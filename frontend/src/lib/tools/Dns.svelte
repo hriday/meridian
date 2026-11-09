@@ -37,6 +37,41 @@
     }
   }
 
+  // Plain-language bottom line for the result.
+  function verdict(r: any): string {
+    if (!r) return "";
+    const n = (r.answers ?? []).length;
+    switch (r.rcode) {
+      case "NOERROR":
+        if (n > 0) {
+          const s = n === 1 ? "" : "s";
+          return `${name} has ${n} ${rtype} record${s}, answered by ${r.server} in ${r.rttMillis} ms${r.authenticated ? " — DNSSEC-validated" : ""}.`;
+        }
+        return `${name} exists, but has no ${rtype} records.`;
+      case "NXDOMAIN":
+        return `${name} doesn't exist (NXDOMAIN) — there's no such name.`;
+      case "SERVFAIL":
+        return `${r.server} couldn't answer (SERVFAIL) — the resolver failed or the zone is broken.`;
+      case "REFUSED":
+        return `${r.server} refused the query (REFUSED).`;
+      default:
+        return `${r.server} returned ${r.rcode}.`;
+    }
+  }
+
+  const FLAG_MEANING: Record<string, string> = {
+    qr: "response",
+    aa: "authoritative",
+    tc: "truncated",
+    rd: "recursion requested",
+    ra: "recursion available",
+    ad: "DNSSEC-validated",
+    cd: "DNSSEC checking off",
+  };
+  function flagHelp(flags: string[]): string {
+    return (flags ?? []).map((f) => `${f} = ${FLAG_MEANING[f] ?? f}`).join(" · ");
+  }
+
   loadSystem();
   run();
 </script>
@@ -56,11 +91,14 @@
 
   {#if error}<div class="hint">{error}</div>{/if}
 
+  {#if result}<div class="summary">{verdict(result)}</div>{/if}
+
   <div class="cards">
     <div class="card hero">
       <div class="chead"><h3>This machine</h3><span class="src">{system?.source ?? ""}</span></div>
       {#if system?.values?.length}
         <dl class="mono"><dt>Resolver(s)</dt><dd>{#each system.values as v}{v}<br />{/each}</dd></dl>
+        <p class="cap">The resolver(s) your computer uses by default — leave the server box blank to query these.</p>
       {:else}
         <p class="muted">Couldn't detect configured resolvers{#if system?.err} ({system.err}){/if} — enter one above.</p>
       {/if}
@@ -70,10 +108,14 @@
       <div class="card">
         <div class="chead"><h3>Response</h3><span class="src">{result.server} · {result.rttMillis} ms</span></div>
         <dl class="mono">
-          <dt>Status</dt><dd>{result.rcode}</dd>
-          <dt>Flags</dt><dd>{(result.flags ?? []).join(" ") || "—"}</dd>
-          <dt>DNSSEC</dt><dd>{result.authenticated ? "authenticated (ad)" : "not authenticated"}</dd>
-          <dt>Answers</dt><dd>{(result.answers ?? []).length}</dd>
+          <dt>Status</dt>
+          <dd>{result.rcode}<span class="cap">response code — NOERROR means the query succeeded</span></dd>
+          <dt>Flags</dt>
+          <dd>{(result.flags ?? []).join(" ") || "—"}<span class="cap">{flagHelp(result.flags)}</span></dd>
+          <dt>DNSSEC</dt>
+          <dd>{result.authenticated ? "authenticated (ad)" : "not authenticated"}<span class="cap">whether the resolver cryptographically validated the answer</span></dd>
+          <dt>Answers</dt>
+          <dd>{(result.answers ?? []).length}</dd>
         </dl>
       </div>
 
@@ -117,6 +159,8 @@
   dl { display: grid; grid-template-columns: 100px 1fr; gap: 6px 12px; margin: 0; font-size: 0.86rem; }
   dt { color: var(--text-dim); } dd { margin: 0; color: var(--text); }
   .muted { color: var(--text-dim); font-size: 0.85rem; margin: 2px 0 0; }
+  .summary { background: var(--card); border: 1px solid var(--accent); border-left-width: 3px; box-shadow: 0 0 0 1px var(--accent-ring); border-radius: 9px; padding: 11px 14px; margin-bottom: 14px; font-size: 0.9rem; color: var(--text-strong); max-width: 940px; }
+  .cap { display: block; font-family: var(--font-sans); color: var(--text-faint); font-size: 0.72rem; margin-top: 2px; }
   table.tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   .tbl th { text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border); }
   .tbl td { padding: 6px 10px; border-bottom: 1px solid var(--border-soft); }
