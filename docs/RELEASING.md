@@ -38,8 +38,9 @@ These secret names are placeholders — nothing references them yet.
 Before flipping the repo to public:
 
 - [ ] You've run the finished app on at least one OS and are happy with it.
-- [ ] **`wails.json` contains `hriday@users.noreply.github.com`** — it becomes public with the
-      repo. Keep, change, or remove it deliberately.
+- [ ] **No personal email is exposed** — check `wails.json` author details and,
+      importantly, the **git commit-author emails** (`git log --format='%ae' | sort -u`),
+      which become public with the repo. Scrub via history rewrite if needed.
 - [ ] Confirm the **LICENSE** (currently Apache-2.0) is the one you want.
 - [ ] Add real screenshots under `docs/media/` and uncomment them in `README.md`.
 - [ ] Review the README's install/privacy wording.

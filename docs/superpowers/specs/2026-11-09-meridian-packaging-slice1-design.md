@@ -66,9 +66,9 @@ and writes the public-facing **README** — without yet flipping the repo public
 - Exact runner image tags, action versions (pin to a recent release ≥2 weeks
   old), and the AppImage helper (`appimagetool`) invocation details.
 - README wording and structure within the sections above.
-- Note for the owner (not changed by the builder): `wails.json` already carries
-  `hriday@users.noreply.github.com`; it becomes public when the repo does — listed in the
-  go-public checklist so the owner can decide before flipping.
+- Note for the owner (not changed by the builder): `wails.json` author details
+  and the git commit-author emails become public when the repo does — listed in
+  the go-public checklist so the owner can scrub them before flipping.
 
 ## Verification
 The pipeline is proven by a real **`workflow_dispatch` run on the private repo**:
