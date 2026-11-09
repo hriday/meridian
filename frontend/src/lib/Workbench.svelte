@@ -33,7 +33,16 @@
 
 <div class="wb">
   <header class="bar">
-    <span class="brand">Meridian</span>
+    <span class="brand">
+      <svg class="mark" viewBox="0 0 64 64" width="19" height="19" fill="none"
+        stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true">
+        <circle cx="32" cy="32" r="22" />
+        <ellipse cx="32" cy="32" rx="9" ry="22" />
+        <line x1="10" y1="32" x2="54" y2="32" />
+        <circle cx="32" cy="10" r="4.5" fill="currentColor" stroke="none" />
+      </svg>
+      Meridian
+    </span>
     <input
       bind:this={searchEl}
       bind:value={filter}
@@ -86,7 +95,8 @@
     display: flex; align-items: center; gap: 10px; padding: 8px 12px;
     background: var(--bar); border-bottom: 1px solid var(--border);
   }
-  .brand { font-weight: 600; letter-spacing: .02em; color: var(--text-strong); }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: .02em; color: var(--text-strong); }
+  .brand .mark { color: var(--accent); flex: none; }
   .search {
     flex: 1; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px;
     padding: 6px 10px; color: var(--text); font-size: 0.82rem; outline: none;
