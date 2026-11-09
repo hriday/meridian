@@ -20,6 +20,7 @@ type IPReport struct {
 	RegisteredOrg  string `json:"registeredOrg"`
 	AbuseEmail     string `json:"abuseEmail"`
 	Registry       string `json:"registry"`    // RIR name (ARIN, RIPE NCC, …)
+	RPKIState      string `json:"rpkiState"`   // valid/invalid/unknown ("" if not checked)
 	RoutingNote    string `json:"routingNote"` // set for non-global addresses
 	RoutingSrc     Source `json:"routingSrc"`
 	RegistrySrc    Source `json:"registrySrc"`
@@ -68,6 +69,11 @@ func (c *Client) LookupIP(ctx context.Context, ip string) (IPReport, error) {
 			r.OriginASN = "AS" + asns[0]
 			if holder, err := c.ripeASOverview(ctx, r.OriginASN); err == nil {
 				r.OriginName = holder
+			}
+			if prefix != "" {
+				if state, _, err := c.ripeRPKI(ctx, prefix, r.OriginASN); err == nil {
+					r.RPKIState = state
+				}
 			}
 		}
 	}
