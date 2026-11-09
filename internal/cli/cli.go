@@ -13,9 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netinput"
+	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/subnet"
+	"github.com/hriday/meridian/internal/sysconf"
 )
 
 // newLookupClient builds the lookup client the CLI uses; tests override it to
@@ -24,12 +27,20 @@ var newLookupClient = func() *lookup.Client {
 	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
 
+// Query functions behind package vars so tests inject fakes.
+var (
+	ntpQuery = ntp.Query
+	dnsQuery = dnsx.Query
+)
+
 const usage = `meridian-cli — network info toolkit
 
 usage:
   meridian-cli classify <value> [--json]
   meridian-cli subnet <cidr> [--split <prefixlen>] [--json]
   meridian-cli lookup <ip|asn> [--json]
+  meridian-cli ntp <server> [--json]
+  meridian-cli dns <name> [--type A] [--server <ip>] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -46,6 +57,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runSubnet(args[1:], stdout, stderr)
 	case "lookup":
 		return runLookup(args[1:], stdout, stderr)
+	case "ntp":
+		return runNTP(args[1:], stdout, stderr)
+	case "dns":
+		return runDNS(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -187,6 +202,80 @@ func runLookup(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "lookup needs an IP or ASN; %q looks like a %s\n", pos[0], r.Kind)
 		return 2
 	}
+}
+
+func runNTP(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("ntp", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "ntp needs exactly one server\n%s", usage)
+		return 2
+	}
+	rep, err := ntpQuery(context.Background(), pos[0])
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	reportRow(stdout, "Server", rep.Server)
+	reportRow(stdout, "Stratum", fmt.Sprintf("%d", rep.Stratum))
+	reportRow(stdout, "Reference", rep.RefID)
+	reportRow(stdout, "Leap", rep.LeapIndicator)
+	reportRow(stdout, "Offset", rep.Offset.String())
+	reportRow(stdout, "Round-trip", rep.RTT.String())
+	reportRow(stdout, "Root delay", rep.RootDelay.String())
+	reportRow(stdout, "Root disp", rep.RootDispersion.String())
+	reportRow(stdout, "Server time", rep.ServerTime.Format("2006-01-02 15:04:05 MST"))
+	if rep.KissOfDeath {
+		reportRow(stdout, "Note", "kiss-o'-death (rate-limited / unusable)")
+	}
+	return 0
+}
+
+func runDNS(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("dns", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	rtype := fs.String("type", "A", "record type")
+	server := fs.String("server", "", "resolver to query (default: system)")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "dns needs exactly one name\n%s", usage)
+		return 2
+	}
+	srv := *server
+	if srv == "" {
+		if f := sysconf.Resolvers(); len(f.Values) > 0 {
+			srv = f.Values[0]
+		} else {
+			srv = "1.1.1.1"
+		}
+	}
+	res, err := dnsQuery(context.Background(), pos[0], *rtype, srv)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, res)
+	}
+	reportRow(stdout, "Server", res.Server)
+	reportRow(stdout, "Status", res.Rcode)
+	reportRow(stdout, "Flags", strings.Join(res.Flags, " "))
+	for _, a := range res.Answers {
+		fmt.Fprintf(stdout, "%-14s %s\t%d\t%s\n", a.Type, a.Name, a.TTL, a.Value)
+	}
+	return 0
 }
 
 func writeJSON(stdout, stderr io.Writer, v any) int {
