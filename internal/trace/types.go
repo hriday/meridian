@@ -31,6 +31,7 @@ type Result struct {
 	Hops    []Hop         `json:"hops"`
 	Reached bool          `json:"reached"`
 	Elapsed time.Duration `json:"elapsed"`
+	Verdict string        `json:"verdict"`
 }
 
 // rttStats returns the min, mean, and max of the non-timeout probe times

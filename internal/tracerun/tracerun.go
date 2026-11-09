@@ -66,6 +66,7 @@ func Run(ctx context.Context, target string, useV6 bool, onHop func(trace.Hop)) 
 	})
 	r.Hops = hops
 	r.Target = target
+	r.Verdict = trace.Verdict(r)
 	return r, err
 }
 

@@ -30,10 +30,18 @@ export function NTPSystem() {
   return window['go']['app']['App']['NTPSystem']();
 }
 
+export function StopTrace() {
+  return window['go']['app']['App']['StopTrace']();
+}
+
 export function SubnetDescribe(arg1) {
   return window['go']['app']['App']['SubnetDescribe'](arg1);
 }
 
 export function SubnetSplit(arg1, arg2) {
   return window['go']['app']['App']['SubnetSplit'](arg1, arg2);
+}
+
+export function Traceroute(arg1, arg2) {
+  return window['go']['app']['App']['Traceroute'](arg1, arg2);
 }

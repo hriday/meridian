@@ -328,3 +328,72 @@ export namespace sysconf {
 
 }
 
+export namespace trace {
+	
+	export class Hop {
+	    ttl: number;
+	    addr: string;
+	    host: string;
+	    rtts: number[];
+	    asn: string;
+	    asOwner: string;
+	    timeout: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Hop(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ttl = source["ttl"];
+	        this.addr = source["addr"];
+	        this.host = source["host"];
+	        this.rtts = source["rtts"];
+	        this.asn = source["asn"];
+	        this.asOwner = source["asOwner"];
+	        this.timeout = source["timeout"];
+	    }
+	}
+	export class Result {
+	    target: string;
+	    addr: string;
+	    hops: Hop[];
+	    reached: boolean;
+	    elapsed: number;
+	    verdict: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.addr = source["addr"];
+	        this.hops = this.convertValues(source["hops"], Hop);
+	        this.reached = source["reached"];
+	        this.elapsed = source["elapsed"];
+	        this.verdict = source["verdict"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
