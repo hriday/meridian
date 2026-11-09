@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/hriday/meridian/internal/lookup"
@@ -17,6 +18,9 @@ import (
 type App struct {
 	ctx    context.Context
 	lookup *lookup.Client
+
+	traceMu     sync.Mutex
+	traceCancel context.CancelFunc
 }
 
 // New returns a controller with no context; the context arrives at startup.

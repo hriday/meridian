@@ -19,6 +19,8 @@ import (
 	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/subnet"
 	"github.com/hriday/meridian/internal/sysconf"
+	"github.com/hriday/meridian/internal/trace"
+	"github.com/hriday/meridian/internal/tracerun"
 )
 
 // newLookupClient builds the lookup client the CLI uses; tests override it to
@@ -41,6 +43,7 @@ usage:
   meridian-cli lookup <ip|asn> [--json]
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
+  meridian-cli trace <host> [--6] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -61,6 +64,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runNTP(args[1:], stdout, stderr)
 	case "dns":
 		return runDNS(args[1:], stdout, stderr)
+	case "trace":
+		return runTrace(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -276,6 +281,74 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "%-14s %s\t%d\t%s\n", a.Type, a.Name, a.TTL, a.Value)
 	}
 	return 0
+}
+
+func runTrace(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("trace", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	useV6 := fs.Bool("6", false, "trace over IPv6")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "trace needs exactly one host\n%s", usage)
+		return 2
+	}
+	r, err := tracerun.Run(context.Background(), pos[0], *useV6, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	for _, h := range r.Hops {
+		host := h.Addr
+		if h.Timeout {
+			host = "*"
+		} else if h.Host != "" {
+			host = fmt.Sprintf("%s (%s)", h.Host, h.Addr)
+		}
+		as := "—"
+		if h.ASN != "" {
+			as = "AS" + h.ASN
+			if h.ASOwner != "" {
+				as += " " + h.ASOwner
+			}
+		}
+		_, avg, _ := traceRTT(h.RTTs)
+		rtt := "*"
+		if avg > 0 {
+			rtt = fmt.Sprintf("%.1f ms", float64(avg)/1e6)
+		}
+		fmt.Fprintf(stdout, "%2d  %-40s %-26s %s\n", h.TTL, host, as, rtt)
+	}
+	fmt.Fprintln(stdout, trace.Verdict(r))
+	return 0
+}
+
+func traceRTT(d []time.Duration) (min, avg, max time.Duration) {
+	var sum time.Duration
+	var n int
+	for _, x := range d {
+		if x <= 0 {
+			continue
+		}
+		if n == 0 || x < min {
+			min = x
+		}
+		if x > max {
+			max = x
+		}
+		sum += x
+		n++
+	}
+	if n == 0 {
+		return 0, 0, 0
+	}
+	return min, sum / time.Duration(n), max
 }
 
 func writeJSON(stdout, stderr io.Writer, v any) int {
