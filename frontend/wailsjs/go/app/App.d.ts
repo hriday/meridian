@@ -40,6 +40,8 @@ export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 
+export function LookupBGP(arg1:string):Promise<lookup.BGPReport>;
+
 export function LookupDomain(arg1:string):Promise<lookup.DomainReport>;
 
 export function LookupIP(arg1:string):Promise<lookup.IPReport>;
