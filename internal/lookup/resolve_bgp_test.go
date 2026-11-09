@@ -102,6 +102,21 @@ func TestLookupBGPNotSeen(t *testing.T) {
 	require.Empty(t, r.RPKISrc.Label) // no RPKI call when there's no origin
 }
 
+func TestLookupBGPSkipsEmptyPaths(t *testing.T) {
+	body := `{"data":{"rrcs":[{"rrc":"RRC01","location":"L","scope":"S","peers":[
+		{"asn_origin":"1205","as_path":"174 1205","prefix":"140.78.0.0/16"},
+		{"asn_origin":"1205","as_path":"","prefix":"140.78.0.0/16"}]}]}}`
+	c := lookupServer(t, map[string]srvResp{
+		"/looking-glass/":   {body: body},
+		"/rpki-validation/": {body: rpkiValidBody("140.78.0.0/16")},
+	})
+	r, err := c.LookupBGP(context.Background(), "140.78.0.0/16")
+	require.NoError(t, err)
+	require.Equal(t, 2, r.Peers) // the empty-path peer still counts toward visibility
+	require.Len(t, r.Paths, 1)   // but it is not rendered as a blank path row
+	require.Equal(t, []string{"174", "1205"}, r.Paths[0].Path)
+}
+
 func TestLookupBGPRPKIDegrades(t *testing.T) {
 	c := lookupServer(t, map[string]srvResp{
 		"/looking-glass/":   {body: lgAggBody},

@@ -82,6 +82,11 @@ func (c *Client) LookupBGP(ctx context.Context, input string) (BGPReport, error)
 			if p.Prefix != "" {
 				prefixCount[p.Prefix]++
 			}
+			// A peer still counts toward visibility even with no path, but an
+			// empty path is not rendered as a blank row.
+			if len(p.ASPath) == 0 {
+				continue
+			}
 			key := strings.Join(p.ASPath, " ")
 			pathCount[key]++
 			if _, ok := pathOf[key]; !ok {

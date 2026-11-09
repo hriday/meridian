@@ -82,7 +82,7 @@
     <input
       class="field mono"
       bind:value={query}
-      placeholder="1.1.1.1  ·  104.16.0.0/13  ·  8.8.8.0/24"
+      placeholder="1.1.1.1  ·  1.1.1.0/24  ·  8.8.8.0/24"
       autocomplete="off"
       spellcheck="false"
       aria-label="prefix or IP"
@@ -111,6 +111,8 @@
           {/each}
           {#if report.rpkiState}
             <span class="pill {rpkiClass(report.rpkiState)}">RPKI {report.rpkiState}</span>
+          {:else if report.rpkiSrc?.err}
+            <span class="pill soon" title={report.rpkiSrc.err}>RPKI uncheckable</span>
           {:else}
             <span class="pill soon">RPKI unknown</span>
           {/if}
