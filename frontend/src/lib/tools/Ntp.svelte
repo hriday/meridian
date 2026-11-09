@@ -46,6 +46,22 @@
     return isNaN(d.getTime()) ? ts : d.toISOString().replace("T", " ").replace("Z", " UTC");
   }
 
+  // Plain-language bottom line for the result.
+  function verdict(r: any): string {
+    if (!r) return "";
+    if (r.kissOfDeath) return `${r.server} is rate-limiting you (kiss-o'-death) — it won't give a usable time. Try another server.`;
+    const offMs = r.offset / 1e6;
+    const dir = offMs >= 0 ? "behind" : "ahead of";
+    const stratum =
+      r.stratum === 1
+        ? "a stratum-1 server (directly attached to a reference clock)"
+        : `a stratum-${r.stratum} server (${r.stratum} hops from a reference clock)`;
+    const absMs = Math.abs(offMs);
+    const health =
+      absMs < 100 ? "Your clock looks accurate." : absMs < 1000 ? "Your clock is off by a noticeable amount." : "Your clock is significantly off — worth investigating.";
+    return `Your computer's clock is ${Math.abs(offMs).toFixed(1)} ms ${dir} ${r.server}, ${stratum}. ${health}`;
+  }
+
   loadSystem();
   run();
 </script>
@@ -64,11 +80,14 @@
 
   {#if error}<div class="hint">{error}</div>{/if}
 
+  {#if reply}<div class="summary">{verdict(reply)}</div>{/if}
+
   <div class="cards">
     <div class="card hero">
       <div class="chead"><h3>This machine</h3><span class="src">{system?.source ?? ""}</span></div>
       {#if system?.values?.length}
         <dl class="mono"><dt>Time server</dt><dd class="big">{system.values.join(", ")}</dd></dl>
+        <p class="cap">The server your computer is set to sync with — not necessarily the one you queried above.</p>
       {:else}
         <p class="muted">Couldn't detect a configured time server{#if system?.err} ({system.err}){/if} — enter one above.</p>
       {/if}
@@ -83,21 +102,26 @@
           <span class="node">you</span>
         </div>
         <dl class="mono">
-          <dt>Stratum</dt><dd>{reply.stratum}{#if reply.kissOfDeath} <span class="pill bad">kiss-o'-death</span>{/if}</dd>
-          <dt>Reference</dt><dd>{reply.refId || "—"}</dd>
-          <dt>Leap</dt><dd>{reply.leapIndicator}</dd>
-          <dt>Precision</dt><dd>{precision(reply.precisionSeconds)}</dd>
-          <dt>Server time</dt><dd>{fmtTime(reply.serverTime)}</dd>
+          <dt>Stratum</dt>
+          <dd>{reply.stratum}{#if reply.kissOfDeath} <span class="pill bad">kiss-o'-death</span>{/if}<span class="cap">hops from a reference clock — lower is closer to the true source</span></dd>
+          <dt>Reference</dt>
+          <dd>{reply.refId || "—"}<span class="cap">the upstream clock or server this one syncs from</span></dd>
+          <dt>Leap</dt>
+          <dd>{reply.leapIndicator}<span class="cap">whether a leap-second adjustment is pending</span></dd>
+          <dt>Precision</dt>
+          <dd>{precision(reply.precisionSeconds)}<span class="cap">how finely the server can measure time</span></dd>
+          <dt>Server time</dt>
+          <dd>{fmtTime(reply.serverTime)}<span class="cap">the time the server reports right now</span></dd>
         </dl>
       </div>
 
       <div class="card span">
         <div class="chead"><h3>Timing</h3><span class="src">computed</span></div>
         <div class="timing">
-          <div><span class="tl">Offset</span><span class="tv">{ms(reply.offset)}</span></div>
-          <div><span class="tl">Round-trip</span><span class="tv">{ms(reply.rtt)}</span></div>
-          <div><span class="tl">Root delay</span><span class="tv">{ms(reply.rootDelay)}</span></div>
-          <div><span class="tl">Root dispersion</span><span class="tv">{ms(reply.rootDispersion)}</span></div>
+          <div><span class="tl">Offset</span><span class="tv">{ms(reply.offset)}</span><span class="tcap">your clock vs the server — how far off you are</span></div>
+          <div><span class="tl">Round-trip</span><span class="tv">{ms(reply.rtt)}</span><span class="tcap">network latency there and back</span></div>
+          <div><span class="tl">Root delay</span><span class="tv">{ms(reply.rootDelay)}</span><span class="tcap">the server's total delay to its reference clock</span></div>
+          <div><span class="tl">Root dispersion</span><span class="tv">{ms(reply.rootDispersion)}</span><span class="tcap">the server's estimate of its own max error</span></div>
         </div>
       </div>
     {/if}
@@ -126,6 +150,9 @@
   dt { color: var(--text-dim); } dd { margin: 0; color: var(--text); }
   .big { font-size: 1.05rem; color: var(--text-strong); }
   .muted { color: var(--text-dim); font-size: 0.85rem; margin: 2px 0 0; }
+  .summary { background: var(--card); border: 1px solid var(--accent); border-left-width: 3px; box-shadow: 0 0 0 1px var(--accent-ring); border-radius: 9px; padding: 11px 14px; margin-bottom: 14px; font-size: 0.9rem; color: var(--text-strong); max-width: 940px; }
+  .cap { display: block; font-family: var(--font-sans); color: var(--text-faint); font-size: 0.72rem; margin-top: 2px; }
+  .tcap { display: block; color: var(--text-faint); font-size: 0.68rem; margin-top: 3px; line-height: 1.35; }
   .chain { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .node { font-size: 0.7rem; padding: 3px 10px; border-radius: 7px; border: 1px solid var(--border); color: var(--text-dim); font-family: var(--font-mono); }
   .node.on { color: var(--on-accent); background: var(--btn); border-color: var(--btn-border); }
