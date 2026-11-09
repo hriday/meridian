@@ -1,0 +1,52 @@
+html {
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+body {
+    margin: 0;
+    color: var(--text);
+    font-family: var(--font-sans);
+}
+
+/* Geist Sans + Geist Mono, bundled locally (OFL, see assets/fonts/GEIST-OFL.txt)
+   so the app renders identically offline on every OS. */
+@font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("assets/fonts/Geist-400.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("assets/fonts/Geist-500.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("assets/fonts/Geist-600.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Geist Mono";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("assets/fonts/GeistMono-400.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Geist Mono";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("assets/fonts/GeistMono-500.woff2") format("woff2");
+}
+
+#app {
+    height: 100vh;
+}

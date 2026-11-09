@@ -1,1 +1,7 @@
 .superpowers/
+
+# Wails / build
+build/bin
+node_modules
+frontend/dist
+*.app

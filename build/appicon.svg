@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#171b24"/>
+      <stop offset="1" stop-color="#0c0e13"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#tile)"/>
+  <rect x="3" y="3" width="1018" height="1018" rx="226" ry="226" fill="none" stroke="#2a2f3b" stroke-width="2"/>
+  <!-- meridian globe mark -->
+  <g fill="none" stroke="#5b8cff" stroke-width="34" stroke-linecap="round">
+    <circle cx="512" cy="512" r="235"/>
+    <ellipse cx="512" cy="512" rx="96" ry="235"/>
+    <line x1="277" y1="512" x2="747" y2="512"/>
+  </g>
+  <circle cx="512" cy="277" r="50" fill="#79a1ff"/>
+</svg>

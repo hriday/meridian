@@ -2,7 +2,7 @@
 
 **Status:** approved scope, pre-plan
 **Date:** 2026-11-08
-**Repo:** `github.com/hriday/engineers_tools` (private until release)
+**Repo:** `github.com/hriday/meridian` (private until release)
 **Licence:** Apache 2.0
 
 ---
