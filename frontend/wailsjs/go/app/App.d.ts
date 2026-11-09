@@ -6,6 +6,7 @@ import {sysconf} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
 import {subnet} from '../models';
+import {trace} from '../models';
 
 export function Classify(arg1:string):Promise<netinput.Result>;
 
@@ -21,6 +22,10 @@ export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
 export function NTPSystem():Promise<sysconf.Found>;
 
+export function StopTrace():Promise<void>;
+
 export function SubnetDescribe(arg1:string):Promise<subnet.Info>;
 
 export function SubnetSplit(arg1:string,arg2:number):Promise<Array<string>>;
+
+export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
