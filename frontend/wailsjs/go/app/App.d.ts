@@ -3,6 +3,8 @@
 import {netinput} from '../models';
 import {dnsx} from '../models';
 import {sysconf} from '../models';
+import {ipspace} from '../models';
+import {app} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
 import {subnet} from '../models';
@@ -13,6 +15,28 @@ export function Classify(arg1:string):Promise<netinput.Result>;
 export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Result>;
 
 export function DNSSystem():Promise<sysconf.Found>;
+
+export function IPSpaceAdd(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<ipspace.Record>;
+
+export function IPSpaceCreate(arg1:string):Promise<void>;
+
+export function IPSpaceDelete(arg1:string):Promise<void>;
+
+export function IPSpaceEdit(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<void>;
+
+export function IPSpaceExportCSV():Promise<string>;
+
+export function IPSpaceHistory():Promise<Array<ipspace.Event>>;
+
+export function IPSpaceImportCSV(arg1:string):Promise<ipspace.ImportReport>;
+
+export function IPSpaceStatus():Promise<app.IPSpaceState>;
+
+export function IPSpaceTree():Promise<Array<ipspace.TreeNode>>;
+
+export function IPSpaceUndo():Promise<void>;
+
+export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 
