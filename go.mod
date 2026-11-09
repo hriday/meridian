@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v2 v2.10.1
+	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 )
 
 require (
