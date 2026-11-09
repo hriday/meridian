@@ -1,5 +1,6 @@
 <script lang="ts">
   import SubnetCalc from "./tools/SubnetCalc.svelte";
+  import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
 
   type Tool = { id: string; name: string; group: string; ready: boolean };
   const tools: Tool[] = [
@@ -41,6 +42,15 @@
       aria-label="Search"
     />
     <kbd>⌘K</kbd>
+    <button
+      class="theme"
+      on:click={cycleTheme}
+      title={`Theme: ${themeLabel[$themePref]} — click to change`}
+      aria-label={`Theme: ${themeLabel[$themePref]}`}
+    >
+      <span class="ticon">{themeIcon[$themePref]}</span>
+      <span class="tlabel">{themeLabel[$themePref]}</span>
+    </button>
   </header>
 
   <div class="body">
@@ -74,39 +84,47 @@
   .wb { display: flex; flex-direction: column; height: 100vh; }
   .bar {
     display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-    background: #151821; border-bottom: 1px solid #262a33;
+    background: var(--bar); border-bottom: 1px solid var(--border);
   }
-  .brand { font-weight: 600; letter-spacing: .02em; }
+  .brand { font-weight: 600; letter-spacing: .02em; color: var(--text-strong); }
   .search {
-    flex: 1; background: #0b0d12; border: 1px solid #2f3542; border-radius: 7px;
-    padding: 6px 10px; color: #e7ebf3; font-size: 0.82rem; outline: none;
+    flex: 1; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px;
+    padding: 6px 10px; color: var(--text); font-size: 0.82rem; outline: none;
   }
-  .search:focus { border-color: #5b8cff; box-shadow: 0 0 0 3px rgba(91,140,255,.15); }
+  .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   kbd {
-    font: 11px ui-monospace, monospace; color: #7d8596;
-    border: 1px solid #333a47; border-radius: 4px; padding: 1px 6px;
+    font: 11px ui-monospace, monospace; color: var(--text-dim);
+    border: 1px solid var(--kbd-border); border-radius: 4px; padding: 1px 6px;
   }
+  .theme {
+    display: flex; align-items: center; gap: 6px; background: none;
+    border: 1px solid var(--kbd-border); border-radius: 6px; padding: 3px 8px;
+    color: var(--text-dim); font-size: 0.72rem; cursor: pointer; line-height: 1;
+  }
+  .theme:hover { color: var(--text-strong); border-color: var(--field-border); background: var(--hover); }
+  .ticon { font-size: 0.82rem; }
+  @media (max-width: 560px) { .tlabel { display: none; } }
   .body { flex: 1; display: flex; min-height: 0; }
   .side {
-    width: 190px; flex: none; background: #12151c; border-right: 1px solid #262a33;
+    width: 190px; flex: none; background: var(--panel); border-right: 1px solid var(--border);
     padding: 8px; overflow-y: auto;
   }
   .grp {
-    color: #6b7385; font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--text-faint2); font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em;
     margin: 12px 8px 4px;
   }
   .item {
     display: flex; align-items: center; justify-content: space-between; width: 100%;
-    text-align: left; background: none; border: none; color: #aeb5c3;
+    text-align: left; background: none; border: none; color: var(--item-text);
     padding: 5px 9px; border-radius: 6px; font-size: 0.84rem; cursor: pointer;
   }
-  .item:hover:not(.disabled) { background: #192030; color: #fff; }
-  .item.on { background: #1e2533; color: #fff; }
-  .item.disabled { color: #596072; cursor: default; }
-  .soon { font-size: 0.6rem; color: #596072; border: 1px solid #2c333f; border-radius: 8px; padding: 0 6px; }
+  .item:hover:not(.disabled) { background: var(--hover); color: var(--text-strong); }
+  .item.on { background: var(--active); color: var(--text-strong); }
+  .item.disabled { color: var(--text-faint); cursor: default; }
+  .soon { font-size: 0.6rem; color: var(--text-faint); border: 1px solid var(--pill-border); border-radius: 8px; padding: 0 6px; }
   .main { flex: 1; min-width: 0; overflow-y: auto; }
-  .tabs { display: flex; gap: 2px; padding: 0 10px; background: #12151c; border-bottom: 1px solid #262a33; }
-  .tab { padding: 8px 12px; font-size: 0.82rem; color: #8b93a4; border-bottom: 2px solid transparent; }
-  .tab.on { color: #fff; border-color: #5b8cff; }
-  .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; }
+  .tabs { display: flex; gap: 2px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  .tab { padding: 8px 12px; font-size: 0.82rem; color: var(--tab-inactive); border-bottom: 2px solid transparent; }
+  .tab.on { color: var(--text-strong); border-color: var(--accent); }
+  .mono { font-family: var(--font-mono); }
 </style>
