@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let type: "ip" | "asn";
+  export let type: "ip" | "asn" | "prefix" | "domain";
   export let data: any;
   export let onpivot: (value: string) => void = () => {};
 
@@ -20,6 +20,9 @@
     if (src.err) return `${src.label}: unavailable`;
     return `${src.label} · ${ago(src.fetchedAt)}`;
   }
+  function rpkiClass(state: string): string {
+    return state === "valid" ? "good" : state === "invalid" ? "bad" : "";
+  }
   async function copyJSON() {
     try {
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -33,7 +36,7 @@
   {#if type === "ip"}
     <div class="crumbs">
       <span class="cur mono">{data.input}</span>
-      {#if data.coveringPrefix}<span class="sep">›</span><span class="mono">{data.coveringPrefix}</span>{/if}
+      {#if data.coveringPrefix}<span class="sep">›</span><button class="piv mono" on:click={() => onpivot(data.coveringPrefix)}>{data.coveringPrefix}</button>{/if}
       {#if data.originAsn}<span class="sep">›</span><button class="piv mono" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button>{/if}
       {#if data.registry}<span class="sep">·</span><span>{data.registry}</span>{/if}
     </div>
@@ -41,7 +44,7 @@
     <p class="hsub">
       {#if data.originName}Announced by {data.originAsn} · {data.originName}{:else if data.routingNote}{data.routingNote}{:else}No global routing seen{/if}
     </p>
-  {:else}
+  {:else if type === "asn"}
     <div class="crumbs">
       <span class="cur mono">{data.asn}</span>
       {#if data.holder}<span class="sep">·</span><span>{data.holder}</span>{/if}
@@ -49,6 +52,21 @@
     </div>
     <div class="hhead"><span class="htitle mono">{data.asn}</span><span class="htag">Autonomous System</span></div>
     <p class="hsub">{data.holder || "Autonomous system"}{#if data.registry} · registered via {data.registry}{/if}</p>
+  {:else if type === "prefix"}
+    <div class="crumbs">
+      <span class="cur mono">{data.input}</span>
+      {#if data.originAsn}<span class="sep">›</span><button class="piv mono" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button>{/if}
+      {#if data.registry}<span class="sep">·</span><span>{data.registry}</span>{/if}
+    </div>
+    <div class="hhead"><span class="htitle mono">{data.input}</span><span class="htag">Prefix</span></div>
+    <p class="hsub">{#if data.originAsn}Announced by {data.originAsn}{#if data.originName} · {data.originName}{/if}{:else}Not globally announced{/if}</p>
+  {:else}
+    <div class="crumbs">
+      <span class="cur mono">{data.input}</span>
+      {#if data.registrar}<span class="sep">·</span><span>{data.registrar}</span>{/if}
+    </div>
+    <div class="hhead"><span class="htitle">{data.input}</span><span class="htag">Domain</span></div>
+    <p class="hsub">{#if data.resolvesTo?.length}Resolves to {data.resolvesTo.length} address{data.resolvesTo.length > 1 ? "es" : ""}{#if data.hostedBy?.length} · hosted by {data.hostedBy.join(", ")}{/if}{:else if data.rcode === "NXDOMAIN"}This domain doesn't resolve (NXDOMAIN){:else}No A/AAAA records{#if data.rcode && data.rcode !== "NOERROR"} ({data.rcode}){/if}{/if}</p>
   {/if}
 
   <div class="actions"><button class="btn" on:click={copyJSON}>Copy as JSON</button></div>
@@ -56,9 +74,11 @@
   <div class="tabbar">
     <button class="tab" class:on={tab === "overview"} on:click={() => (tab = "overview")}>Overview</button>
     <button class="tab" class:on={tab === "registry"} on:click={() => (tab = "registry")}>Registry</button>
-    <span class="tab dis">Routing <span class="soon">soon</span></span>
-    <span class="tab dis">DNS <span class="soon">soon</span></span>
-    <span class="tab dis">Reachability <span class="soon">soon</span></span>
+    {#if type === "ip"}
+      <span class="tab dis">Routing <span class="soon">soon</span></span>
+      <span class="tab dis">DNS <span class="soon">soon</span></span>
+      <span class="tab dis">Reachability <span class="soon">soon</span></span>
+    {/if}
   </div>
 
   {#if type === "ip"}
@@ -67,13 +87,10 @@
         <div class="card hero span">
           <div class="chead">
             <h3>Who owns this</h3>
-            <span class="srcs">
-              <span class="src">{chip(data.routingSrc)}</span>
-              <span class="src">{chip(data.registrySrc)}</span>
-            </span>
+            <span class="srcs"><span class="src">{chip(data.routingSrc)}</span><span class="src">{chip(data.registrySrc)}</span></span>
           </div>
           <dl class="mono">
-            {#if data.coveringPrefix}<dt>Covering prefix</dt><dd class="big">{data.coveringPrefix}</dd>{/if}
+            {#if data.coveringPrefix}<dt>Covering prefix</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.coveringPrefix)}>{data.coveringPrefix}</button></dd>{/if}
             {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
             {#if data.registeredOrg}<dt>Registered org</dt><dd>{data.registeredOrg}{#if data.registry} <span class="pill">{data.registry}</span>{/if}</dd>{/if}
             {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}
@@ -87,7 +104,7 @@
           <dl class="mono">
             <dt>Origin AS</dt><dd>{data.originAsn || "—"}</dd>
             <dt>Prefix</dt><dd>{data.coveringPrefix || "—"}</dd>
-            <dt>RPKI</dt><dd><span class="pill soon">soon</span></dd>
+            <dt>RPKI</dt><dd>{#if data.rpkiState}<span class="pill {rpkiClass(data.rpkiState)}">{data.rpkiState}</span>{:else}<span class="pill soon">unknown</span>{/if}</dd>
           </dl>
           {#if data.routingSrc?.err}<p class="err">Routing data unavailable: {data.routingSrc.err}</p>{/if}
         </div>
@@ -95,16 +112,13 @@
     {:else}
       <div class="cards"><div class="card span">
         <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
-        <dl class="mono">
-          <dt>Organization</dt><dd>{data.registeredOrg || "—"}</dd>
-          <dt>Registry</dt><dd>{data.registry || "—"}</dd>
-          <dt>Abuse</dt><dd>{data.abuseEmail || "—"}</dd>
-        </dl>
+        <dl class="mono"><dt>Organization</dt><dd>{data.registeredOrg || "—"}</dd><dt>Registry</dt><dd>{data.registry || "—"}</dd><dt>Abuse</dt><dd>{data.abuseEmail || "—"}</dd></dl>
       </div></div>
     {/if}
-  {:else if tab === "overview"}
-    <div class="cards">
-      <div class="card hero span">
+
+  {:else if type === "asn"}
+    {#if tab === "overview"}
+      <div class="cards"><div class="card hero span">
         <div class="chead"><h3>Autonomous System</h3><span class="src">{chip(data.routingSrc)}</span></div>
         <dl class="mono">
           <dt>Holder</dt><dd class="big">{data.holder || "—"}</dd>
@@ -112,12 +126,71 @@
           <dt>Prefixes (v6)</dt><dd>{data.v6Prefixes} announced</dd>
           <dt>Neighbours</dt><dd>{data.neighbours} observed</dd>
         </dl>
+      </div></div>
+    {:else}
+      <div class="cards"><div class="card span">
+        <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
+        <dl class="mono"><dt>Handle</dt><dd>{data.asn}</dd><dt>Holder</dt><dd>{data.holder || "—"}</dd><dt>Registry</dt><dd>{data.registry || "—"}</dd></dl>
+      </div></div>
+    {/if}
+
+  {:else if type === "prefix"}
+    {#if tab === "overview"}
+      <div class="cards">
+        <div class="card hero span">
+          <div class="chead"><h3>Who announces this</h3><span class="srcs"><span class="src">{chip(data.routingSrc)}</span><span class="src">{chip(data.rpkiSrc)}</span></span></div>
+          <dl class="mono">
+            {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
+            <dt>Announced</dt><dd>{data.announced ? "yes" : "no"}</dd>
+            <dt>RPKI</dt><dd>{#if data.rpkiState}<span class="pill {rpkiClass(data.rpkiState)}">{data.rpkiState}</span> {#if data.rpkiRoa}<span class="dim">{data.rpkiRoa}</span>{/if}{:else}<span class="pill soon">unknown</span>{/if}</dd>
+            {#if data.registeredOrg}<dt>Registered org</dt><dd>{data.registeredOrg}{#if data.registry} <span class="pill">{data.registry}</span>{/if}</dd>{/if}
+            {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}
+          </dl>
+          {#if data.routingSrc?.err}<p class="err">Routing data unavailable: {data.routingSrc.err}</p>{/if}
+        </div>
+        {#if data.lessSpecific?.length || data.moreSpecific?.length}
+          <div class="card span">
+            <div class="chead"><h3>Related prefixes</h3><span class="src">{chip(data.routingSrc)}</span></div>
+            {#if data.lessSpecific?.length}<p class="lbl">Less specific (enclosing)</p><div class="lst">{#each data.lessSpecific as p}<button class="piv mono" on:click={() => onpivot(p)}>{p}</button>{/each}</div>{/if}
+            {#if data.moreSpecific?.length}<p class="lbl">More specific (sub-prefixes)</p><div class="lst">{#each data.moreSpecific as p}<button class="piv mono" on:click={() => onpivot(p)}>{p}</button>{/each}</div>{/if}
+          </div>
+        {/if}
+      </div>
+    {:else}
+      <div class="cards"><div class="card span">
+        <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
+        <dl class="mono"><dt>Organization</dt><dd>{data.registeredOrg || "—"}</dd><dt>Registry</dt><dd>{data.registry || "—"}</dd><dt>Abuse</dt><dd>{data.abuseEmail || "—"}</dd></dl>
+      </div></div>
+    {/if}
+
+  {:else if tab === "overview"}
+    <div class="cards">
+      <div class="card hero span">
+        <div class="chead"><h3>Where it resolves</h3><span class="src">{chip(data.dnsSrc)}</span></div>
+        <dl class="mono">
+          <dt>Resolves to</dt><dd>{#if data.resolvesTo?.length}{#each data.resolvesTo as ip, i}{#if i > 0}, {/if}<button class="piv" on:click={() => onpivot(ip)}>{ip}</button>{/each}{:else}—{/if}</dd>
+          <dt>Hosted by</dt><dd>{data.hostedBy?.join(", ") || "—"}</dd>
+        </dl>
+        {#if data.dnsSrc?.err}<p class="err">DNS unavailable: {data.dnsSrc.err}</p>{/if}
+      </div>
+      <div class="card span">
+        <div class="chead"><h3>DNS records</h3><span class="src">{chip(data.dnsSrc)}</span></div>
+        {#if data.records?.length}
+          <table class="rec mono"><tbody>{#each data.records as r}<tr><td class="rt">{r.type}</td><td>{r.name}</td><td class="rv">{r.value}</td></tr>{/each}</tbody></table>
+        {:else}<p class="dim">No records{#if data.rcode && data.rcode !== "NOERROR"} · {data.rcode}{/if}.</p>{/if}
       </div>
     </div>
   {:else}
     <div class="cards"><div class="card span">
-      <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
-      <dl class="mono"><dt>Handle</dt><dd>{data.asn}</dd><dt>Holder</dt><dd>{data.holder || "—"}</dd><dt>Registry</dt><dd>{data.registry || "—"}</dd></dl>
+      <div class="chead"><h3>Registration (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
+      {#if data.registrySrc?.err}<p class="dim">No RDAP registration data for this domain (some TLDs don't serve RDAP).</p>{/if}
+      <dl class="mono">
+        <dt>Registrar</dt><dd>{data.registrar || "—"}</dd>
+        <dt>Created</dt><dd>{data.created || "—"}</dd>
+        <dt>Expires</dt><dd>{data.expires || "—"}</dd>
+        <dt>DNSSEC</dt><dd>{data.dnssec || "—"}</dd>
+        <dt>Nameservers</dt><dd>{data.nameservers?.join(", ") || "—"}</dd>
+      </dl>
     </div></div>
   {/if}
 </div>
@@ -130,7 +203,7 @@
   .piv { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
   .piv:hover { text-decoration: underline; }
   .hhead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-  .htitle { font-size: 1.5rem; font-weight: 500; color: var(--text-strong); }
+  .htitle { font-size: 1.5rem; font-weight: 500; color: var(--text-strong); word-break: break-all; }
   .htag { font-size: 0.75rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
   .hsub { color: var(--text-dim); font-size: 0.86rem; margin: 2px 0 16px; }
   .actions { display: flex; gap: 8px; margin: 0 0 16px; }
@@ -156,6 +229,14 @@
   .dim { color: var(--text-dim); font-size: 0.82rem; }
   .pill { display: inline-flex; font-size: 0.66rem; padding: 1px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-dim); }
   .pill.soon { color: var(--text-faint); }
+  .pill.good { color: var(--good, #5ad17a); border-color: transparent; background: var(--good-bg, #102516); }
+  .pill.bad { color: var(--bad, #ff6b6b); border-color: transparent; }
+  .lbl { color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 4px; }
+  .lst { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  table.rec { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .rec td { padding: 4px 8px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  .rec .rt { color: var(--accent); width: 60px; }
+  .rec .rv { word-break: break-all; }
   .err { color: var(--warn-text); font-size: 0.78rem; margin: 8px 0 0; }
   .mono { font-family: var(--font-mono); }
 </style>

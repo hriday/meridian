@@ -40,7 +40,11 @@ export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 
+export function LookupDomain(arg1:string):Promise<lookup.DomainReport>;
+
 export function LookupIP(arg1:string):Promise<lookup.IPReport>;
+
+export function LookupPrefix(arg1:string):Promise<lookup.PrefixReport>;
 
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
