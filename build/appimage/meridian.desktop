@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Meridian
+Comment=Network info toolkit — lookups, routing, BGP, NTP/DNS, IP space
+Exec=meridian
+Icon=meridian
+Categories=Network;Utility;
+Terminal=false
