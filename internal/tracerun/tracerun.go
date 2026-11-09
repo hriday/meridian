@@ -6,6 +6,7 @@ package tracerun
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -66,6 +67,11 @@ func Run(ctx context.Context, target string, useV6 bool, onHop func(trace.Hop)) 
 	})
 	r.Hops = hops
 	r.Target = target
+	// A user-initiated Stop cancels the context; that is a clean stop, not an
+	// error — return the partial result so the UI shows what was found.
+	if errors.Is(err, context.Canceled) {
+		err = nil
+	}
 	r.Verdict = trace.Verdict(r)
 	return r, err
 }

@@ -44,3 +44,15 @@ func TestAppTraceroute(t *testing.T) {
 	require.Len(t, r.Hops, 3)
 	require.Equal(t, "13335", r.Hops[2].ASN)
 }
+
+func TestTraceCancelGenerations(t *testing.T) {
+	a := New()
+	aCanceled, bCanceled := false, false
+	genA := a.startTrace(func() { aCanceled = true })
+	a.startTrace(func() { bCanceled = true }) // starting B cancels A
+	require.True(t, aCanceled)
+
+	a.endTrace(genA) // A unwinding must NOT clear B's cancel
+	a.StopTrace()    // must still cancel B
+	require.True(t, bCanceled)
+}

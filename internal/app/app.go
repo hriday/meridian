@@ -21,6 +21,7 @@ type App struct {
 
 	traceMu     sync.Mutex
 	traceCancel context.CancelFunc
+	traceGen    int
 }
 
 // New returns a controller with no context; the context arrives at startup.

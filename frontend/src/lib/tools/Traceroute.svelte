@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from "svelte";
   import { Traceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
 
@@ -69,6 +70,13 @@
   function stop() {
     StopTrace();
   }
+
+  // If the tool is closed mid-trace, stop probing and drop the listener so the
+  // backend doesn't keep emitting events to a gone component.
+  onDestroy(() => {
+    EventsOff("trace:hop");
+    if (running) StopTrace();
+  });
 </script>
 
 <div class="tool">

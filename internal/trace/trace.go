@@ -58,10 +58,10 @@ func Run(ctx context.Context, dst netip.Addr, p Prober, opts Options, onHop func
 			}
 			from, rtt, got, err := p.Probe(ctx, dst, ttl, seq, opts.Timeout)
 			seq++
-			if err != nil {
-				return r, err
-			}
-			if from.IsValid() {
+			// A probe error (a transient send failure, a quoted ICMP error)
+			// is treated as a lost probe — a star — not as trace-fatal, so a
+			// single bad hop never discards the hops already found.
+			if err == nil && from.IsValid() {
 				hop.RTTs = append(hop.RTTs, rtt)
 				if !hopAddr.IsValid() {
 					hopAddr = from
@@ -70,7 +70,7 @@ func Run(ctx context.Context, dst netip.Addr, p Prober, opts Options, onHop func
 					reached = true
 				}
 			} else {
-				hop.RTTs = append(hop.RTTs, 0) // timed-out probe
+				hop.RTTs = append(hop.RTTs, 0) // timed-out / failed probe
 			}
 		}
 
