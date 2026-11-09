@@ -55,10 +55,12 @@ func TestRunLookupRoutesASN(t *testing.T) {
 	require.Contains(t, out.String(), "CLOUDFLARENET")
 }
 
-func TestRunLookupRejectsNonIPASN(t *testing.T) {
+func TestRunLookupRejectsUnrecognized(t *testing.T) {
+	// Domains/prefixes are now valid targets (slice 2); a value the recognizer
+	// can't parse (an incomplete ASN) is still rejected.
 	withFakeLookup(t)
 	var out, errb bytes.Buffer
-	code := Run([]string{"lookup", "example.com"}, &out, &errb)
+	code := Run([]string{"lookup", "as"}, &out, &errb)
 	require.NotEqual(t, 0, code)
 	require.NotEmpty(t, errb.String())
 }

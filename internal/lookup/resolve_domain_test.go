@@ -10,9 +10,9 @@ import (
 )
 
 func fakeDNS(t *testing.T, aRecord bool) {
-	old := dnsQueryFn
-	t.Cleanup(func() { dnsQueryFn = old })
-	dnsQueryFn = func(_ context.Context, name, rtype, _ string) (dnsx.Result, error) {
+	old := DNSQuery
+	t.Cleanup(func() { DNSQuery = old })
+	DNSQuery = func(_ context.Context, name, rtype, _ string) (dnsx.Result, error) {
 		if strings.Contains(name, "cymru") {
 			return dnsx.Result{Answers: []dnsx.Record{{Type: "TXT", Value: `"13335 | 104.16.0.0/13 | US | arin | x | CLOUDFLARENET, US"`}}}, nil
 		}

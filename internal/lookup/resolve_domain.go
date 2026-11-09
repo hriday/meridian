@@ -7,10 +7,10 @@ import (
 	"github.com/hriday/meridian/internal/dnsx"
 )
 
-// dnsQueryFn is the DNS query seam (tests inject a fake); dnsServer is the
+// DNSQuery is the DNS query seam (tests inject a fake); dnsServer is the
 // resolver domain lookups use.
 var (
-	dnsQueryFn = dnsx.Query
+	DNSQuery = dnsx.Query
 	dnsServer  = "1.1.1.1"
 )
 
@@ -42,7 +42,7 @@ func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, e
 	r.DNSSrc = Source{Label: "DNS · " + dnsServer, FetchedAt: now()}
 	var firstErr error
 	for _, rtype := range domainRecordTypes {
-		res, err := dnsQueryFn(ctx, name, rtype, dnsServer)
+		res, err := DNSQuery(ctx, name, rtype, dnsServer)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = err
@@ -63,7 +63,7 @@ func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, e
 	// Who hosts the resolved addresses (Team Cymru).
 	seen := map[string]bool{}
 	for _, ip := range r.ResolvesTo {
-		info, err := asnmap.Lookup(ctx, asnmap.QueryFunc(dnsQueryFn), ip)
+		info, err := asnmap.Lookup(ctx, asnmap.QueryFunc(DNSQuery), ip)
 		if err != nil || info.Owner == "" || seen[info.Owner] {
 			continue
 		}
