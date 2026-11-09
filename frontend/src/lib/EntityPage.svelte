@@ -66,7 +66,7 @@
       {#if data.registrar}<span class="sep">·</span><span>{data.registrar}</span>{/if}
     </div>
     <div class="hhead"><span class="htitle">{data.input}</span><span class="htag">Domain</span></div>
-    <p class="hsub">{#if data.resolvesTo?.length}Resolves to {data.resolvesTo.length} address{data.resolvesTo.length > 1 ? "es" : ""}{#if data.hostedBy?.length} · hosted by {data.hostedBy.join(", ")}{/if}{:else}No A/AAAA records{/if}</p>
+    <p class="hsub">{#if data.resolvesTo?.length}Resolves to {data.resolvesTo.length} address{data.resolvesTo.length > 1 ? "es" : ""}{#if data.hostedBy?.length} · hosted by {data.hostedBy.join(", ")}{/if}{:else if data.rcode === "NXDOMAIN"}This domain doesn't resolve (NXDOMAIN){:else}No A/AAAA records{#if data.rcode && data.rcode !== "NOERROR"} ({data.rcode}){/if}{/if}</p>
   {/if}
 
   <div class="actions"><button class="btn" on:click={copyJSON}>Copy as JSON</button></div>
@@ -177,7 +177,7 @@
         <div class="chead"><h3>DNS records</h3><span class="src">{chip(data.dnsSrc)}</span></div>
         {#if data.records?.length}
           <table class="rec mono"><tbody>{#each data.records as r}<tr><td class="rt">{r.type}</td><td>{r.name}</td><td class="rv">{r.value}</td></tr>{/each}</tbody></table>
-        {:else}<p class="dim">No records.</p>{/if}
+        {:else}<p class="dim">No records{#if data.rcode && data.rcode !== "NOERROR"} · {data.rcode}{/if}.</p>{/if}
       </div>
     </div>
   {:else}

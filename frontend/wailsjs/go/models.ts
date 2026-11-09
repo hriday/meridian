@@ -308,6 +308,7 @@ export namespace lookup {
 	}
 	export class DomainReport {
 	    input: string;
+	    rcode: string;
 	    records: dnsx.Record[];
 	    resolvesTo: string[];
 	    hostedBy: string[];
@@ -326,6 +327,7 @@ export namespace lookup {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.input = source["input"];
+	        this.rcode = source["rcode"];
 	        this.records = this.convertValues(source["records"], dnsx.Record);
 	        this.resolvesTo = source["resolvesTo"];
 	        this.hostedBy = source["hostedBy"];

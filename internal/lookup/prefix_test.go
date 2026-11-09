@@ -19,8 +19,9 @@ func TestRipePrefixOverview(t *testing.T) {
 }
 
 func TestRipeRelatedPrefixes(t *testing.T) {
+	// Relationship strings are the real RIPEstat values; Adjacency rows are dropped.
 	c := ripeServer(t, map[string]string{
-		"related-prefixes": `{"data":{"prefixes":[{"prefix":"104.16.0.0/12","relationship":"less-specific"},{"prefix":"104.16.123.0/24","relationship":"more-specific"}]}}`,
+		"related-prefixes": `{"data":{"prefixes":[{"prefix":"104.16.0.0/12","relationship":"Overlap - Less Specific"},{"prefix":"104.16.123.0/24","relationship":"Overlap - More Specific"},{"prefix":"104.15.255.0/24","relationship":"Adjacency - Left"}]}}`,
 	})
 	less, more, err := c.ripeRelatedPrefixes(context.Background(), "104.16.0.0/13")
 	require.NoError(t, err)
