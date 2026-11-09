@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/hriday/engineers_tools/internal/netinput"
+	"github.com/hriday/meridian/internal/netinput"
 	"github.com/stretchr/testify/require"
 )
 

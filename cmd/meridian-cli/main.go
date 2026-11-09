@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"github.com/hriday/engineers_tools/internal/cli"
+	"github.com/hriday/meridian/internal/cli"
 )
 
 func main() {

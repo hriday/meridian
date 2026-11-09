@@ -1,4 +1,4 @@
-module github.com/hriday/engineers_tools
+module github.com/hriday/meridian
 
 go 1.23
 

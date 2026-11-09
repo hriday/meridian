@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/hriday/engineers_tools/internal/netinput"
-	"github.com/hriday/engineers_tools/internal/subnet"
+	"github.com/hriday/meridian/internal/netinput"
+	"github.com/hriday/meridian/internal/subnet"
 )
 
 // These methods are bound to the frontend by Wails. Each is a thin

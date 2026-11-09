@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/hriday/engineers_tools/internal/cli"
-	"github.com/hriday/engineers_tools/internal/subnet"
+	"github.com/hriday/meridian/internal/cli"
+	"github.com/hriday/meridian/internal/subnet"
 	"github.com/stretchr/testify/require"
 )
 

@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Module path: `github.com/hriday/engineers_tools`. GUI binary: `meridian`. CLI binary: `meridian-cli`.
+- Module path: `github.com/hriday/meridian`. GUI binary: `meridian`. CLI binary: `meridian-cli`.
 - Licence header is not required per-file; repo is Apache 2.0 (one `LICENSE` file, Task 1).
 - Repo stays **private** until the v1 core is polished; do not add public-facing release steps.
 - IPv4 **and** IPv6 are first-class in every engine — no function may support one and not the other.
@@ -46,7 +46,7 @@ Spec-implied inputs no happy-path test exercises; each line's test is added to t
 
 - [ ] **Step 1: Initialize the Wails project**
 
-Run `wails init -n meridian -t svelte-ts` into a temp dir, then move its `frontend/`, `wails.json`, and template `main.go` into the repo root; set `go.mod` module to `github.com/hriday/engineers_tools`. Replace the generated `app.go` location with `internal/app/app.go` and update `main.go`'s import and `Bind` to use `app.New()`.
+Run `wails init -n meridian -t svelte-ts` into a temp dir, then move its `frontend/`, `wails.json`, and template `main.go` into the repo root; set `go.mod` module to `github.com/hriday/meridian`. Replace the generated `app.go` location with `internal/app/app.go` and update `main.go`'s import and `Bind` to use `app.New()`.
 
 - [ ] **Step 2: Write the failing test**
 

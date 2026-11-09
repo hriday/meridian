@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/hriday/engineers_tools/internal/netinput"
-	"github.com/hriday/engineers_tools/internal/subnet"
+	"github.com/hriday/meridian/internal/netinput"
+	"github.com/hriday/meridian/internal/subnet"
 )
 
 const usage = `meridian-cli — network info toolkit

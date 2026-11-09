@@ -3,7 +3,7 @@ package subnet_test
 import (
 	"testing"
 
-	"github.com/hriday/engineers_tools/internal/subnet"
+	"github.com/hriday/meridian/internal/subnet"
 	"github.com/stretchr/testify/require"
 )
 
