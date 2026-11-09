@@ -306,6 +306,56 @@ export namespace lookup {
 		    return a;
 		}
 	}
+	export class DomainReport {
+	    input: string;
+	    records: dnsx.Record[];
+	    resolvesTo: string[];
+	    hostedBy: string[];
+	    registrar: string;
+	    created: string;
+	    expires: string;
+	    dnssec: string;
+	    nameservers: string[];
+	    dnsSrc: Source;
+	    registrySrc: Source;
+	
+	    static createFrom(source: any = {}) {
+	        return new DomainReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.input = source["input"];
+	        this.records = this.convertValues(source["records"], dnsx.Record);
+	        this.resolvesTo = source["resolvesTo"];
+	        this.hostedBy = source["hostedBy"];
+	        this.registrar = source["registrar"];
+	        this.created = source["created"];
+	        this.expires = source["expires"];
+	        this.dnssec = source["dnssec"];
+	        this.nameservers = source["nameservers"];
+	        this.dnsSrc = this.convertValues(source["dnsSrc"], Source);
+	        this.registrySrc = this.convertValues(source["registrySrc"], Source);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class IPReport {
 	    input: string;
 	    version: string;
@@ -315,6 +365,7 @@ export namespace lookup {
 	    registeredOrg: string;
 	    abuseEmail: string;
 	    registry: string;
+	    rpkiState: string;
 	    routingNote: string;
 	    routingSrc: Source;
 	    registrySrc: Source;
@@ -333,9 +384,66 @@ export namespace lookup {
 	        this.registeredOrg = source["registeredOrg"];
 	        this.abuseEmail = source["abuseEmail"];
 	        this.registry = source["registry"];
+	        this.rpkiState = source["rpkiState"];
 	        this.routingNote = source["routingNote"];
 	        this.routingSrc = this.convertValues(source["routingSrc"], Source);
 	        this.registrySrc = this.convertValues(source["registrySrc"], Source);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PrefixReport {
+	    input: string;
+	    originAsn: string;
+	    originName: string;
+	    announced: boolean;
+	    registry: string;
+	    registeredOrg: string;
+	    abuseEmail: string;
+	    rpkiState: string;
+	    rpkiRoa: string;
+	    lessSpecific: string[];
+	    moreSpecific: string[];
+	    routingSrc: Source;
+	    registrySrc: Source;
+	    rpkiSrc: Source;
+	
+	    static createFrom(source: any = {}) {
+	        return new PrefixReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.input = source["input"];
+	        this.originAsn = source["originAsn"];
+	        this.originName = source["originName"];
+	        this.announced = source["announced"];
+	        this.registry = source["registry"];
+	        this.registeredOrg = source["registeredOrg"];
+	        this.abuseEmail = source["abuseEmail"];
+	        this.rpkiState = source["rpkiState"];
+	        this.rpkiRoa = source["rpkiRoa"];
+	        this.lessSpecific = source["lessSpecific"];
+	        this.moreSpecific = source["moreSpecific"];
+	        this.routingSrc = this.convertValues(source["routingSrc"], Source);
+	        this.registrySrc = this.convertValues(source["registrySrc"], Source);
+	        this.rpkiSrc = this.convertValues(source["rpkiSrc"], Source);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

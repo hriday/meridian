@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get } from "svelte/store";
-  import { Classify, LookupIP, LookupASN } from "../../../wailsjs/go/app/App.js";
+  import { Classify, LookupIP, LookupASN, LookupPrefix, LookupDomain } from "../../../wailsjs/go/app/App.js";
   import { Kind, kindLabel } from "../kinds";
   import EntityPage from "../EntityPage.svelte";
   import { requestedTool } from "../nav";
@@ -8,7 +8,7 @@
   let query = "1.1.1.1";
   let busy = false;
   let error = "";
-  let kind: "ip" | "asn" | null = null;
+  let kind: "ip" | "asn" | "prefix" | "domain" | null = null;
   let report: any = null;
 
   async function run(value?: string) {
@@ -28,10 +28,16 @@
       } else if (r.Kind === Kind.ASN) {
         report = await LookupASN(r.Normalized);
         kind = "asn";
+      } else if (r.Kind === Kind.PrefixV4 || r.Kind === Kind.PrefixV6) {
+        report = await LookupPrefix(r.Normalized);
+        kind = "prefix";
+      } else if (r.Kind === Kind.Domain || r.Kind === Kind.Hostname) {
+        report = await LookupDomain(r.Normalized);
+        kind = "domain";
       } else {
         report = null;
         kind = null;
-        error = `Enter an IP address or ASN — “${v}” looks like a ${kindLabel(r.Kind)}.`;
+        error = `Couldn't recognize “${v}” as an IP, ASN, prefix, or domain.`;
       }
     } catch (e) {
       report = null;
@@ -60,7 +66,7 @@
     <input
       class="field mono"
       bind:value={query}
-      placeholder="1.1.1.1   ·   2606:4700::   ·   AS13335"
+      placeholder="1.1.1.1  ·  AS13335  ·  104.16.0.0/13  ·  cloudflare.com"
       autocomplete="off"
       spellcheck="false"
       aria-label="IP address or ASN"
