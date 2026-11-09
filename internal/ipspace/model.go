@@ -92,7 +92,15 @@ func replay(events []Event) map[string]Record {
 func buildTree(records map[string]Record) []TreeNode {
 	childrenOf := map[string][]Record{}
 	for _, r := range records {
-		childrenOf[r.ParentID] = append(childrenOf[r.ParentID], r)
+		// A record whose parent no longer exists (the parent was deleted) is
+		// surfaced as a root rather than vanishing from the tree.
+		parent := r.ParentID
+		if parent != "" {
+			if _, ok := records[parent]; !ok {
+				parent = ""
+			}
+		}
+		childrenOf[parent] = append(childrenOf[parent], r)
 	}
 	var build func(parentID string) []TreeNode
 	build = func(parentID string) []TreeNode {

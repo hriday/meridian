@@ -40,6 +40,19 @@ func TestBuildTreeNesting(t *testing.T) {
 	require.Equal(t, "C", tree[0].Children[1].Record.ID)
 }
 
+func TestBuildTreeSurfacesOrphans(t *testing.T) {
+	// B's parent A was deleted; B (and its subtree) must still show, as a root.
+	m := map[string]Record{
+		"B": {ID: "B", Prefix: "10.1.0.0/16", ParentID: "A"},
+		"C": {ID: "C", Prefix: "10.1.10.0/24", ParentID: "B"},
+	}
+	tree := buildTree(m)
+	require.Len(t, tree, 1)
+	require.Equal(t, "B", tree[0].Record.ID)
+	require.Len(t, tree[0].Children, 1)
+	require.Equal(t, "C", tree[0].Children[0].Record.ID)
+}
+
 func TestReplayDeleteUnknownIsNoop(t *testing.T) {
 	require.Len(t, replay([]Event{{Type: "delete", Record: Record{ID: "ghost"}}}), 0)
 }
