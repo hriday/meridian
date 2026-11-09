@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { get } from "svelte/store";
   import { Classify, LookupIP, LookupASN } from "../../../wailsjs/go/app/App.js";
   import { Kind, kindLabel } from "../kinds";
   import EntityPage from "../EntityPage.svelte";
+  import { requestedTool } from "../nav";
 
   let query = "1.1.1.1";
   let busy = false;
@@ -43,7 +45,13 @@
     run(value);
   }
 
-  // Resolve the default value on mount so the panel is never empty.
+  // If pivoted here from another tool, look that value up instead.
+  const req = get(requestedTool);
+  if (req && req.tool === "lookup" && req.value) {
+    query = req.value;
+    requestedTool.set(null);
+  }
+  // Resolve the default (or pivoted) value on mount so the panel is never empty.
   run();
 </script>
 

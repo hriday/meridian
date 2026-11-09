@@ -14,6 +14,50 @@ export function DNSSystem() {
   return window['go']['app']['App']['DNSSystem']();
 }
 
+export function IPSpaceAdd(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['IPSpaceAdd'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function IPSpaceCreate(arg1) {
+  return window['go']['app']['App']['IPSpaceCreate'](arg1);
+}
+
+export function IPSpaceDelete(arg1) {
+  return window['go']['app']['App']['IPSpaceDelete'](arg1);
+}
+
+export function IPSpaceEdit(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['IPSpaceEdit'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function IPSpaceExportCSV() {
+  return window['go']['app']['App']['IPSpaceExportCSV']();
+}
+
+export function IPSpaceHistory() {
+  return window['go']['app']['App']['IPSpaceHistory']();
+}
+
+export function IPSpaceImportCSV(arg1) {
+  return window['go']['app']['App']['IPSpaceImportCSV'](arg1);
+}
+
+export function IPSpaceStatus() {
+  return window['go']['app']['App']['IPSpaceStatus']();
+}
+
+export function IPSpaceTree() {
+  return window['go']['app']['App']['IPSpaceTree']();
+}
+
+export function IPSpaceUndo() {
+  return window['go']['app']['App']['IPSpaceUndo']();
+}
+
+export function IPSpaceUnlock(arg1) {
+  return window['go']['app']['App']['IPSpaceUnlock'](arg1);
+}
+
 export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }

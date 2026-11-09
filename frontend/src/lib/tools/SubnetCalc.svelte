@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { get } from "svelte/store";
   import { Classify, SubnetDescribe, SubnetSplit } from "../../../wailsjs/go/app/App.js";
   import { subnet } from "../../../wailsjs/go/models";
   import { isPrefix, kindLabel } from "../kinds";
+  import { requestedTool } from "../nav";
 
   let query = "10.0.0.0/24";
   let info: subnet.Info | null = null;
@@ -45,7 +47,13 @@
     }
   }
 
-  // Describe the default on first mount so the panel is never empty.
+  // If pivoted here from another tool, describe that value instead.
+  const req = get(requestedTool);
+  if (req && req.tool === "subnet" && req.value) {
+    query = req.value;
+    requestedTool.set(null);
+  }
+  // Describe the default (or pivoted value) on first mount so the panel is never empty.
   run();
 </script>
 

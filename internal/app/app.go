@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 )
 
@@ -22,12 +23,18 @@ type App struct {
 	traceMu     sync.Mutex
 	traceCancel context.CancelFunc
 	traceGen    int
+
+	ipPath     string
+	ipPass     string
+	ipStore    *ipspace.Store
+	ipUnlocked bool
 }
 
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
 	return &App{
 		lookup: lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
+		ipPath: ipspace.DefaultPath(),
 	}
 }
 

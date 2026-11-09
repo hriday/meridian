@@ -4,7 +4,9 @@
   import Traceroute from "./tools/Traceroute.svelte";
   import Ntp from "./tools/Ntp.svelte";
   import Dns from "./tools/Dns.svelte";
+  import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
+  import { requestedTool } from "./nav";
 
   type Tool = { id: string; name: string; group: string; ready: boolean };
   const tools: Tool[] = [
@@ -12,7 +14,7 @@
     { id: "trace", name: "Traceroute (AS)", group: "Internet", ready: true },
     { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: false },
     { id: "subnet", name: "Subnet calculator", group: "Addressing", ready: true },
-    { id: "ipspace", name: "IP space", group: "Addressing", ready: false },
+    { id: "ipspace", name: "IP space", group: "Addressing", ready: true },
     { id: "ntp", name: "NTP", group: "Local / environment", ready: true },
     { id: "dns", name: "DNS", group: "Local / environment", ready: true },
     { id: "ping", name: "Ping sweep", group: "Local network", ready: false },
@@ -60,6 +62,9 @@
   function toggleGroup(g: string) {
     closed = { ...closed, [g]: !closed[g] };
   }
+
+  // A tool pivot (e.g. from IP space → Subnet calc) switches the active tool.
+  $: if ($requestedTool) active = $requestedTool.tool;
 
   $: visible = (g: string) =>
     tools.filter((t) => t.group === g && t.name.toLowerCase().includes(filter.toLowerCase()));
@@ -128,7 +133,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{/if}
     </main>
   </div>
 </div>

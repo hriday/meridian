@@ -1,0 +1,273 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import {
+    IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
+    IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
+  } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
+
+  let phase: "loading" | "create" | "locked" | "ready" = "loading";
+  let pass = "", pass2 = "", gateErr = "";
+  let tree: any[] = [], history: any[] = [];
+  let selected: any = null;
+  let showAdd = false, addErr = "", addMsg = "";
+  let form = { prefix: "", name: "", status: "active", tags: "", notes: "" };
+  let editing = false, editForm = { name: "", status: "active", tags: "", notes: "" };
+  let showCsv = false, importText = "", exportText = "", importReport: any = null, csvErr = "";
+
+  // Flatten the tree into rows with a depth, for rendering.
+  function flatten(nodes: any[], depth = 0, out: any[] = []): any[] {
+    for (const n of nodes ?? []) {
+      out.push({ rec: n.record, depth });
+      flatten(n.children, depth + 1, out);
+    }
+    return out;
+  }
+  $: rows = flatten(tree);
+
+  async function init() {
+    const s = await IPSpaceStatus();
+    phase = s.exists ? "locked" : "create";
+  }
+  async function create() {
+    gateErr = "";
+    if (pass.length < 6) { gateErr = "Use a passphrase of at least 6 characters."; return; }
+    if (pass !== pass2) { gateErr = "The passphrases don't match."; return; }
+    try { await IPSpaceCreate(pass); pass = pass2 = ""; phase = "ready"; await refresh(); }
+    catch (e) { gateErr = String(e); }
+  }
+  async function unlock() {
+    gateErr = "";
+    try { await IPSpaceUnlock(pass); pass = ""; phase = "ready"; await refresh(); }
+    catch (e) { gateErr = String(e); }
+  }
+  async function refresh() {
+    tree = await IPSpaceTree();
+    history = (await IPSpaceHistory()).slice().reverse();
+    if (selected) selected = findRec(rows, selected.id);
+  }
+  function findRec(list: any[], id: string) { return (list.find((r) => r.rec.id === id) || {}).rec || null; }
+  function select(rec: any) { selected = rec; editing = false; }
+
+  async function doAdd() {
+    addErr = ""; addMsg = "";
+    try {
+      const tags = form.tags.split(",").map((s) => s.trim()).filter(Boolean);
+      const rec = await IPSpaceAdd(form.prefix.trim(), form.name.trim(), form.status, tags, form.notes);
+      addMsg = `Added ${rec.prefix}${rec.parentId ? " — nested under its enclosing block" : " at top level"}.`;
+      form = { prefix: "", name: "", status: "active", tags: "", notes: "" };
+      showAdd = false;
+      await refresh();
+    } catch (e) { addErr = String(e); }
+  }
+  function startEdit() {
+    editing = true;
+    editForm = { name: selected.name, status: selected.status, tags: (selected.tags || []).join(", "), notes: selected.notes };
+  }
+  async function saveEdit() {
+    try {
+      const tags = editForm.tags.split(",").map((s) => s.trim()).filter(Boolean);
+      await IPSpaceEdit(selected.id, editForm.name, editForm.status, tags, editForm.notes);
+      editing = false; await refresh();
+    } catch (e) { addErr = String(e); }
+  }
+  async function del() { if (!selected) return; try { await IPSpaceDelete(selected.id); selected = null; await refresh(); } catch (e) { addErr = String(e); } }
+  async function undo() { try { await IPSpaceUndo(); selected = null; await refresh(); } catch (e) {} }
+  function pivot(tool: string) {
+    if (!selected) return;
+    // Lookup takes an IP/ASN (prefix pages come later), so pass the base address.
+    const value = tool === "lookup" ? selected.prefix.split("/")[0] : selected.prefix;
+    requestedTool.set({ tool, value });
+  }
+
+  async function openExport() { exportText = await IPSpaceExportCSV(); showCsv = true; importReport = null; csvErr = ""; }
+  async function doImport() {
+    csvErr = "";
+    try { importReport = await IPSpaceImportCSV(importText); await refresh(); }
+    catch (e) { csvErr = String(e); }
+  }
+
+  onMount(init);
+</script>
+
+<div class="tool">
+  {#if phase === "loading"}
+    <p class="muted">Loading…</p>
+
+  {:else if phase === "create"}
+    <div class="gate">
+      <h2>Create your IP-space store</h2>
+      <p class="sub">It's encrypted on disk with this passphrase. <b>There's no recovery</b> — if you lose it, the records are gone.</p>
+      <input class="field" type="password" placeholder="Passphrase (≥ 6 chars)" bind:value={pass} />
+      <input class="field" type="password" placeholder="Confirm passphrase" bind:value={pass2} on:keydown={(e) => e.key === "Enter" && create()} />
+      {#if gateErr}<div class="err">{gateErr}</div>{/if}
+      <button class="btn" on:click={create}>Create store</button>
+    </div>
+
+  {:else if phase === "locked"}
+    <div class="gate">
+      <h2>Unlock IP space</h2>
+      <p class="sub">Enter the passphrase for your encrypted store.</p>
+      <input class="field" type="password" placeholder="Passphrase" bind:value={pass} on:keydown={(e) => e.key === "Enter" && unlock()} />
+      {#if gateErr}<div class="err">{gateErr}</div>{/if}
+      <button class="btn" on:click={unlock}>Unlock</button>
+    </div>
+
+  {:else}
+    <div class="toolbar">
+      <button class="btn" on:click={() => { showAdd = !showAdd; addErr = ""; addMsg = ""; }}>+ Add block</button>
+      <button class="btn ghost" on:click={undo} disabled={!history.length}>Undo</button>
+      <button class="btn ghost" on:click={openExport}>CSV…</button>
+      <span class="lock">🔓 Unlocked · encrypted at rest</span>
+    </div>
+
+    {#if addMsg}<div class="ok">{addMsg}</div>{/if}
+
+    {#if showAdd}
+      <div class="card addcard">
+        <div class="form">
+          <label>CIDR or address<input class="field mono" bind:value={form.prefix} placeholder="10.1.0.0/24  or  10.1.10.5" /></label>
+          <label>Name<input class="field" bind:value={form.name} placeholder="HQ servers" /></label>
+          <label>Status
+            <select class="field" bind:value={form.status}><option>active</option><option>reserved</option><option>deprecated</option></select>
+          </label>
+          <label>Tags (comma)<input class="field" bind:value={form.tags} placeholder="prod, servers" /></label>
+          <label class="wide">Notes<input class="field" bind:value={form.notes} /></label>
+        </div>
+        {#if addErr}<div class="err">{addErr}</div>{/if}
+        <div class="formbtns">
+          <button class="btn" on:click={doAdd}>Save</button>
+          <button class="btn ghost" on:click={() => (showAdd = false)}>Cancel</button>
+          <span class="hint">Overlaps nest automatically; duplicates are rejected. Saved as an undoable event.</span>
+        </div>
+      </div>
+    {/if}
+
+    {#if showCsv}
+      <div class="card">
+        <div class="chead"><h3>CSV</h3><button class="x" on:click={() => (showCsv = false)}>✕</button></div>
+        <p class="lbl">Export (copy this):</p>
+        <textarea class="field mono" rows="4" readonly>{exportText}</textarea>
+        <p class="lbl">Import (paste rows: prefix,name,status,tags,notes):</p>
+        <textarea class="field mono" rows="4" bind:value={importText}></textarea>
+        <div class="formbtns"><button class="btn" on:click={doImport}>Import</button></div>
+        {#if csvErr}<div class="err">{csvErr}</div>{/if}
+        {#if importReport}<div class="ok">Imported {importReport.added}, skipped {importReport.skipped}.{#if importReport.errors?.length} ({importReport.errors.length} errors){/if}</div>{/if}
+      </div>
+    {/if}
+
+    <div class="cols">
+      <div class="card">
+        <div class="chead"><h3>Your IP space</h3><span class="pill">{rows.length} records</span></div>
+        {#if !rows.length}
+          <p class="muted">No records yet — add a block to get started.</p>
+        {:else}
+          <div class="tree">
+            {#each rows as r}
+              <button class="node" class:sel={selected && selected.id === r.rec.id} style={`padding-left:${6 + r.depth * 18}px`} on:click={() => select(r.rec)}>
+                <span class="cidr mono">{r.rec.prefix}</span>
+                <span class="nm">{r.rec.name}</span>
+                <span class="st pill {r.rec.status}">{r.rec.status}</span>
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+        {#if selected}
+          <div class="card">
+            <div class="chead"><h3>{selected.prefix}</h3></div>
+            <div class="acts">
+              {#if !editing}<button class="btn ghost sm" on:click={startEdit}>Edit</button>{/if}
+              <button class="btn ghost sm" on:click={() => { form.prefix = selected.prefix.split("/")[0] + "/"; showAdd = true; }}>Add child</button>
+              <button class="btn ghost sm" on:click={() => pivot("subnet")}>Subnet calc ↗</button>
+              <button class="btn ghost sm" on:click={() => pivot("lookup")}>Look up ↗</button>
+              <button class="btn ghost sm danger" on:click={del}>Delete</button>
+            </div>
+            {#if editing}
+              <div class="form" style="margin-top:4px">
+                <label>Name<input class="field" bind:value={editForm.name} /></label>
+                <label>Status<select class="field" bind:value={editForm.status}><option>active</option><option>reserved</option><option>deprecated</option></select></label>
+                <label>Tags<input class="field" bind:value={editForm.tags} /></label>
+                <label class="wide">Notes<input class="field" bind:value={editForm.notes} /></label>
+              </div>
+              <div class="formbtns"><button class="btn" on:click={saveEdit}>Save</button><button class="btn ghost" on:click={() => (editing = false)}>Cancel</button></div>
+            {:else}
+              <dl>
+                <dt>Name</dt><dd>{selected.name || "—"}</dd>
+                <dt>Status</dt><dd><span class="pill {selected.status}">{selected.status}</span></dd>
+                <dt>Tags</dt><dd>{(selected.tags || []).join(" · ") || "—"}</dd>
+                <dt>Added by</dt><dd class="mono">{selected.createdBy}</dd>
+                <dt>Last change</dt><dd class="mono">{selected.changedBy}</dd>
+                <dt>Notes</dt><dd>{selected.notes || "—"}</dd>
+              </dl>
+            {/if}
+          </div>
+        {/if}
+        <div class="card">
+          <div class="chead"><h3>Change log</h3><span class="pill">append-only</span></div>
+          {#if !history.length}<p class="muted">No changes yet.</p>{:else}
+            <div class="log">
+              {#each history.slice(0, 12) as e}
+                <div class="logrow"><span class="who mono">{e.actor}</span> <span class="act">{e.type} {e.record.prefix || e.record.id}</span></div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+</div>
+
+<style>
+  .tool { padding: 14px 18px 40px; }
+  h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; color: var(--text-strong); }
+  .sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 12px; }
+  .muted { color: var(--text-dim); font-size: 0.85rem; }
+  .gate { max-width: 420px; display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .field { background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 8px 11px; color: var(--text); font-size: 0.88rem; outline: none; width: 100%; font-family: var(--font-sans); }
+  .field.mono { font-family: var(--font-mono); }
+  .field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  textarea.field { resize: vertical; }
+  .btn { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 7px 14px; font: inherit; font-size: 0.84rem; cursor: pointer; }
+  .btn.ghost { background: var(--card); border-color: var(--field-border); color: var(--text); }
+  .btn.sm { padding: 3px 10px; font-size: 0.78rem; }
+  .btn.danger { color: var(--bad, #ff6b6b); border-color: transparent; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .lock { margin-left: auto; font-size: 0.74rem; color: var(--good, #5ad17a); border: 1px solid var(--border); border-radius: 20px; padding: 3px 11px; }
+  .err { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); border-radius: 7px; padding: 8px 11px; font-size: 0.82rem; }
+  .ok { background: var(--good-bg, #102516); color: var(--good, #5ad17a); border-radius: 7px; padding: 7px 11px; font-size: 0.82rem; margin-bottom: 10px; }
+  .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px 14px; }
+  .addcard { margin-bottom: 14px; }
+  .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+  .chead h3 { margin: 0; font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; }
+  .x { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; }
+  .lbl { color: var(--text-dim); font-size: 0.72rem; margin: 8px 0 3px; }
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  @media (max-width: 700px) { .form { grid-template-columns: 1fr; } }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); }
+  .form .wide { grid-column: 1 / -1; }
+  .formbtns { display: flex; align-items: center; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  .hint { color: var(--text-faint); font-size: 0.72rem; }
+  .cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .tree { display: flex; flex-direction: column; }
+  .node { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 5px 6px; border-radius: 6px; cursor: pointer; font: inherit; }
+  .node:hover { background: var(--hover); } .node.sel { background: var(--active); }
+  .node .cidr { color: var(--text-strong); font-size: 0.82rem; }
+  .node .nm { color: var(--text-dim); font-size: 0.82rem; }
+  .node .st { margin-left: auto; }
+  .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 11px; }
+  dl { display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
+  dt { color: var(--text-dim); } dd { margin: 0; color: var(--text); }
+  .pill { display: inline-flex; font-size: 0.64rem; padding: 1px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-dim); }
+  .pill.active { color: var(--good, #5ad17a); border-color: transparent; background: var(--good-bg, #102516); }
+  .pill.reserved { color: var(--accent); border-color: var(--accent); }
+  .pill.deprecated { color: var(--text-faint); }
+  .log { font-size: 0.8rem; }
+  .logrow { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+  .logrow .who { color: var(--text-strong); } .logrow .act { color: var(--text-dim); }
+  .mono { font-family: var(--font-mono); }
+</style>

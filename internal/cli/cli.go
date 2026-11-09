@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/hriday/meridian/internal/dnsx"
+	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
@@ -44,6 +46,7 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -66,6 +69,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "ipspace":
+		return runIPSpace(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
@@ -349,6 +354,51 @@ func traceRTT(d []time.Duration) (min, avg, max time.Duration) {
 		return 0, 0, 0
 	}
 	return min, sum / time.Duration(n), max
+}
+
+func runIPSpace(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprintf(stderr, "ipspace needs a subcommand (list or export)\n%s", usage)
+		return 2
+	}
+	sub := args[0]
+	fs := flag.NewFlagSet("ipspace", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	file := fs.String("file", ipspace.DefaultPath(), "store file path")
+	pass := fs.String("passphrase", "", "store passphrase (or MERIDIAN_PASSPHRASE)")
+	if err := fs.Parse(args[1:]); err != nil {
+		return 2
+	}
+	passphrase := *pass
+	if passphrase == "" {
+		passphrase = os.Getenv("MERIDIAN_PASSPHRASE")
+	}
+	events, err := ipspace.Load(*file, passphrase)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	store := ipspace.FromEvents(ipspace.Actor(), events)
+	switch sub {
+	case "list":
+		for _, r := range store.Records() {
+			name := r.Name
+			if name == "" {
+				name = "—"
+			}
+			fmt.Fprintf(stdout, "%-20s %-10s %s\n", r.Prefix, r.Status, name)
+		}
+		return 0
+	case "export":
+		if err := store.ExportCSV(stdout); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		return 0
+	default:
+		fmt.Fprintf(stderr, "unknown ipspace subcommand %q (want list or export)\n", sub)
+		return 2
+	}
 }
 
 func writeJSON(stdout, stderr io.Writer, v any) int {
