@@ -1,10 +1,11 @@
 <script lang="ts">
   import SubnetCalc from "./tools/SubnetCalc.svelte";
+  import Lookup from "./tools/Lookup.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
 
   type Tool = { id: string; name: string; group: string; ready: boolean };
   const tools: Tool[] = [
-    { id: "lookup", name: "Lookup", group: "Internet", ready: false },
+    { id: "lookup", name: "Lookup", group: "Internet", ready: true },
     { id: "trace", name: "Traceroute (AS)", group: "Internet", ready: false },
     { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: false },
     { id: "subnet", name: "Subnet calculator", group: "Addressing", ready: true },
@@ -14,25 +15,57 @@
   ];
   const groups = [...new Set(tools.map((t) => t.group))];
 
-  let active = "subnet";
+  // Per-viewer UI state, persisted best-effort (storage may be blocked).
+  function load<T>(key: string, fallback: T): T {
+    try {
+      const v = localStorage.getItem(key);
+      return v == null ? fallback : (JSON.parse(v) as T);
+    } catch {
+      return fallback;
+    }
+  }
+  function save(key: string, val: unknown) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  let active = load<string>("meridian.activeTool", "lookup");
+  if (!tools.find((t) => t.id === active && t.ready)) active = "lookup";
+  let sideCollapsed = load<boolean>("meridian.sideCollapsed", false);
+  let closed = load<Record<string, boolean>>("meridian.closedGroups", {});
+
+  $: save("meridian.activeTool", active);
+  $: save("meridian.sideCollapsed", sideCollapsed);
+  $: save("meridian.closedGroups", closed);
+
   let searchEl: HTMLInputElement;
   let filter = "";
 
   function onKey(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
+      sideCollapsed = false;
       searchEl?.focus();
     }
   }
 
+  function toggleGroup(g: string) {
+    closed = { ...closed, [g]: !closed[g] };
+  }
+
   $: visible = (g: string) =>
     tools.filter((t) => t.group === g && t.name.toLowerCase().includes(filter.toLowerCase()));
+  $: activeTool = tools.find((t) => t.id === active);
 </script>
 
 <svelte:window on:keydown={onKey} />
 
 <div class="wb">
   <header class="bar">
+    <button class="icon" on:click={() => (sideCollapsed = !sideCollapsed)} title="Toggle sidebar" aria-label="Toggle sidebar">☰</button>
     <span class="brand">
       <svg class="mark" viewBox="0 0 64 64" width="19" height="19" fill="none"
         stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true">
@@ -47,8 +80,8 @@
       bind:this={searchEl}
       bind:value={filter}
       class="search mono"
-      placeholder="Search tools, IPs, ASNs…"
-      aria-label="Search"
+      placeholder="Search tools…"
+      aria-label="Search tools"
     />
     <kbd>⌘K</kbd>
     <button
@@ -63,28 +96,34 @@
   </header>
 
   <div class="body">
-    <nav class="side">
-      {#each groups as g}
-        {#if visible(g).length}
-          <div class="grp">{g}</div>
-          {#each visible(g) as t}
-            <button
-              class="item"
-              class:on={active === t.id}
-              class:disabled={!t.ready}
-              on:click={() => t.ready && (active = t.id)}
-              title={t.ready ? t.name : `${t.name} — coming soon`}
-            >
-              {t.name}{#if !t.ready}<span class="soon">soon</span>{/if}
+    {#if !sideCollapsed}
+      <nav class="side">
+        {#each groups as g}
+          {#if visible(g).length}
+            <button class="grp" on:click={() => toggleGroup(g)}>
+              <span class="caret">{closed[g] && !filter ? "▸" : "▾"}</span>{g}
             </button>
-          {/each}
-        {/if}
-      {/each}
-    </nav>
+            {#if !(closed[g] && !filter)}
+              {#each visible(g) as t}
+                <button
+                  class="item"
+                  class:on={active === t.id}
+                  class:disabled={!t.ready}
+                  on:click={() => t.ready && (active = t.id)}
+                  title={t.ready ? t.name : `${t.name} — coming soon`}
+                >
+                  {t.name}{#if !t.ready}<span class="soon">soon</span>{/if}
+                </button>
+              {/each}
+            {/if}
+          {/if}
+        {/each}
+      </nav>
+    {/if}
 
     <main class="main">
-      <div class="tabs"><div class="tab on">Subnet calculator</div></div>
-      {#if active === "subnet"}<SubnetCalc />{/if}
+      <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
+      {#if active === "lookup"}<Lookup />{:else if active === "subnet"}<SubnetCalc />{/if}
     </main>
   </div>
 </div>
@@ -95,6 +134,11 @@
     display: flex; align-items: center; gap: 10px; padding: 8px 12px;
     background: var(--bar); border-bottom: 1px solid var(--border);
   }
+  .icon {
+    background: none; border: none; color: var(--text-dim); font-size: 1rem; cursor: pointer;
+    padding: 2px 6px; border-radius: 6px; line-height: 1;
+  }
+  .icon:hover { color: var(--text-strong); background: var(--hover); }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; letter-spacing: .02em; color: var(--text-strong); }
   .brand .mark { color: var(--accent); flex: none; }
   .search {
@@ -120,9 +164,13 @@
     padding: 8px; overflow-y: auto;
   }
   .grp {
+    display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
+    background: none; border: none; cursor: pointer;
     color: var(--text-faint2); font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em;
-    margin: 12px 8px 4px;
+    margin: 12px 0 4px; padding: 2px 8px;
   }
+  .grp:hover { color: var(--text-dim); }
+  .caret { font-size: 0.6rem; width: 9px; }
   .item {
     display: flex; align-items: center; justify-content: space-between; width: 100%;
     text-align: left; background: none; border: none; color: var(--item-text);

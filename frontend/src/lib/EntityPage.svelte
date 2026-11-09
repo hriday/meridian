@@ -1,0 +1,161 @@
+<script lang="ts">
+  export let type: "ip" | "asn";
+  export let data: any;
+  export let onpivot: (value: string) => void = () => {};
+
+  let tab: "overview" | "registry" = "overview";
+  // Reset to Overview whenever a new entity loads.
+  $: if (data) tab = "overview";
+
+  function ago(ts: string): string {
+    if (!ts) return "";
+    const d = (Date.now() - new Date(ts).getTime()) / 1000;
+    if (isNaN(d)) return "";
+    if (d < 60) return `${Math.max(0, Math.round(d))}s ago`;
+    if (d < 3600) return `${Math.round(d / 60)}m ago`;
+    return `${Math.round(d / 3600)}h ago`;
+  }
+  function chip(src: any): string {
+    if (!src) return "";
+    if (src.err) return `${src.label}: unavailable`;
+    return `${src.label} · ${ago(src.fetchedAt)}`;
+  }
+  async function copyJSON() {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    } catch (_) {
+      /* clipboard blocked; ignore */
+    }
+  }
+</script>
+
+<div class="entity">
+  {#if type === "ip"}
+    <div class="crumbs">
+      <span class="cur mono">{data.input}</span>
+      {#if data.coveringPrefix}<span class="sep">›</span><span class="mono">{data.coveringPrefix}</span>{/if}
+      {#if data.originAsn}<span class="sep">›</span><button class="piv mono" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button>{/if}
+      {#if data.registry}<span class="sep">·</span><span>{data.registry}</span>{/if}
+    </div>
+    <div class="hhead"><span class="htitle mono">{data.input}</span><span class="htag">{data.version}</span></div>
+    <p class="hsub">
+      {#if data.originName}Announced by {data.originAsn} · {data.originName}{:else if data.routingNote}{data.routingNote}{:else}No global routing seen{/if}
+    </p>
+  {:else}
+    <div class="crumbs">
+      <span class="cur mono">{data.asn}</span>
+      {#if data.holder}<span class="sep">·</span><span>{data.holder}</span>{/if}
+      {#if data.registry}<span class="sep">›</span><span>{data.registry}</span>{/if}
+    </div>
+    <div class="hhead"><span class="htitle mono">{data.asn}</span><span class="htag">Autonomous System</span></div>
+    <p class="hsub">{data.holder || "Autonomous system"}{#if data.registry} · registered via {data.registry}{/if}</p>
+  {/if}
+
+  <div class="actions"><button class="btn" on:click={copyJSON}>Copy as JSON</button></div>
+
+  <div class="tabbar">
+    <button class="tab" class:on={tab === "overview"} on:click={() => (tab = "overview")}>Overview</button>
+    <button class="tab" class:on={tab === "registry"} on:click={() => (tab = "registry")}>Registry</button>
+    <span class="tab dis">Routing <span class="soon">soon</span></span>
+    <span class="tab dis">DNS <span class="soon">soon</span></span>
+    <span class="tab dis">Reachability <span class="soon">soon</span></span>
+  </div>
+
+  {#if type === "ip"}
+    {#if tab === "overview"}
+      <div class="cards">
+        <div class="card hero span">
+          <div class="chead">
+            <h3>Who owns this</h3>
+            <span class="srcs">
+              <span class="src">{chip(data.routingSrc)}</span>
+              <span class="src">{chip(data.registrySrc)}</span>
+            </span>
+          </div>
+          <dl class="mono">
+            {#if data.coveringPrefix}<dt>Covering prefix</dt><dd class="big">{data.coveringPrefix}</dd>{/if}
+            {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
+            {#if data.registeredOrg}<dt>Registered org</dt><dd>{data.registeredOrg}{#if data.registry} <span class="pill">{data.registry}</span>{/if}</dd>{/if}
+            {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}
+            {#if data.routingNote}<dt>Note</dt><dd class="dim">{data.routingNote}</dd>{/if}
+          </dl>
+          {#if data.routingSrc?.err}<p class="err">Routing data unavailable: {data.routingSrc.err}</p>{/if}
+          {#if data.registrySrc?.err}<p class="err">Registry data unavailable: {data.registrySrc.err}</p>{/if}
+        </div>
+        <div class="card">
+          <div class="chead"><h3>Routing</h3><span class="src">{chip(data.routingSrc)}</span></div>
+          <dl class="mono">
+            <dt>Origin AS</dt><dd>{data.originAsn || "—"}</dd>
+            <dt>Prefix</dt><dd>{data.coveringPrefix || "—"}</dd>
+            <dt>RPKI</dt><dd><span class="pill soon">soon</span></dd>
+          </dl>
+          {#if data.routingSrc?.err}<p class="err">Routing data unavailable: {data.routingSrc.err}</p>{/if}
+        </div>
+      </div>
+    {:else}
+      <div class="cards"><div class="card span">
+        <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
+        <dl class="mono">
+          <dt>Organization</dt><dd>{data.registeredOrg || "—"}</dd>
+          <dt>Registry</dt><dd>{data.registry || "—"}</dd>
+          <dt>Abuse</dt><dd>{data.abuseEmail || "—"}</dd>
+        </dl>
+      </div></div>
+    {/if}
+  {:else if tab === "overview"}
+    <div class="cards">
+      <div class="card hero span">
+        <div class="chead"><h3>Autonomous System</h3><span class="src">{chip(data.routingSrc)}</span></div>
+        <dl class="mono">
+          <dt>Holder</dt><dd class="big">{data.holder || "—"}</dd>
+          <dt>Prefixes (v4)</dt><dd>{data.v4Prefixes} announced</dd>
+          <dt>Prefixes (v6)</dt><dd>{data.v6Prefixes} announced</dd>
+          <dt>Neighbours</dt><dd>{data.neighbours} observed</dd>
+        </dl>
+      </div>
+    </div>
+  {:else}
+    <div class="cards"><div class="card span">
+      <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
+      <dl class="mono"><dt>Handle</dt><dd>{data.asn}</dd><dt>Holder</dt><dd>{data.holder || "—"}</dd><dt>Registry</dt><dd>{data.registry || "—"}</dd></dl>
+    </div></div>
+  {/if}
+</div>
+
+<style>
+  .entity { padding: 16px 20px 40px; max-width: 980px; }
+  .crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; font-size: 0.8rem; margin-bottom: 13px; }
+  .crumbs .sep { color: var(--text-faint); }
+  .crumbs .cur { color: var(--text-strong); font-weight: 500; }
+  .piv { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 0; }
+  .piv:hover { text-decoration: underline; }
+  .hhead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .htitle { font-size: 1.5rem; font-weight: 500; color: var(--text-strong); }
+  .htag { font-size: 0.75rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+  .hsub { color: var(--text-dim); font-size: 0.86rem; margin: 2px 0 16px; }
+  .actions { display: flex; gap: 8px; margin: 0 0 16px; }
+  .btn { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 6px 13px; font: inherit; font-size: 0.82rem; cursor: pointer; }
+  .tabbar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { padding: 8px 13px; font: inherit; font-size: 0.84rem; color: var(--tab-inactive); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .tab.on { color: var(--text-strong); border-color: var(--accent); }
+  .tab.dis { color: var(--text-faint); cursor: default; }
+  .soon { font-size: 0.6rem; color: var(--text-faint); border: 1px solid var(--pill-border); border-radius: 8px; padding: 0 6px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 10px; padding: 13px 15px; }
+  .card.span { grid-column: 1 / -1; }
+  .card.hero { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-ring); }
+  .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
+  .chead h3 { margin: 0; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); font-weight: 600; }
+  .src { font-size: 0.62rem; color: var(--text-faint); font-family: var(--font-mono); }
+  .srcs { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; }
+  dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
+  dt { color: var(--text-dim); }
+  dd { margin: 0; color: var(--text); }
+  .big { font-size: 1rem; color: var(--text-strong); }
+  .dim { color: var(--text-dim); font-size: 0.82rem; }
+  .pill { display: inline-flex; font-size: 0.66rem; padding: 1px 8px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-dim); }
+  .pill.soon { color: var(--text-faint); }
+  .err { color: var(--warn-text); font-size: 0.78rem; margin: 8px 0 0; }
+  .mono { font-family: var(--font-mono); }
+</style>
