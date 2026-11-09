@@ -22,11 +22,11 @@ cp "$ICON" "$APPDIR/meridian.png"
 cp "$DESKTOP" "$APPDIR/meridian.desktop"
 ln -sf usr/bin/meridian "$APPDIR/AppRun"
 
-# appimagetool (pinned to AppImageKit 13); extract-and-run avoids needing FUSE on CI.
+# appimagetool (pinned release); extract-and-run avoids needing FUSE on CI.
 TOOL="$ROOT/build/appimagetool.AppImage"
 if [ ! -x "$TOOL" ]; then
   curl -fsSL -o "$TOOL" \
-    "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage"
+    "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage"
   chmod +x "$TOOL"
 fi
 
