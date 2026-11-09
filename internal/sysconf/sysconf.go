@@ -7,6 +7,7 @@ package sysconf
 
 import (
 	"context"
+	"net"
 	"os"
 	"os/exec"
 	"runtime"
@@ -172,17 +173,20 @@ func parseIpconfigDNS(text string) []string {
 		if strings.Contains(line, "DNS Servers") {
 			inDNS = true
 			if i := strings.Index(line, ":"); i >= 0 {
-				if ip := strings.TrimSpace(line[i+1:]); ip != "" {
+				if ip := strings.TrimSpace(line[i+1:]); net.ParseIP(ip) != nil {
 					out = append(out, ip)
 				}
 			}
 			continue
 		}
-		if inDNS && !strings.Contains(line, ":") && trimmed != "" {
-			out = append(out, trimmed)
-			continue
-		}
-		if strings.Contains(line, ":") {
+		// A continuation line is just an IP (possibly IPv6, which contains
+		// colons) — detect it by parsing, not by colon-presence. Anything
+		// else (a new labelled field, a blank line) ends the DNS block.
+		if inDNS {
+			if net.ParseIP(trimmed) != nil {
+				out = append(out, trimmed)
+				continue
+			}
 			inDNS = false
 		}
 	}

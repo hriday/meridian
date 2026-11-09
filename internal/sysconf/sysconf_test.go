@@ -47,6 +47,14 @@ func TestParseIpconfigDNS(t *testing.T) {
 	require.Equal(t, []string{"192.168.1.1", "8.8.8.8"}, parseIpconfigDNS(in))
 }
 
+func TestParseIpconfigDNSIPv6(t *testing.T) {
+	in := "   DNS Servers . . . . . . . . . . . : 192.168.1.1\r\n" +
+		"                                       fe80::1\r\n" +
+		"                                       2606:4700:4700::1111\r\n" +
+		"   NetBIOS over Tcpip. . . . . . . . : Enabled\r\n"
+	require.Equal(t, []string{"192.168.1.1", "fe80::1", "2606:4700:4700::1111"}, parseIpconfigDNS(in))
+}
+
 func TestParseNtpConfServer(t *testing.T) {
 	require.Equal(t, "pool.ntp.org", parseNtpConfServer("# cfg\nserver pool.ntp.org iburst\n"))
 	require.Equal(t, "time.nist.gov", parseNtpConfServer("[Time]\nNTP=time.nist.gov\n"))

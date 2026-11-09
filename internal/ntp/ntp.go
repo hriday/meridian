@@ -5,6 +5,7 @@
 package ntp
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -78,6 +79,16 @@ func decode(resp []byte, t1, t4 time.Time) (Reply, error) {
 	if len(resp) < 48 {
 		return Reply{}, fmt.Errorf("short NTP reply: %d bytes", len(resp))
 	}
+	if mode := resp[0] & 0x07; mode != 4 {
+		return Reply{}, fmt.Errorf("not an NTP server reply (mode %d)", mode)
+	}
+	// The origin timestamp must echo the transmit timestamp we sent (putNTPTime(t1)),
+	// which rejects stale, duplicated, or spoofed replies (RFC 4330).
+	var wantOrigin [8]byte
+	putNTPTime(wantOrigin[:], t1)
+	if !bytes.Equal(resp[24:32], wantOrigin[:]) {
+		return Reply{}, fmt.Errorf("origin timestamp mismatch (stale or spoofed reply)")
+	}
 	stratum := int(resp[1])
 	r := Reply{
 		Stratum:        stratum,
@@ -90,6 +101,9 @@ func decode(resp []byte, t1, t4 time.Time) (Reply, error) {
 	}
 	t2 := ntpTime(resp[32:40])
 	t3 := ntpTime(resp[40:48])
+	if t2.IsZero() || t3.IsZero() {
+		return Reply{}, fmt.Errorf("server returned zero timestamps")
+	}
 	r.ServerTime = t3
 	r.Offset = ((t2.Sub(t1)) + (t3.Sub(t4))) / 2
 	r.RTT = (t4.Sub(t1)) - (t3.Sub(t2))
