@@ -120,6 +120,20 @@ func (c *Client) LookupASN(ctx context.Context, asn string) (ASNReport, error) {
 	return r, nil
 }
 
+// reservedPrefixes are special-use ranges that netip's predicates don't cover
+// but that are never globally routed, so a lookup should answer locally.
+var reservedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),      // "this network" (RFC 1122)
+	netip.MustParsePrefix("100.64.0.0/10"),  // CGNAT (RFC 6598)
+	netip.MustParsePrefix("192.0.0.0/24"),   // IETF protocol assignments
+	netip.MustParsePrefix("192.0.2.0/24"),   // TEST-NET-1 (documentation)
+	netip.MustParsePrefix("198.18.0.0/15"),  // benchmarking (RFC 2544)
+	netip.MustParsePrefix("198.51.100.0/24"), // TEST-NET-2 (documentation)
+	netip.MustParsePrefix("203.0.113.0/24"), // TEST-NET-3 (documentation)
+	netip.MustParsePrefix("240.0.0.0/4"),    // reserved (RFC 1112)
+	netip.MustParsePrefix("2001:db8::/32"),  // IPv6 documentation (RFC 3849)
+}
+
 // nonGlobalNote returns a human note if addr is not a globally routable unicast
 // address (so routing/registry lookups would be meaningless), else "".
 func nonGlobalNote(a netip.Addr) string {
@@ -134,7 +148,11 @@ func nonGlobalNote(a netip.Addr) string {
 		return "multicast address — not globally routed"
 	case a.IsUnspecified():
 		return "unspecified address — not globally routed"
-	default:
-		return ""
 	}
+	for _, p := range reservedPrefixes {
+		if p.Contains(a) {
+			return "special-use / reserved address — not globally routed"
+		}
+	}
+	return ""
 }

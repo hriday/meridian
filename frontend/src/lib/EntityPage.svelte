@@ -65,7 +65,13 @@
     {#if tab === "overview"}
       <div class="cards">
         <div class="card hero span">
-          <div class="chead"><h3>Who owns this</h3><span class="src">{chip(data.registrySrc)}</span></div>
+          <div class="chead">
+            <h3>Who owns this</h3>
+            <span class="srcs">
+              <span class="src">{chip(data.routingSrc)}</span>
+              <span class="src">{chip(data.registrySrc)}</span>
+            </span>
+          </div>
           <dl class="mono">
             {#if data.coveringPrefix}<dt>Covering prefix</dt><dd class="big">{data.coveringPrefix}</dd>{/if}
             {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
@@ -73,6 +79,7 @@
             {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}
             {#if data.routingNote}<dt>Note</dt><dd class="dim">{data.routingNote}</dd>{/if}
           </dl>
+          {#if data.routingSrc?.err}<p class="err">Routing data unavailable: {data.routingSrc.err}</p>{/if}
           {#if data.registrySrc?.err}<p class="err">Registry data unavailable: {data.registrySrc.err}</p>{/if}
         </div>
         <div class="card">
@@ -141,6 +148,7 @@
   .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
   .chead h3 { margin: 0; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); font-weight: 600; }
   .src { font-size: 0.62rem; color: var(--text-faint); font-family: var(--font-mono); }
+  .srcs { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; }
   dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
   dt { color: var(--text-dim); }
   dd { margin: 0; color: var(--text); }

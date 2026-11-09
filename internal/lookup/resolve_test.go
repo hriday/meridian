@@ -120,3 +120,18 @@ func TestLookupASNCombines(t *testing.T) {
 	require.Equal(t, 8400, r.Neighbours)
 	require.Equal(t, "ARIN", r.Registry)
 }
+
+func TestLookupIPSpecialUse(t *testing.T) {
+	c := NewClient(failDoer{t}, time.Minute) // any network call fails the test
+	// Documentation (TEST-NET-1/2/3), CGNAT, reserved, this-network, and
+	// IPv6 documentation ranges are not globally routed and must short-circuit.
+	for _, ip := range []string{
+		"192.0.2.1", "198.51.100.5", "203.0.113.9",
+		"100.64.0.1", "240.0.0.1", "0.1.2.3", "2001:db8::1",
+	} {
+		r, err := c.LookupIP(context.Background(), ip)
+		require.NoError(t, err, ip)
+		require.NotEmpty(t, r.RoutingNote, ip)
+		require.Empty(t, r.OriginASN, ip)
+	}
+}
