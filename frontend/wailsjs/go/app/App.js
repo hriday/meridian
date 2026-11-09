@@ -6,12 +6,28 @@ export function Classify(arg1) {
   return window['go']['app']['App']['Classify'](arg1);
 }
 
+export function DNSQuery(arg1, arg2, arg3) {
+  return window['go']['app']['App']['DNSQuery'](arg1, arg2, arg3);
+}
+
+export function DNSSystem() {
+  return window['go']['app']['App']['DNSSystem']();
+}
+
 export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
 
 export function LookupIP(arg1) {
   return window['go']['app']['App']['LookupIP'](arg1);
+}
+
+export function NTPQuery(arg1) {
+  return window['go']['app']['App']['NTPQuery'](arg1);
+}
+
+export function NTPSystem() {
+  return window['go']['app']['App']['NTPSystem']();
 }
 
 export function SubnetDescribe(arg1) {
