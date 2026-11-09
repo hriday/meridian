@@ -208,8 +208,30 @@ func runLookup(args []string, stdout, stderr io.Writer) int {
 		}
 		printASNReport(stdout, rep)
 		return 0
+	case netinput.KindPrefixV4, netinput.KindPrefixV6:
+		rep, err := client.LookupPrefix(ctx, r.Normalized)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if *asJSON {
+			return writeJSON(stdout, stderr, rep)
+		}
+		printPrefixReport(stdout, rep)
+		return 0
+	case netinput.KindDomain, netinput.KindHostname:
+		rep, err := client.LookupDomain(ctx, r.Normalized)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if *asJSON {
+			return writeJSON(stdout, stderr, rep)
+		}
+		printDomainReport(stdout, rep)
+		return 0
 	default:
-		fmt.Fprintf(stderr, "lookup needs an IP or ASN; %q looks like a %s\n", pos[0], r.Kind)
+		fmt.Fprintf(stderr, "lookup needs an IP, ASN, prefix, or domain; %q is a %s\n", pos[0], r.Kind)
 		return 2
 	}
 }
@@ -450,6 +472,45 @@ func printASNReport(stdout io.Writer, r lookup.ASNReport) {
 	reportRow(stdout, "Prefixes", fmt.Sprintf("%d IPv4, %d IPv6", r.V4Prefixes, r.V6Prefixes))
 	reportRow(stdout, "Neighbours", fmt.Sprintf("%d", r.Neighbours))
 	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc)
+}
+
+func printPrefixReport(stdout io.Writer, r lookup.PrefixReport) {
+	reportRow(stdout, "Prefix", r.Input)
+	if r.OriginASN != "" {
+		reportRow(stdout, "Origin AS", strings.TrimSpace(r.OriginASN+"  "+r.OriginName))
+	}
+	reportRow(stdout, "Announced", fmt.Sprintf("%t", r.Announced))
+	reportRow(stdout, "RPKI", strings.TrimSpace(r.RPKIState+"  "+r.RPKIRoa))
+	reportRow(stdout, "Registered", strings.TrimSpace(r.RegisteredOrg+registrySuffix(r.Registry)))
+	reportRow(stdout, "Abuse", r.AbuseEmail)
+	if len(r.LessSpecific) > 0 {
+		reportRow(stdout, "Less specific", strings.Join(r.LessSpecific, ", "))
+	}
+	if len(r.MoreSpecific) > 0 {
+		reportRow(stdout, "More specific", strings.Join(r.MoreSpecific, ", "))
+	}
+	printSourceErrs(stdout, r.RoutingSrc, r.RPKISrc, r.RegistrySrc)
+}
+
+func printDomainReport(stdout io.Writer, r lookup.DomainReport) {
+	reportRow(stdout, "Domain", r.Input)
+	if len(r.ResolvesTo) > 0 {
+		reportRow(stdout, "Resolves to", strings.Join(r.ResolvesTo, ", "))
+	}
+	if len(r.HostedBy) > 0 {
+		reportRow(stdout, "Hosted by", strings.Join(r.HostedBy, ", "))
+	}
+	reportRow(stdout, "Registrar", r.Registrar)
+	reportRow(stdout, "Created", r.Created)
+	reportRow(stdout, "Expires", r.Expires)
+	reportRow(stdout, "DNSSEC", r.DNSSEC)
+	if len(r.Nameservers) > 0 {
+		reportRow(stdout, "Nameservers", strings.Join(r.Nameservers, ", "))
+	}
+	for _, rec := range r.Records {
+		fmt.Fprintf(stdout, "%-14s %s\t%s\n", rec.Type, rec.Name, rec.Value)
+	}
+	printSourceErrs(stdout, r.DNSSrc, r.RegistrySrc)
 }
 
 func registrySuffix(registry string) string {
