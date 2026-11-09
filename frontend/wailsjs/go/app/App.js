@@ -62,6 +62,10 @@ export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
 
+export function LookupBGP(arg1) {
+  return window['go']['app']['App']['LookupBGP'](arg1);
+}
+
 export function LookupDomain(arg1) {
   return window['go']['app']['App']['LookupDomain'](arg1);
 }
