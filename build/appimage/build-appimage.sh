@@ -22,11 +22,14 @@ cp "$ICON" "$APPDIR/meridian.png"
 cp "$DESKTOP" "$APPDIR/meridian.desktop"
 ln -sf usr/bin/meridian "$APPDIR/AppRun"
 
-# appimagetool (pinned release); extract-and-run avoids needing FUSE on CI.
+# appimagetool (pinned release + checksum); extract-and-run avoids needing FUSE on CI.
 TOOL="$ROOT/build/appimagetool.AppImage"
+TOOL_SHA256="46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1"
 if [ ! -x "$TOOL" ]; then
   curl -fsSL -o "$TOOL" \
     "https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage"
+  echo "${TOOL_SHA256}  ${TOOL}" | sha256sum -c - || {
+    echo "appimagetool checksum mismatch — refusing to run" >&2; exit 1; }
   chmod +x "$TOOL"
 fi
 
