@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"math/big"
 	"net/netip"
-	"sort"
 
 	"go4.org/netipx"
 )
+
+// maxSplitBits caps how far Split will expand a prefix: at most 2^16 = 65536
+// subnets per call, which keeps the result enumerable without blocking.
+const maxSplitBits = 16
 
 // Info is the full description of one prefix.
 type Info struct {
@@ -92,6 +95,13 @@ func Split(cidr string, newPrefixLen int) ([]string, error) {
 	if newPrefixLen <= p.Bits() || newPrefixLen > p.Addr().BitLen() {
 		return nil, fmt.Errorf("new prefix length %d must be between %d and %d", newPrefixLen, p.Bits()+1, p.Addr().BitLen())
 	}
+	// Guard against a request that would enumerate an unreasonable number of
+	// subnets (e.g. /8 → /32 is ~16M), which would exhaust memory and block
+	// the UI. 2^maxSplitBits is the ceiling on how many we will produce.
+	if newPrefixLen-p.Bits() > maxSplitBits {
+		return nil, fmt.Errorf("splitting /%d into /%d would make %d×2^%d subnets; split into a shorter prefix (at most /%d)",
+			p.Bits(), newPrefixLen, 1, newPrefixLen-p.Bits(), p.Bits()+maxSplitBits)
+	}
 
 	var out []string
 	addr := p.Addr()
@@ -132,12 +142,13 @@ func Summarize(cidrs []string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Prefixes() already returns blocks in numeric order; keep it (a string
+	// sort would order 100.0.0.0/8 before 9.0.0.0/8).
 	prefixes := set.Prefixes()
 	out := make([]string, 0, len(prefixes))
 	for _, p := range prefixes {
 		out = append(out, p.String())
 	}
-	sort.Strings(out)
 	return out, nil
 }
 

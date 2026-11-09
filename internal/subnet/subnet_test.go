@@ -67,3 +67,28 @@ func TestSummarize(t *testing.T) {
 	_, err = subnet.Summarize([]string{"10.0.0.0/24", "2001:db8::/32"})
 	require.Error(t, err) // mixed families
 }
+
+func TestSummarizeNumericOrder(t *testing.T) {
+	// Non-adjacent blocks stay separate and must come back in numeric,
+	// not lexical, order (9, 10, 20, 100 — not 10, 100, 20, 9).
+	out, err := subnet.Summarize([]string{"10.0.0.0/8", "9.0.0.0/8", "100.0.0.0/8", "20.0.0.0/8"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"9.0.0.0/8", "10.0.0.0/8", "20.0.0.0/8", "100.0.0.0/8"}, out)
+}
+
+func TestSummarizeOverlapping(t *testing.T) {
+	// A /25 fully contained in a /24 collapses to the /24.
+	out, err := subnet.Summarize([]string{"10.0.0.0/24", "10.0.0.128/25"})
+	require.NoError(t, err)
+	require.Equal(t, []string{"10.0.0.0/24"}, out)
+}
+
+func TestSplitRejectsHugeExpansion(t *testing.T) {
+	// A /8 split to /32 would be ~16M subnets; reject rather than allocate.
+	_, err := subnet.Split("10.0.0.0/8", 32)
+	require.Error(t, err)
+	// A split within the cap still works.
+	out, err := subnet.Split("10.0.0.0/16", 24)
+	require.NoError(t, err)
+	require.Len(t, out, 256)
+}
