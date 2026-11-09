@@ -62,8 +62,16 @@ export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
 
+export function LookupDomain(arg1) {
+  return window['go']['app']['App']['LookupDomain'](arg1);
+}
+
 export function LookupIP(arg1) {
   return window['go']['app']['App']['LookupIP'](arg1);
+}
+
+export function LookupPrefix(arg1) {
+  return window['go']['app']['App']['LookupPrefix'](arg1);
 }
 
 export function NTPQuery(arg1) {
