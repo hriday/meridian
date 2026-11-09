@@ -2,6 +2,7 @@
   import SubnetCalc from "./tools/SubnetCalc.svelte";
   import Lookup from "./tools/Lookup.svelte";
   import Traceroute from "./tools/Traceroute.svelte";
+  import Bgp from "./tools/Bgp.svelte";
   import Ntp from "./tools/Ntp.svelte";
   import Dns from "./tools/Dns.svelte";
   import IpSpace from "./tools/IpSpace.svelte";
@@ -12,7 +13,7 @@
   const tools: Tool[] = [
     { id: "lookup", name: "Lookup", group: "Internet", ready: true },
     { id: "trace", name: "Traceroute (AS)", group: "Internet", ready: true },
-    { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: false },
+    { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: true },
     { id: "subnet", name: "Subnet calculator", group: "Addressing", ready: true },
     { id: "ipspace", name: "IP space", group: "Addressing", ready: true },
     { id: "ntp", name: "NTP", group: "Local / environment", ready: true },
@@ -133,7 +134,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{/if}
     </main>
   </div>
 </div>
