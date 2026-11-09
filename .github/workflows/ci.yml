@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      # Only the root `main` package links Wails/GUI system libraries, which
+      # aren't installed on bare runners. All engine/CLI logic lives under
+      # internal/ and cmd/, so CI vets and tests those. The GUI build is run
+      # locally (and later via a packaging workflow), not here.
+      - run: go vet ./internal/...
+      - run: go test ./internal/...
