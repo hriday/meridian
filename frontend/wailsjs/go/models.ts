@@ -1,3 +1,66 @@
+export namespace dnsx {
+	
+	export class Record {
+	    name: string;
+	    type: string;
+	    ttl: number;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.ttl = source["ttl"];
+	        this.value = source["value"];
+	    }
+	}
+	export class Result {
+	    server: string;
+	    rcode: string;
+	    flags: string[];
+	    authenticated: boolean;
+	    rttMillis: number;
+	    answers: Record[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.server = source["server"];
+	        this.rcode = source["rcode"];
+	        this.flags = source["flags"];
+	        this.authenticated = source["authenticated"];
+	        this.rttMillis = source["rttMillis"];
+	        this.answers = this.convertValues(source["answers"], Record);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace lookup {
 	
 	export class Source {
@@ -151,6 +214,62 @@ export namespace netinput {
 
 }
 
+export namespace ntp {
+	
+	export class Reply {
+	    server: string;
+	    stratum: number;
+	    refId: string;
+	    leapIndicator: string;
+	    precisionSeconds: number;
+	    rootDelay: number;
+	    rootDispersion: number;
+	    // Go type: time
+	    serverTime: any;
+	    offset: number;
+	    rtt: number;
+	    kissOfDeath: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Reply(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.server = source["server"];
+	        this.stratum = source["stratum"];
+	        this.refId = source["refId"];
+	        this.leapIndicator = source["leapIndicator"];
+	        this.precisionSeconds = source["precisionSeconds"];
+	        this.rootDelay = source["rootDelay"];
+	        this.rootDispersion = source["rootDispersion"];
+	        this.serverTime = this.convertValues(source["serverTime"], null);
+	        this.offset = source["offset"];
+	        this.rtt = source["rtt"];
+	        this.kissOfDeath = source["kissOfDeath"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace subnet {
 	
 	export class Info {
@@ -183,6 +302,27 @@ export namespace subnet {
 	        this.UsableFirst = source["UsableFirst"];
 	        this.UsableLast = source["UsableLast"];
 	        this.UsableCount = source["UsableCount"];
+	    }
+	}
+
+}
+
+export namespace sysconf {
+	
+	export class Found {
+	    values: string[];
+	    source: string;
+	    err: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Found(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.values = source["values"];
+	        this.source = source["source"];
+	        this.err = source["err"];
 	    }
 	}
 
