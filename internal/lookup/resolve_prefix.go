@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/netip"
+	"time"
 )
 
 // PrefixReport is the "who announces this prefix" answer.
@@ -32,6 +33,8 @@ func (c *Client) LookupPrefix(ctx context.Context, prefix string) (PrefixReport,
 		return PrefixReport{}, fmt.Errorf("not a valid CIDR: %w", err)
 	}
 	p = p.Masked()
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
 	r := PrefixReport{Input: p.String()}
 
 	// Routing (RIPEstat): origin + related prefixes.

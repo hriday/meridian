@@ -46,10 +46,13 @@ func (c *Client) ripeRelatedPrefixes(ctx context.Context, prefix string) (less, 
 		return nil, nil, err
 	}
 	for _, p := range r.Data.Prefixes {
-		switch p.Relationship {
-		case "less-specific":
+		// RIPEstat uses "Overlap - Less Specific" / "Overlap - More Specific";
+		// "Adjacency - Left/Right" are neighbouring (not nesting) blocks — dropped.
+		rel := strings.ToLower(p.Relationship)
+		switch {
+		case strings.Contains(rel, "less specific"):
 			less = append(less, p.Prefix)
-		case "more-specific":
+		case strings.Contains(rel, "more specific"):
 			more = append(more, p.Prefix)
 		}
 	}

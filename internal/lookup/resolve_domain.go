@@ -2,6 +2,7 @@ package lookup
 
 import (
 	"context"
+	"time"
 
 	"github.com/hriday/meridian/internal/asnmap"
 	"github.com/hriday/meridian/internal/dnsx"
@@ -21,6 +22,7 @@ var domainRecordTypes = []string{"A", "AAAA", "MX", "NS", "TXT"}
 // registration (empty when the TLD serves no RDAP).
 type DomainReport struct {
 	Input       string        `json:"input"`
+	Rcode       string        `json:"rcode"` // A-record query status (NOERROR / NXDOMAIN / …)
 	Records     []dnsx.Record `json:"records"`
 	ResolvesTo  []string      `json:"resolvesTo"`
 	HostedBy    []string      `json:"hostedBy"`
@@ -36,6 +38,10 @@ type DomainReport struct {
 // LookupDomain resolves a domain's records (via the DNS engine), the networks
 // hosting its addresses (via Team Cymru), and its RDAP registration.
 func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, error) {
+	// Bound the whole lookup so a slow/large domain can't stack many record +
+	// hosting queries without end.
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
 	r := DomainReport{Input: name}
 
 	// DNS records.
@@ -49,6 +55,9 @@ func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, e
 			}
 			continue
 		}
+		if rtype == "A" {
+			r.Rcode = res.Rcode // the authoritative "does it resolve" status
+		}
 		r.Records = append(r.Records, res.Answers...)
 		if rtype == "A" || rtype == "AAAA" {
 			for _, a := range res.Answers {
@@ -60,14 +69,19 @@ func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, e
 		r.DNSSrc.Err = firstErr.Error()
 	}
 
-	// Who hosts the resolved addresses (Team Cymru).
-	seen := map[string]bool{}
+	// Who hosts the resolved addresses (Team Cymru) — each unique IP queried once.
+	seenIP := map[string]bool{}
+	seenOwner := map[string]bool{}
 	for _, ip := range r.ResolvesTo {
-		info, err := asnmap.Lookup(ctx, asnmap.QueryFunc(DNSQuery), ip)
-		if err != nil || info.Owner == "" || seen[info.Owner] {
+		if ip == "" || seenIP[ip] {
 			continue
 		}
-		seen[info.Owner] = true
+		seenIP[ip] = true
+		info, err := asnmap.Lookup(ctx, asnmap.QueryFunc(DNSQuery), ip)
+		if err != nil || info.Owner == "" || seenOwner[info.Owner] {
+			continue
+		}
+		seenOwner[info.Owner] = true
 		r.HostedBy = append(r.HostedBy, info.Owner)
 	}
 

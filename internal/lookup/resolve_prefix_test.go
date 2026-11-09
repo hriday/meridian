@@ -10,7 +10,7 @@ import (
 func TestLookupPrefixCombines(t *testing.T) {
 	c := lookupServer(t, map[string]srvResp{
 		"prefix-overview":  {body: `{"data":{"announced":true,"asns":[{"asn":13335,"holder":"CLOUDFLARENET, US"}]}}`},
-		"related-prefixes": {body: `{"data":{"prefixes":[{"prefix":"104.16.0.0/12","relationship":"less-specific"},{"prefix":"104.16.123.0/24","relationship":"more-specific"}]}}`},
+		"related-prefixes": {body: `{"data":{"prefixes":[{"prefix":"104.16.0.0/12","relationship":"Overlap - Less Specific"},{"prefix":"104.16.123.0/24","relationship":"Overlap - More Specific"}]}}`},
 		"rpki-validation":  {body: `{"data":{"status":"valid","validating_roas":[{"prefix":"104.16.0.0/13","max_length":24,"origin":"13335"}]}}`},
 		"/ip/":             {body: arinIPBody},
 	})
