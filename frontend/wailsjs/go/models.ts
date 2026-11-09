@@ -1,3 +1,22 @@
+export namespace app {
+	
+	export class IPSpaceState {
+	    exists: boolean;
+	    unlocked: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new IPSpaceState(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.exists = source["exists"];
+	        this.unlocked = source["unlocked"];
+	    }
+	}
+
+}
+
 export namespace dnsx {
 	
 	export class Record {
@@ -38,6 +57,151 @@ export namespace dnsx {
 	        this.authenticated = source["authenticated"];
 	        this.rttMillis = source["rttMillis"];
 	        this.answers = this.convertValues(source["answers"], Record);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace ipspace {
+	
+	export class Record {
+	    id: string;
+	    prefix: string;
+	    name: string;
+	    status: string;
+	    tags: string[];
+	    notes: string;
+	    parentId: string;
+	    createdBy: string;
+	    changedBy: string;
+	    // Go type: time
+	    createdAt: any;
+	    // Go type: time
+	    changedAt: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new Record(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.prefix = source["prefix"];
+	        this.name = source["name"];
+	        this.status = source["status"];
+	        this.tags = source["tags"];
+	        this.notes = source["notes"];
+	        this.parentId = source["parentId"];
+	        this.createdBy = source["createdBy"];
+	        this.changedBy = source["changedBy"];
+	        this.createdAt = this.convertValues(source["createdAt"], null);
+	        this.changedAt = this.convertValues(source["changedAt"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Event {
+	    id: string;
+	    type: string;
+	    actor: string;
+	    // Go type: time
+	    at: any;
+	    record: Record;
+	
+	    static createFrom(source: any = {}) {
+	        return new Event(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.type = source["type"];
+	        this.actor = source["actor"];
+	        this.at = this.convertValues(source["at"], null);
+	        this.record = this.convertValues(source["record"], Record);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImportReport {
+	    added: number;
+	    skipped: number;
+	    errors: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.added = source["added"];
+	        this.skipped = source["skipped"];
+	        this.errors = source["errors"];
+	    }
+	}
+	
+	export class TreeNode {
+	    record: Record;
+	    children: TreeNode[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TreeNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.record = this.convertValues(source["record"], Record);
+	        this.children = this.convertValues(source["children"], TreeNode);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
