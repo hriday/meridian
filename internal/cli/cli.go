@@ -46,6 +46,7 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli bgp <prefix|ip> [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
 
@@ -69,6 +70,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "bgp":
+		return runBGP(args[1:], stdout, stderr)
 	case "ipspace":
 		return runIPSpace(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
@@ -511,6 +514,72 @@ func printDomainReport(stdout io.Writer, r lookup.DomainReport) {
 		fmt.Fprintf(stdout, "%-14s %s\t%s\n", rec.Type, rec.Name, rec.Value)
 	}
 	printSourceErrs(stdout, r.DNSSrc, r.RegistrySrc)
+}
+
+func runBGP(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("bgp", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "bgp needs exactly one prefix or IP\n%s", usage)
+		return 2
+	}
+	r, err := netinput.Classify(pos[0])
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	switch r.Kind {
+	case netinput.KindIPv4, netinput.KindIPv6, netinput.KindPrefixV4, netinput.KindPrefixV6:
+	default:
+		fmt.Fprintf(stderr, "bgp needs a prefix or IP; %q is a %s\n", pos[0], r.Kind)
+		return 2
+	}
+	rep, err := newLookupClient().LookupBGP(context.Background(), r.Normalized)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printBGPReport(stdout, rep)
+	return 0
+}
+
+func printBGPReport(stdout io.Writer, r lookup.BGPReport) {
+	reportRow(stdout, "Prefix", r.Prefix)
+	if len(r.OriginASNs) > 0 {
+		origin := "AS" + strings.Join(r.OriginASNs, ", AS")
+		if r.MOAS {
+			origin += "  (MOAS: multiple origins)"
+		}
+		reportRow(stdout, "Origin AS", origin)
+	}
+	reportRow(stdout, "Visibility", fmt.Sprintf("seen by %d peers across %d collectors · %d distinct paths",
+		r.Peers, r.Collectors, len(r.Paths)))
+	if r.RPKIState != "" {
+		reportRow(stdout, "RPKI", r.RPKIState)
+	}
+	for i, p := range r.Paths {
+		if i >= 5 {
+			break
+		}
+		path := "AS" + strings.Join(p.Path, " → AS")
+		reportRow(stdout, fmt.Sprintf("Path %d", i+1),
+			fmt.Sprintf("%s  (%d peers, %d%%)", path, p.Peers, p.Percent))
+	}
+	if len(r.Upstreams) > 0 {
+		reportRow(stdout, "Upstreams", "AS"+strings.Join(r.Upstreams, ", AS"))
+	}
+	if len(r.Transit) > 0 {
+		reportRow(stdout, "Transit", "AS"+strings.Join(r.Transit, ", AS"))
+	}
+	printSourceErrs(stdout, r.RoutingSrc, r.RPKISrc)
 }
 
 func registrySuffix(registry string) string {
