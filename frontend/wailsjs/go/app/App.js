@@ -6,6 +6,14 @@ export function Classify(arg1) {
   return window['go']['app']['App']['Classify'](arg1);
 }
 
+export function LookupASN(arg1) {
+  return window['go']['app']['App']['LookupASN'](arg1);
+}
+
+export function LookupIP(arg1) {
+  return window['go']['app']['App']['LookupIP'](arg1);
+}
+
 export function SubnetDescribe(arg1) {
   return window['go']['app']['App']['SubnetDescribe'](arg1);
 }

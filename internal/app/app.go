@@ -22,7 +22,7 @@ type App struct {
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
 	return &App{
-		lookup: lookup.NewClient(&http.Client{Timeout: 5 * time.Second}, 10*time.Minute),
+		lookup: lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
 	}
 }
 

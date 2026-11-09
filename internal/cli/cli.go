@@ -21,7 +21,7 @@ import (
 // newLookupClient builds the lookup client the CLI uses; tests override it to
 // inject a fake HTTP transport.
 var newLookupClient = func() *lookup.Client {
-	return lookup.NewClient(&http.Client{Timeout: 5 * time.Second}, 10*time.Minute)
+	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
 
 const usage = `meridian-cli — network info toolkit
