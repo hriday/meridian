@@ -9,16 +9,20 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
+	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/subnet"
 	"github.com/hriday/meridian/internal/sysconf"
@@ -34,6 +38,16 @@ var newLookupClient = func() *lookup.Client {
 
 // newPinger builds the ping-sweep pinger; tests override it to inject a fake.
 var newPinger = func() scan.Pinger { return scan.NewICMPPinger() }
+
+// nc seams: input piped to the connection, and the grace period to drain
+// responses after stdin EOF before closing. Tests override both.
+var (
+	ncStdin io.Reader = os.Stdin
+	ncGrace           = 200 * time.Millisecond
+)
+
+// newCracker builds the password cracker the CLI uses; tests override it.
+var newCracker = func() pwaudit.Cracker { return pwaudit.NewHashcatCracker() }
 
 // Query functions behind package vars so tests inject fakes.
 var (
@@ -52,7 +66,9 @@ usage:
   meridian-cli trace <host> [--6] [--json]
   meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
+  meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
+  meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
 
@@ -80,8 +96,12 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPingSweep(args[1:], stdout, stderr)
 	case "portscan":
 		return runPortScan(args[1:], stdout, stderr)
+	case "nc":
+		return runNC(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
+	case "adaudit":
+		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
 		return runIPSpace(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
@@ -201,6 +221,85 @@ func runPortScan(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	fmt.Fprintf(stdout, "%d open of %d scanned\n", open, len(res))
+	return 0
+}
+
+type ncWriter struct{ s *netcat.Session }
+
+func (w ncWriter) Write(b []byte) (int, error) { return w.s.Send(b) }
+
+func runNC(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("nc", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	udp := fs.Bool("udp", false, "use UDP")
+	useTLS := fs.Bool("tls", false, "wrap the connection in TLS")
+	insecure := fs.Bool("insecure", false, "skip TLS verification")
+	listen := fs.Bool("listen", false, "listen on the local port instead of connecting")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 2 {
+		fmt.Fprintf(stderr, "nc needs <host> <port>\n%s", usage)
+		return 2
+	}
+	network := "tcp"
+	if *udp {
+		network = "udp"
+	}
+	cfg := netcat.Config{Network: network, Addr: net.JoinHostPort(pos[0], pos[1]), TLS: *useTLS, Insecure: *insecure}
+	ctx := context.Background()
+
+	var s *netcat.Session
+	if *listen {
+		l, err := netcat.Listen(ctx, cfg)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		defer l.Close()
+		fmt.Fprintf(stderr, "listening on %s (%s)\n", l.Addr(), network)
+		if s, err = l.Accept(); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+	} else {
+		var cert *netcat.CertInfo
+		var err error
+		if s, cert, err = netcat.Dial(ctx, cfg); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if cert != nil {
+			fmt.Fprintf(stderr, "TLS subject %s · expires %s · verified=%v\n", cert.Subject, cert.NotAfter, cert.Verified)
+		}
+	}
+	defer s.Close()
+
+	var mu sync.Mutex
+	remoteClosed := make(chan struct{})
+	s.Start(func(b []byte) {
+		mu.Lock()
+		_, _ = stdout.Write(b)
+		mu.Unlock()
+	}, func(error) { close(remoteClosed) })
+
+	in := ncStdin // snapshot the seam so a late goroutine read can't race a test reset
+	stdinDone := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(ncWriter{s}, in)
+		close(stdinDone)
+	}()
+
+	// Exit when the remote hangs up, or shortly after our own input ends.
+	select {
+	case <-remoteClosed:
+	case <-stdinDone:
+		select {
+		case <-remoteClosed:
+		case <-time.After(ncGrace): // drain late responses, then close
+		}
+	}
 	return 0
 }
 
@@ -650,6 +749,92 @@ func runBGP(args []string, stdout, stderr io.Writer) int {
 	}
 	printBGPReport(stdout, rep)
 	return 0
+}
+
+func runADAudit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("adaudit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	dump := fs.String("dump", "", "secretsdump/pwdump file to audit")
+	wl := fs.String("wordlist", "", "wordlist file for the crack")
+	rulesFile := fs.String("rules", "", "optional hashcat rules file")
+	show := fs.Bool("show", false, "reveal recovered plaintext passwords")
+	asJSON := fs.Bool("json", false, "output JSON")
+	if _, ok := parsePositionals(fs, args); !ok {
+		return 2
+	}
+	if *dump == "" {
+		fmt.Fprintf(stderr, "adaudit needs --dump <file>\n%s", usage)
+		return 2
+	}
+	f, err := os.Open(*dump)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	defer f.Close()
+	accounts, err := pwaudit.ParseDump(f)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	var rules []string
+	if *rulesFile != "" {
+		rules = []string{*rulesFile}
+	}
+	rep, err := pwaudit.RunAudit(context.Background(), accounts, newCracker(), *wl, rules, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		if !*show {
+			rep = redactReport(rep)
+		}
+		return writeJSON(stdout, stderr, rep)
+	}
+	printADAuditReport(stdout, rep, *show)
+	return 0
+}
+
+// redactReport blanks recovered plaintext for output when --show is not set.
+func redactReport(r pwaudit.AuditReport) pwaudit.AuditReport {
+	for i := range r.Results {
+		if r.Results[i].Cracked {
+			r.Results[i].Plaintext = "••••••"
+		}
+	}
+	for i := range r.Reuse {
+		if r.Reuse[i].Plaintext != "" && r.Reuse[i].Plaintext != "(empty password)" {
+			r.Reuse[i].Plaintext = "••••••"
+		}
+	}
+	return r
+}
+
+func printADAuditReport(stdout io.Writer, r pwaudit.AuditReport, show bool) {
+	reportRow(stdout, "Cracker", r.CrackerUsed)
+	reportRow(stdout, "Accounts", fmt.Sprintf("%d", r.Total))
+	reportRow(stdout, "Cracked", fmt.Sprintf("%d (%.0f%%)", r.Cracked, r.PercentCracked))
+	for _, p := range r.Patterns {
+		reportRow(stdout, "Pattern", fmt.Sprintf("%s × %d", p.Pattern, p.Count))
+	}
+	if len(r.Reuse) > 0 {
+		reportRow(stdout, "Reused", fmt.Sprintf("%d group(s)", len(r.Reuse)))
+	}
+	for _, res := range r.Results {
+		if !res.Cracked {
+			continue
+		}
+		pw := "••••••"
+		if show {
+			pw = res.Plaintext
+		}
+		fmt.Fprintf(stdout, "%-20s %-8s %-14s %s\n", res.Account.Name, res.Strength, res.Pattern, pw)
+	}
+	if !show {
+		fmt.Fprintln(stdout, "(passwords hidden; re-run with --show to reveal)")
+	}
 }
 
 func printBGPReport(stdout io.Writer, r lookup.BGPReport) {

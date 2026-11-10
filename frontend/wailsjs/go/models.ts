@@ -557,6 +557,29 @@ export namespace lookup {
 
 }
 
+export namespace netcat {
+	
+	export class CertInfo {
+	    subject: string;
+	    issuer: string;
+	    notAfter: string;
+	    verified: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CertInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.subject = source["subject"];
+	        this.issuer = source["issuer"];
+	        this.notAfter = source["notAfter"];
+	        this.verified = source["verified"];
+	    }
+	}
+
+}
+
 export namespace netinput {
 	
 	export class Result {
@@ -629,6 +652,159 @@ export namespace ntp {
 		    return a;
 		}
 	}
+
+}
+
+export namespace pwaudit {
+	
+	export class Account {
+	    name: string;
+	    ntHash: string;
+	    rid: string;
+	    machine: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Account(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.ntHash = source["ntHash"];
+	        this.rid = source["rid"];
+	        this.machine = source["machine"];
+	    }
+	}
+	export class PatternStat {
+	    pattern: string;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PatternStat(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pattern = source["pattern"];
+	        this.count = source["count"];
+	    }
+	}
+	export class ReuseGroup {
+	    ntHash: string;
+	    plaintext: string;
+	    accounts: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ReuseGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ntHash = source["ntHash"];
+	        this.plaintext = source["plaintext"];
+	        this.accounts = source["accounts"];
+	    }
+	}
+	export class Result {
+	    account: Account;
+	    cracked: boolean;
+	    plaintext: string;
+	    strength: string;
+	    pattern: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.account = this.convertValues(source["account"], Account);
+	        this.cracked = source["cracked"];
+	        this.plaintext = source["plaintext"];
+	        this.strength = source["strength"];
+	        this.pattern = source["pattern"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class AuditReport {
+	    total: number;
+	    cracked: number;
+	    percentCracked: number;
+	    results: Result[];
+	    reuse: ReuseGroup[];
+	    patterns: PatternStat[];
+	    crackerUsed: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuditReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.total = source["total"];
+	        this.cracked = source["cracked"];
+	        this.percentCracked = source["percentCracked"];
+	        this.results = this.convertValues(source["results"], Result);
+	        this.reuse = this.convertValues(source["reuse"], ReuseGroup);
+	        this.patterns = this.convertValues(source["patterns"], PatternStat);
+	        this.crackerUsed = source["crackerUsed"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class CrackerInfo {
+	    name: string;
+	    version: string;
+	    path: string;
+	    available: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CrackerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.path = source["path"];
+	        this.available = source["available"];
+	    }
+	}
+	
+	
 
 }
 
@@ -796,6 +972,31 @@ export namespace trace {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace wordlist {
+	
+	export class Entry {
+	    name: string;
+	    desc: string;
+	    url: string;
+	    sha256: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Entry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.desc = source["desc"];
+	        this.url = source["url"];
+	        this.sha256 = source["sha256"];
+	        this.size = source["size"];
+	    }
 	}
 
 }

@@ -11,6 +11,8 @@ import (
 
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
+	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 )
 
@@ -30,6 +32,15 @@ type App struct {
 	ipStore    *ipspace.Store
 	ipUnlocked bool
 
+	ncMu       sync.Mutex
+	ncSession  *netcat.Session
+	ncListener *netcat.Listener
+	ncRecvHook func([]byte) // test observation hook; nil in production
+
+	adCracker   pwaudit.Cracker
+	adReport    *pwaudit.AuditReport // last run, held for an encrypted save
+	wordlistDir string
+
 	scanMu     sync.Mutex
 	scanCancel context.CancelFunc
 	newPinger  func() scan.Pinger
@@ -38,9 +49,11 @@ type App struct {
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
 	return &App{
-		lookup:    lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
-		ipPath:    ipspace.DefaultPath(),
-		newPinger: func() scan.Pinger { return scan.NewICMPPinger() },
+		lookup:      lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
+		ipPath:      ipspace.DefaultPath(),
+		adCracker:   pwaudit.NewHashcatCracker(),
+		wordlistDir: defaultWordlistDir(),
+		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 	}
 }
 
