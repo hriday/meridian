@@ -4,6 +4,7 @@
   import Traceroute from "./tools/Traceroute.svelte";
   import Bgp from "./tools/Bgp.svelte";
   import AtlasPing from "./tools/AtlasPing.svelte";
+  import AtlasTrace from "./tools/AtlasTrace.svelte";
   import Tls from "./tools/Tls.svelte";
   import HttpCheck from "./tools/HttpCheck.svelte";
   import Whois from "./tools/Whois.svelte";
@@ -29,6 +30,7 @@
     { id: "trace", name: "Traceroute (AS)", group: "Internet", ready: true },
     { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: true },
     { id: "atlasping", name: "Remote ping", group: "Internet", ready: true },
+    { id: "atlastrace", name: "Remote traceroute", group: "Internet", ready: true },
     { id: "tls", name: "TLS certificate", group: "Internet", ready: true },
     { id: "http", name: "HTTP check", group: "Internet", ready: true },
     { id: "whois", name: "Whois", group: "Internet", ready: true },
@@ -160,7 +162,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{/if}
     </main>
   </div>
 </div>
