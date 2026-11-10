@@ -156,12 +156,14 @@
               {#if data.peering.ratio}<dt>Traffic</dt><dd>{data.peering.ratio}</dd>{/if}
               {#if data.peering.policy}<dt>Policy</dt><dd><span class="pill">{data.peering.policy}</span></dd>{/if}
               {#if data.peering.irrAsSet}<dt>IRR AS-SET</dt><dd>{data.peering.irrAsSet}</dd>{/if}
+              {#if data.peering.v4Prefixes || data.peering.v6Prefixes}<dt>Max prefixes</dt><dd>{data.peering.v4Prefixes} v4 · {data.peering.v6Prefixes} v6 <span class="dim">suggested filter limits</span></dd>{/if}
+              {#if data.peering.website}<dt>Website</dt><dd><a class="piv" href={data.peering.website} target="_blank" rel="noopener noreferrer">{data.peering.website}</a></dd>{/if}
             </dl>
             {#if policyNote(data.peering.policy)}<p class="cap">{policyNote(data.peering.policy)}</p>{/if}
 
             {#if data.peering.ixps?.length}
               <div class="pblock">
-                <div class="phead"><span>Internet exchanges</span><span class="dim">{data.peering.ixCount} present</span></div>
+                <div class="phead"><span>Internet exchanges</span><span class="dim">{data.peering.ixps.length} present</span></div>
                 <div class="chips">
                   {#each data.peering.ixps.slice(0, 12) as ix}
                     <span class="pchip">{ix.name}{#if ix.speed} <span class="dim">{gbps(ix.speed)}</span>{/if}</span>
@@ -173,7 +175,7 @@
 
             {#if data.peering.facilities?.length}
               <div class="pblock">
-                <div class="phead"><span>Facilities</span><span class="dim">{data.peering.facCount} present</span></div>
+                <div class="phead"><span>Facilities</span><span class="dim">{data.peering.facilities.length} present</span></div>
                 <div class="chips">
                   {#each data.peering.facilities.slice(0, 12) as f}
                     <span class="pchip">{f.name}{#if f.city} <span class="dim">{f.city}{#if f.country}, {f.country}{/if}</span>{/if}</span>
@@ -186,7 +188,7 @@
         {:else if data.peeringSrc?.err}
           <div class="card span">
             <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
-            <p class="dim">PeeringDB was unavailable: {data.peeringSrc.err}</p>
+            <p class="err">PeeringDB was unavailable: {data.peeringSrc.err}</p>
           </div>
         {/if}
       </div>
