@@ -121,6 +121,12 @@ export function ScanStop():Promise<void>;
 
 export function SetAtlasKey(arg1:string):Promise<void>;
 
+export function SetPingBaseline(arg1:string):Promise<void>;
+
+export function StartPingMonitor(arg1:string,arg2:string):Promise<void>;
+
+export function StopPingMonitor(arg1:string):Promise<void>;
+
 export function StopTrace():Promise<void>;
 
 export function SubnetDescribe(arg1:string):Promise<subnet.Info>;
