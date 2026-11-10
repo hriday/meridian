@@ -37,6 +37,8 @@ export function AtlasKeyStatus():Promise<app.AtlasKeyStatus>;
 
 export function AtlasPing(arg1:string,arg2:number):Promise<atlas.Report>;
 
+export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
+
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
 
 export function Classify(arg1:string):Promise<netinput.Result>;

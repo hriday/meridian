@@ -30,6 +30,10 @@ export function AtlasPing(arg1, arg2) {
   return window['go']['app']['App']['AtlasPing'](arg1, arg2);
 }
 
+export function AtlasTrace(arg1, arg2) {
+  return window['go']['app']['App']['AtlasTrace'](arg1, arg2);
+}
+
 export function Blocklist(arg1, arg2) {
   return window['go']['app']['App']['Blocklist'](arg1, arg2);
 }

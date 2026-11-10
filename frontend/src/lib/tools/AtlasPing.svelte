@@ -165,7 +165,7 @@
     {/if}
 
     {#if r}
-      {#if r.probes.length > 0}
+      {#if r.probes && r.probes.length > 0}
         <div class="verdict"
           class:good={r.responding === r.probes.length}
           class:warn={r.responding > 0 && r.responding < r.probes.length}

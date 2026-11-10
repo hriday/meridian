@@ -72,17 +72,12 @@ func afFor(target string) int {
 	return 4
 }
 
-// schedule POSTs a one-off ping measurement and returns its id.
-func schedule(ctx context.Context, d Doer, key, target string, probes int) (int, error) {
+// scheduleMeasurement POSTs a one-off measurement with the given definition and
+// a worldwide probe selection, returning its id. Shared by ping and traceroute;
+// only the definition differs.
+func scheduleMeasurement(ctx context.Context, d Doer, key string, def map[string]any, probes int) (int, error) {
 	body := map[string]any{
-		"definitions": []map[string]any{{
-			"type":        "ping",
-			"af":          afFor(target),
-			"target":      target,
-			"description": "Meridian remote ping " + target,
-			"is_oneoff":   true,
-			"packets":     3,
-		}},
+		"definitions": []map[string]any{def},
 		"probes": []map[string]any{{
 			"requested": probes,
 			"type":      "area",
@@ -122,6 +117,18 @@ func schedule(ctx context.Context, d Doer, key, target string, probes int) (int,
 		return 0, fmt.Errorf("atlas: no measurement id returned")
 	}
 	return out.Measurements[0], nil
+}
+
+// schedule POSTs a one-off ping measurement and returns its id.
+func schedule(ctx context.Context, d Doer, key, target string, probes int) (int, error) {
+	return scheduleMeasurement(ctx, d, key, map[string]any{
+		"type":        "ping",
+		"af":          afFor(target),
+		"target":      target,
+		"description": "Meridian remote ping " + target,
+		"is_oneoff":   true,
+		"packets":     3,
+	}, probes)
 }
 
 // scheduleError maps an Atlas error body to a clear message, distinguishing the
@@ -169,8 +176,9 @@ type rawResult struct {
 	Rcvd  int     `json:"rcvd"`
 }
 
-// results fetches and parses the per-probe ping results for a measurement.
-func results(ctx context.Context, d Doer, key string, id int) ([]Probe, error) {
+// fetchResults GETs the raw results body for a measurement. Shared by ping and
+// traceroute, which parse the body into their own shapes.
+func fetchResults(ctx context.Context, d Doer, key string, id int) ([]byte, error) {
 	url := fmt.Sprintf("%smeasurements/%d/results/", baseURL, id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -187,6 +195,15 @@ func results(ctx context.Context, d Doer, key string, id int) ([]Probe, error) {
 	data, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, scheduleError(resp.StatusCode, data)
+	}
+	return data, nil
+}
+
+// results fetches and parses the per-probe ping results for a measurement.
+func results(ctx context.Context, d Doer, key string, id int) ([]Probe, error) {
+	data, err := fetchResults(ctx, d, key, id)
+	if err != nil {
+		return nil, err
 	}
 
 	var raw []rawResult
