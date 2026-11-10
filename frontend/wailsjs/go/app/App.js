@@ -170,6 +170,10 @@ export function Traceroute(arg1, arg2) {
   return window['go']['app']['App']['Traceroute'](arg1, arg2);
 }
 
+export function WakeOnLAN(arg1, arg2, arg3) {
+  return window['go']['app']['App']['WakeOnLAN'](arg1, arg2, arg3);
+}
+
 export function WordlistCatalog() {
   return window['go']['app']['App']['WordlistCatalog']();
 }
