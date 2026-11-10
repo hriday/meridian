@@ -77,6 +77,10 @@ type Analysis struct {
 	Flows     []Flow    `json:"flows"`
 	Counts    Counts    `json:"counts"`
 	Notes     []string  `json:"notes"`
+
+	// wan holds interfaces with `set role wan`; used by flow derivation to map
+	// them to the Internet node. Unexported so it never reaches JSON.
+	wan map[string]bool
 }
 
 // newAnalysis returns an Analysis with every slice initialised non-nil so JSON
@@ -91,5 +95,6 @@ func newAnalysis(vdom string) Analysis {
 		Policies:  []Policy{},
 		Flows:     []Flow{},
 		Notes:     []string{},
+		wan:       map[string]bool{},
 	}
 }

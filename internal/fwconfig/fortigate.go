@@ -32,6 +32,7 @@ func interpret(root *Block) ([]Analysis, error) {
 		readAddresses(scope, &a)
 		readServices(scope, &a)
 		readPolicies(scope, &a)
+		derive(&a)
 		out = append(out, a)
 	}
 	return out, nil
@@ -50,6 +51,9 @@ func readInterfaces(scope *Block, a *Analysis) {
 		return
 	}
 	for _, e := range c.edits() {
+		if valOr(e, "role", "") == "wan" {
+			a.wan[e.Name] = true
+		}
 		vid, ok := e.get("vlanid")
 		if !ok {
 			continue // only interfaces with a vlanid are VLANs
