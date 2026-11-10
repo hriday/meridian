@@ -100,7 +100,13 @@ func TestExtractPlusDirectivesNoError(t *testing.T) {
 }`)
 	require.Len(t, a.Upstreams, 1)
 	require.Equal(t, []string{"10.0.0.1:8080"}, a.Upstreams[0].Servers)
-	require.Empty(t, a.Findings) // extraction alone produces no findings
+	// Plus directives must not themselves be flagged (no errors; nothing names them).
+	require.Equal(t, 0, a.Counts.Errors)
+	for _, f := range a.Findings {
+		for _, plus := range []string{"health_check", "keyval", "sticky", "zone_sync", "api"} {
+			require.NotContains(t, f.Title+" "+f.Detail, plus)
+		}
+	}
 }
 
 func TestExtractEmpty(t *testing.T) {

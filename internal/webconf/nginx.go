@@ -25,6 +25,7 @@ func extract(dirs []*Directive) Analysis {
 			a.Upstreams = append(a.Upstreams, readUpstream(u))
 		}
 	}
+	analyzeFindings(&a)
 	return a
 }
 
