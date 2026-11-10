@@ -23,6 +23,7 @@ import (
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/macvendor"
 	"github.com/hriday/meridian/internal/netcat"
+	"github.com/hriday/meridian/internal/netif"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/ping"
@@ -75,6 +76,7 @@ usage:
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
   meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
   meridian-cli macvendor <mac|oui> [--json]
+  meridian-cli interfaces [--json]
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
@@ -114,6 +116,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runWOL(args[1:], stdout, stderr)
 	case "macvendor":
 		return runMACVendor(args[1:], stdout, stderr)
+	case "interfaces":
+		return runInterfaces(args[1:], stdout, stderr)
 	case "nc":
 		return runNC(args[1:], stdout, stderr)
 	case "bgp":
@@ -1013,6 +1017,47 @@ func printBlocklistReport(stdout io.Writer, r dnsbl.Report) {
 		if l.Note != "" {
 			fmt.Fprintf(stdout, "           note: %s\n", l.Note)
 		}
+	}
+}
+
+func runInterfaces(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("interfaces", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	if _, ok := parsePositionals(fs, args); !ok {
+		return 2
+	}
+	ifaces, err := netif.List()
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, ifaces)
+	}
+	printInterfaces(stdout, ifaces)
+	return 0
+}
+
+func printInterfaces(stdout io.Writer, ifaces []netif.Iface) {
+	for _, i := range ifaces {
+		state := "down"
+		if i.Up {
+			state = "up"
+		}
+		fmt.Fprintf(stdout, "%s  (%s)\n", i.Name, state)
+		if i.MAC != "" {
+			reportRow(stdout, "  MAC", i.MAC)
+		}
+		reportRow(stdout, "  MTU", fmt.Sprintf("%d", i.MTU))
+		if len(i.Flags) > 0 {
+			reportRow(stdout, "  Flags", strings.Join(i.Flags, " "))
+		}
+		addrs := append(append([]string{}, i.IPv4...), i.IPv6...)
+		if len(addrs) > 0 {
+			reportRow(stdout, "  Addresses", strings.Join(addrs, ", "))
+		}
+		fmt.Fprintln(stdout)
 	}
 }
 
