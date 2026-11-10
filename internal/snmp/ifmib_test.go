@@ -109,3 +109,18 @@ func TestResourceUsagePresentAndAbsent(t *testing.T) {
 	require.False(t, r2.HasCPU)
 	require.False(t, r2.HasMem)
 }
+
+func TestResourceUsageClampsMemOver100(t *testing.T) {
+	// some agents report used > size; a usage percent must never exceed 100.
+	c := &fakeClient{walk: map[string][]PDU{
+		oidHrStorageType: col(oidHrStorageType, map[int]any{1: oidHrStorageRAM}),
+	}, get: map[string]any{
+		oidHrStorageAllocUnits + ".1": 1,
+		oidHrStorageSize + ".1":       1000,
+		oidHrStorageUsed + ".1":       1270,
+	}}
+	r, err := ResourceUsage(c)
+	require.NoError(t, err)
+	require.True(t, r.HasMem)
+	require.Equal(t, 100.0, r.MemPct)
+}
