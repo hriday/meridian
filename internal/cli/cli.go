@@ -663,10 +663,31 @@ func printIPReport(stdout io.Writer, r lookup.IPReport) {
 	if r.OriginASN != "" {
 		reportRow(stdout, "Origin AS", strings.TrimSpace(r.OriginASN+"  "+r.OriginName))
 	}
+	reportRow(stdout, "Peering", peeringLine(r.Peering))
 	reportRow(stdout, "Registered", strings.TrimSpace(r.RegisteredOrg+registrySuffix(r.Registry)))
 	reportRow(stdout, "Abuse", r.AbuseEmail)
 	reportRow(stdout, "Note", r.RoutingNote)
-	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc)
+	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc, r.PeeringSrc)
+}
+
+// peeringLine is a one-line PeeringDB summary of the origin AS for the IP page:
+// "<n> IXPs · <m> facilities · policy <policy>". Counts come from the fetched
+// lists; an empty section yields "" so the row is suppressed.
+func peeringLine(p *lookup.Peering) string {
+	if p == nil {
+		return ""
+	}
+	var parts []string
+	if n := len(p.IXPs); n > 0 {
+		parts = append(parts, peeringPresence(n, "IXP", "IXPs", nil))
+	}
+	if n := len(p.Facilities); n > 0 {
+		parts = append(parts, peeringPresence(n, "facility", "facilities", nil))
+	}
+	if p.Policy != "" {
+		parts = append(parts, "policy "+p.Policy)
+	}
+	return strings.Join(parts, " · ")
 }
 
 func printASNReport(stdout io.Writer, r lookup.ASNReport) {

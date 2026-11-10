@@ -39,6 +39,31 @@ func TestPrintASNReportPeering(t *testing.T) {
 	require.Contains(t, s, "1 facility")
 }
 
+func TestPrintIPReportPeeringLine(t *testing.T) {
+	var out bytes.Buffer
+	printIPReport(&out, lookup.IPReport{
+		Input:     "104.16.123.45",
+		Version:   "IPv4",
+		OriginASN: "AS13335",
+		Peering: &lookup.Peering{
+			Policy:     "Open",
+			IXPs:       []lookup.PeerIX{{Name: "AMS-IX"}, {Name: "DE-CIX"}, {Name: "LINX"}},
+			Facilities: []lookup.PeerFac{{Name: "Equinix DC1"}, {Name: "Equinix DC2"}},
+		},
+	})
+	s := out.String()
+	require.Contains(t, s, "Peering")
+	require.Contains(t, s, "3 IXPs")
+	require.Contains(t, s, "2 facilities")
+	require.Contains(t, s, "Open")
+}
+
+func TestPrintIPReportNoPeeringLine(t *testing.T) {
+	var out bytes.Buffer
+	printIPReport(&out, lookup.IPReport{Input: "192.0.2.1", Version: "IPv4", RoutingNote: "reserved"})
+	require.NotContains(t, out.String(), "Peering")
+}
+
 func TestPrintASNReportNoPeering(t *testing.T) {
 	var out bytes.Buffer
 	printASNReport(&out, lookup.ASNReport{ASN: "AS65000", Holder: "Example"})
