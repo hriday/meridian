@@ -26,6 +26,7 @@ import (
 	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/subnet"
 	"github.com/hriday/meridian/internal/sysconf"
+	"github.com/hriday/meridian/internal/tlscheck"
 	"github.com/hriday/meridian/internal/trace"
 	"github.com/hriday/meridian/internal/tracerun"
 )
@@ -68,6 +69,7 @@ usage:
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
+  meridian-cli tls <host[:port]> [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
@@ -100,6 +102,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runNC(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
+	case "tls":
+		return runTLS(args[1:], stdout, stderr)
 	case "adaudit":
 		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
@@ -826,6 +830,52 @@ func runBGP(args []string, stdout, stderr io.Writer) int {
 	}
 	printBGPReport(stdout, rep)
 	return 0
+}
+
+func runTLS(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("tls", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	timeout := fs.Duration("timeout", 8*time.Second, "connection timeout")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "tls needs exactly one host\n%s", usage)
+		return 2
+	}
+	rep, err := tlscheck.Check(context.Background(), pos[0], *timeout)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printTLSReport(stdout, rep)
+	return 0
+}
+
+func printTLSReport(stdout io.Writer, r tlscheck.CertReport) {
+	reportRow(stdout, "Verdict", r.Verdict)
+	reportRow(stdout, "Host", strings.TrimSpace(r.Host+":"+r.Port))
+	reportRow(stdout, "Subject", r.Subject)
+	reportRow(stdout, "Issuer", r.Issuer)
+	if len(r.SANs) > 0 {
+		reportRow(stdout, "SANs", strings.Join(r.SANs, ", "))
+	}
+	if !r.NotAfter.IsZero() {
+		reportRow(stdout, "Valid until", fmt.Sprintf("%s (%d days)", r.NotAfter.Format("2006-01-02"), r.DaysToExpiry))
+	}
+	if r.KeyType != "" {
+		reportRow(stdout, "Key", fmt.Sprintf("%s %d-bit", r.KeyType, r.KeyBits))
+	}
+	reportRow(stdout, "Signature", r.SigAlg)
+	reportRow(stdout, "TLS", strings.TrimSpace(r.TLSVersion+"  "+r.CipherSuite))
+	if len(r.Warnings) > 0 {
+		reportRow(stdout, "Warnings", strings.Join(r.Warnings, "; "))
+	}
 }
 
 func runADAudit(args []string, stdout, stderr io.Writer) int {
