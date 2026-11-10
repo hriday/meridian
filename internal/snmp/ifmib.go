@@ -235,6 +235,9 @@ func ResourceUsage(c Client) (Resources, error) {
 				used := asUint64(g[2].Value)
 				if size > 0 {
 					r.MemPct = float64(used) / float64(size) * 100
+					if r.MemPct > 100 { // some agents report used > size
+						r.MemPct = 100
+					}
 					r.HasMem = true
 				}
 			}
