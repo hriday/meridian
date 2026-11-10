@@ -35,9 +35,12 @@ type Cracker interface {
 }
 
 // HashcatCracker drives hashcat (NTLM mode 1000) through injectable seams.
+// Run is for quick calls (--version, --show); Stream runs the crack and
+// delivers each status line live as hashcat emits it.
 type HashcatCracker struct {
 	LookPath func(string) (string, error)
 	Run      func(ctx context.Context, name string, args ...string) ([]byte, error)
+	Stream   func(ctx context.Context, name string, args []string, onLine func(string)) error
 }
 
 // NewHashcatCracker returns a HashcatCracker wired to the real system.
@@ -46,6 +49,24 @@ func NewHashcatCracker() *HashcatCracker {
 		LookPath: exec.LookPath,
 		Run: func(ctx context.Context, name string, args ...string) ([]byte, error) {
 			return exec.CommandContext(ctx, name, args...).CombinedOutput()
+		},
+		Stream: func(ctx context.Context, name string, args []string, onLine func(string)) error {
+			cmd := exec.CommandContext(ctx, name, args...)
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				return err
+			}
+			cmd.Stderr = cmd.Stdout
+			if err := cmd.Start(); err != nil {
+				return err
+			}
+			sc := bufio.NewScanner(stdout)
+			sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+			for sc.Scan() {
+				onLine(sc.Text())
+			}
+			_ = cmd.Wait() // hashcat exits non-zero on partial cracks; --show is the source of truth
+			return nil
 		},
 	}
 }
@@ -92,9 +113,16 @@ func (c *HashcatCracker) Crack(ctx context.Context, ntHashes []string, wordlist 
 	for _, r := range rules {
 		args = append(args, "--rules-file", r)
 	}
-	out, _ := c.Run(ctx, path, args...) // hashcat exits non-zero when some hashes are uncracked; rely on --show
-	if onProgress != nil {
-		streamProgress(out, onProgress)
+	// Stream the crack: report each status line live as hashcat emits it.
+	if err := c.Stream(ctx, path, args, func(line string) {
+		if onProgress == nil {
+			return
+		}
+		if p, ok := parseStatusLine(line); ok {
+			onProgress(p)
+		}
+	}); err != nil {
+		return nil, err
 	}
 
 	showOut, err := c.Run(ctx, path, "-m", "1000", "--show", "--potfile-path", pot.Name(), "--quiet", hashFile.Name())
@@ -121,29 +149,25 @@ func parseShow(out []byte) map[string]string {
 	return cracked
 }
 
-// streamProgress parses hashcat --status-json lines and reports each snapshot.
-func streamProgress(out []byte, onProgress func(Progress)) {
-	sc := bufio.NewScanner(bytes.NewReader(out))
-	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line := strings.TrimSpace(sc.Text())
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var s struct {
-			Recovered []int `json:"recovered_hashes"`
-			Progress  []int `json:"progress"`
-		}
-		if json.Unmarshal([]byte(line), &s) != nil {
-			continue
-		}
-		p := Progress{}
-		if len(s.Recovered) == 2 {
-			p.Recovered, p.Total = s.Recovered[0], s.Recovered[1]
-		}
-		if len(s.Progress) == 2 && s.Progress[1] > 0 {
-			p.Percent = float64(s.Progress[0]) / float64(s.Progress[1]) * 100
-		}
-		onProgress(p)
+// parseStatusLine parses one hashcat --status-json line into a Progress snapshot.
+func parseStatusLine(line string) (Progress, bool) {
+	line = strings.TrimSpace(line)
+	if !strings.HasPrefix(line, "{") {
+		return Progress{}, false
 	}
+	var s struct {
+		Recovered []int `json:"recovered_hashes"`
+		Progress  []int `json:"progress"`
+	}
+	if json.Unmarshal([]byte(line), &s) != nil {
+		return Progress{}, false
+	}
+	p := Progress{}
+	if len(s.Recovered) == 2 {
+		p.Recovered, p.Total = s.Recovered[0], s.Recovered[1]
+	}
+	if len(s.Progress) == 2 && s.Progress[1] > 0 {
+		p.Percent = float64(s.Progress[0]) / float64(s.Progress[1]) * 100
+	}
+	return p, true
 }

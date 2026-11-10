@@ -48,8 +48,13 @@ systems they don't own.
   wordlists; pick one for a run. Never auto-downloads without the user asking.
 - **Results are sensitive** (they contain plaintext passwords): the report lives
   in memory by default; **persisting is an explicit, passphrase-encrypted action**
-  reusing the IP-space encryption approach (argon2id + NaCl secretbox). No
-  plaintext passwords are ever written unencrypted to disk, logged, or sent out.
+  reusing the IP-space encryption approach (argon2id + NaCl secretbox). Meridian
+  never logs, prints (without `--show`), or transmits plaintext, and writes it to
+  *its own* stores only encrypted. **Known residue:** the external cracker
+  (hashcat) necessarily writes `hash:plaintext` to a potfile during a run; we
+  point it at a temp file (mode 0600) and delete it on completion, but a crash or
+  SIGKILL mid-run can leave that temp potfile behind. This is inherent to shelling
+  out to hashcat; documented rather than claimed away.
 - **CLI** counterpart (`meridian-cli adaudit …`) for the same engine.
 - UI follows the approved "security" template: an import pane, cracker/wordlist
   status, a run button with a live progress bar, and a results table (account /

@@ -40,30 +40,41 @@ func TestHashcatDetectMissing(t *testing.T) {
 }
 
 func TestHashcatCrack(t *testing.T) {
-	progressCalls := 0
+	var progress []Progress
 	c := HashcatCracker{
 		LookPath: func(string) (string, error) { return "/usr/bin/hashcat", nil },
 		Run: func(_ context.Context, _ string, args ...string) ([]byte, error) {
-			switch {
-			case argsContain(args, "--version"):
-				return []byte("v6.2.6"), nil
-			case argsContain(args, "--show"):
+			if argsContain(args, "--show") {
 				return []byte("8846f7eaee8fb117ad06bdd830b7586c:Password1\n"), nil
-			default: // the crack run streams status-json
-				return []byte(`{"status":5,"recovered_hashes":[1,1],"progress":[100,100]}` + "\n"), nil
 			}
+			return []byte("v6.2.6"), nil // --version
+		},
+		// Stream fires status lines live, as the real process would.
+		Stream: func(_ context.Context, _ string, _ []string, onLine func(string)) error {
+			onLine(`{"status":3,"recovered_hashes":[0,1],"progress":[50,100]}`)
+			onLine(`{"status":5,"recovered_hashes":[1,1],"progress":[100,100]}`)
+			return nil
 		},
 	}
 	got, err := c.Crack(context.Background(),
 		[]string{"8846f7eaee8fb117ad06bdd830b7586c"}, "/tmp/wl.txt", nil,
-		func(Progress) { progressCalls++ })
+		func(p Progress) { progress = append(progress, p) })
 	require.NoError(t, err)
 	require.Equal(t, "Password1", got["8846f7eaee8fb117ad06bdd830b7586c"])
-	require.Greater(t, progressCalls, 0)
+	// progress is reported per streamed line, not in one post-hoc burst
+	require.Len(t, progress, 2)
+	require.InDelta(t, 50.0, progress[0].Percent, 0.1)
+	require.Equal(t, 1, progress[1].Recovered)
 }
 
 func TestHashcatCrackNoBinary(t *testing.T) {
 	c := HashcatCracker{LookPath: func(string) (string, error) { return "", errors.New("not found") }}
 	_, err := c.Crack(context.Background(), []string{"8846f7eaee8fb117ad06bdd830b7586c"}, "/tmp/wl.txt", nil, nil)
 	require.Error(t, err)
+}
+
+func TestParseShowColonInPassword(t *testing.T) {
+	// a plaintext containing ':' must survive the first-colon split
+	got := parseShow([]byte("8846f7eaee8fb117ad06bdd830b7586c:pa:ss:word\n"))
+	require.Equal(t, "pa:ss:word", got["8846f7eaee8fb117ad06bdd830b7586c"])
 }

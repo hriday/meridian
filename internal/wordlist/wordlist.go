@@ -89,6 +89,9 @@ func Download(ctx context.Context, e Entry, dir string, client *http.Client, onP
 	if client == nil {
 		client = http.DefaultClient
 	}
+	if e.SHA256 == "" {
+		return "", fmt.Errorf("refusing to download %s: no checksum to verify against", e.Name)
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
