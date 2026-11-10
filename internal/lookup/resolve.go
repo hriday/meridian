@@ -21,9 +21,11 @@ type IPReport struct {
 	AbuseEmail     string `json:"abuseEmail"`
 	Registry       string `json:"registry"`    // RIR name (ARIN, RIPE NCC, …)
 	RPKIState      string `json:"rpkiState"`   // valid/invalid/unknown ("" if not checked)
-	RoutingNote    string `json:"routingNote"` // set for non-global addresses
-	RoutingSrc     Source `json:"routingSrc"`
-	RegistrySrc    Source `json:"registrySrc"`
+	RoutingNote    string   `json:"routingNote"` // set for non-global addresses
+	RoutingSrc     Source   `json:"routingSrc"`
+	RegistrySrc    Source   `json:"registrySrc"`
+	Peering        *Peering `json:"peering,omitempty"` // PeeringDB record of the origin AS
+	PeeringSrc     Source   `json:"peeringSrc"`
 }
 
 // ASNReport is the report for an autonomous system.
@@ -90,6 +92,17 @@ func (c *Client) LookupIP(ctx context.Context, ip string) (IPReport, error) {
 		r.Registry = e.Registry
 		if e.Registry != "" {
 			r.RegistrySrc.Label = "RDAP · " + e.Registry
+		}
+	}
+
+	// Peering (PeeringDB) of the origin AS — best-effort, only when the address
+	// is announced by some AS.
+	if r.OriginASN != "" {
+		r.PeeringSrc = Source{Label: "PeeringDB", FetchedAt: now()}
+		if p, err := c.peeringDB(ctx, r.OriginASN); err != nil {
+			r.PeeringSrc.Err = err.Error()
+		} else {
+			r.Peering = p
 		}
 	}
 	return r, nil
