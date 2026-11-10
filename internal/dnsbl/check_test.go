@@ -43,6 +43,8 @@ func dnsblServer(t *testing.T) string {
 					A:   net.ParseIP("127.255.255.254"),
 				}}
 			}
+		case strings.HasSuffix(name, ".servfail.test."):
+			m.Rcode = mdns.RcodeServerFailure // SERVFAIL: a response arrives, but it's a refusal, not "clean"
 		default:
 			m.Rcode = mdns.RcodeNameError // NXDOMAIN = clean
 		}
@@ -120,6 +122,40 @@ func TestCheckBlockedIncomplete(t *testing.T) {
 	require.GreaterOrEqual(t, r.Unreachable, 1)
 	require.Equal(t, 0, r.Listed) // a blocked query is not a listing
 	require.Contains(t, strings.ToLower(r.Summary), "incomplete")
+}
+
+func TestCheckServfailIsUnreachableNotClean(t *testing.T) {
+	// A SERVFAIL/REFUSED arrives as a DNS response with no transport error, but
+	// it is a refusal, not a clean "not listed" result. It must count as
+	// unreachable and mark the check incomplete, never read as clean.
+	addr := dnsblServer(t)
+	zones := []Zone{
+		{Host: "servfail.test", Name: "Broken List"},
+		{Host: "clean.test", Name: "Clean List"},
+	}
+	r, err := Check(context.Background(), "1.2.3.4", addr, zones, 3*time.Second)
+	require.NoError(t, err)
+
+	b, ok := findListing(r, "servfail.test")
+	require.True(t, ok)
+	require.NotEqual(t, StatusClean, b.Status, "SERVFAIL must not read as clean")
+	require.GreaterOrEqual(t, r.Unreachable, 1)
+	require.Equal(t, 0, r.Listed)
+	require.Contains(t, strings.ToLower(r.Summary), "incomplete")
+}
+
+func TestCheckAllUnreachableVerdict(t *testing.T) {
+	// When every list is unreachable, the headline verdict must not claim
+	// "Not listed" — nothing answered, so there is no reputation result.
+	addr := dnsblServer(t)
+	zones := []Zone{
+		{Host: "servfail.test", Name: "Broken A"},
+		{Host: "servfail.test", Name: "Broken B"},
+	}
+	r, err := Check(context.Background(), "1.2.3.4", addr, zones, 3*time.Second)
+	require.NoError(t, err)
+	require.Equal(t, 2, r.Unreachable)
+	require.NotEqual(t, "Not listed", r.Verdict)
 }
 
 func TestCheckRejectsNonIP(t *testing.T) {

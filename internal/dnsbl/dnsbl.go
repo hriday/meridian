@@ -166,6 +166,16 @@ func Check(ctx context.Context, ip, resolver string, zones []Zone, timeout time.
 			rep.Listings = append(rep.Listings, l)
 			continue
 		}
+		// dnsx returns no error for any response that arrives, so a DNS-level
+		// refusal (SERVFAIL / REFUSED / anything but NOERROR or NXDOMAIN) reaches
+		// here with a non-empty Rcode. That is a refusal, not a clean result — it
+		// must be unreachable, never read as "not listed".
+		if res.Rcode != "" && res.Rcode != "NOERROR" && res.Rcode != "NXDOMAIN" {
+			l.Status = StatusError
+			l.Note = "the resolver returned " + res.Rcode + " — the check could not be performed on this list"
+			rep.Listings = append(rep.Listings, l)
+			continue
+		}
 		var codes []string
 		for _, a := range res.Answers {
 			if a.Type == "A" {
@@ -216,10 +226,16 @@ func summarize(r Report) (verdict, summary string) {
 		}
 	}
 	reachable := r.Checked - r.Unreachable
-	if r.Listed > 0 {
+	switch {
+	case r.Listed > 0:
 		verdict = fmt.Sprintf("Listed on %d blocklist(s)", r.Listed)
 		summary = "Listed on " + strings.Join(listed, ", ") + "."
-	} else {
+	case reachable == 0 && r.Checked > 0:
+		// Nothing answered — there is no reputation result to report.
+		verdict = "Couldn't check"
+		summary = fmt.Sprintf("None of the %d list(s) could be reached (the resolver refused or failed every query), so this is not a reputation result — try your own resolver.", r.Checked)
+		return verdict, summary
+	default:
 		verdict = "Not listed"
 		summary = fmt.Sprintf("Not listed on any of the %d list(s) that answered.", reachable)
 	}
