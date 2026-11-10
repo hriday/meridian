@@ -1,4 +1,5 @@
 import './style.css'
+import 'uplot/dist/uPlot.min.css'
 import App from './App.svelte'
 
 const app = new App({
