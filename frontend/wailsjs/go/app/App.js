@@ -42,6 +42,10 @@ export function DNSSystem() {
   return window['go']['app']['App']['DNSSystem']();
 }
 
+export function HTTPCheck(arg1) {
+  return window['go']['app']['App']['HTTPCheck'](arg1);
+}
+
 export function IPSpaceAdd(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['IPSpaceAdd'](arg1, arg2, arg3, arg4, arg5);
 }
