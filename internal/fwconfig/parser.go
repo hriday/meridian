@@ -31,8 +31,8 @@ func parse(text string) (*Block, error) {
 	stack := []*Block{root}
 	top := func() *Block { return stack[len(stack)-1] }
 
-	for i, raw := range strings.Split(text, "\n") {
-		line := strings.TrimSpace(raw)
+	for i, logical := range logicalLines(text) {
+		line := strings.TrimSpace(logical)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -66,6 +66,44 @@ func parse(text string) (*Block, error) {
 		}
 	}
 	return root, nil
+}
+
+// logicalLines splits text into logical config lines, keeping a double-quoted
+// value that spans several physical lines (PEM keys, HTML templates) as one
+// line so its inner config/next/end words aren't mistaken for structure.
+func logicalLines(text string) []string {
+	var out []string
+	var buf strings.Builder
+	inQuote, started := false, false
+	for _, raw := range strings.Split(text, "\n") {
+		phys := strings.TrimRight(raw, "\r")
+		if started {
+			buf.WriteByte('\n')
+		}
+		buf.WriteString(phys)
+		started = true
+		esc := false
+		for i := 0; i < len(phys); i++ {
+			c := phys[i]
+			switch {
+			case esc:
+				esc = false
+			case c == '\\' && inQuote:
+				esc = true
+			case c == '"':
+				inQuote = !inQuote
+			}
+		}
+		if !inQuote {
+			out = append(out, buf.String())
+			buf.Reset()
+			started = false
+		}
+	}
+	if started { // unterminated quote at EOF: take what we have
+		out = append(out, buf.String())
+	}
+	return out
 }
 
 // tokenize splits a config line on whitespace, honouring double-quoted values

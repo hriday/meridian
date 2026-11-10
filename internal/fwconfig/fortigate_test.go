@@ -105,25 +105,48 @@ end`
 }
 
 func TestInterpretMultiVdom(t *testing.T) {
-	cfg := `config vdom
-edit root
+	// Real FortiGate multi-VDOM layout: interfaces live under `config global`
+	// tagged `set vdom`, VDOMs are declared in an empty `config vdom` block, and
+	// their objects come in a SECOND `config vdom` block.
+	cfg := `config global
     config system interface
         edit "port1.10"
+            set vdom "root"
             set vlanid 10
+            set ip 10.0.10.1 255.255.255.0
+        next
+        edit "wan1"
+            set vdom "root"
+            set role wan
+        next
+        edit "port2.50"
+            set vdom "dmz"
+            set vlanid 50
         next
     end
+end
+config vdom
+edit root
+next
+edit dmz
+next
+end
+config vdom
+edit root
     config firewall policy
         edit 1
             set srcintf "port1.10"
-            set dstintf "port1.20"
+            set dstintf "wan1"
             set action accept
         next
     end
 next
 edit dmz
-    config system interface
-        edit "port2.50"
-            set vlanid 50
+    config firewall policy
+        edit 1
+            set srcintf "port2.50"
+            set dstintf "any"
+            set action accept
         next
     end
 next
@@ -132,10 +155,19 @@ end`
 	require.Len(t, a, 2)
 	require.Equal(t, "root", a[0].VDOM)
 	require.Equal(t, "dmz", a[1].VDOM)
+
+	// root: interface from global (tagged vdom root), policy from the 2nd vdom block
 	require.Len(t, a[0].VLANs, 1)
+	require.Equal(t, 10, a[0].VLANs[0].ID)
+	require.Equal(t, "10.0.10.0/24", a[0].VLANs[0].Subnet)
 	require.Len(t, a[0].Policies, 1)
+	// WAN interface (global, role wan) collapses to the Internet node
+	require.NotNil(t, findFlow(a[0].Flows, "port1.10", "Internet (any)", "allow"))
+
+	// dmz: its own global interface + its own policy
 	require.Len(t, a[1].VLANs, 1)
-	require.Len(t, a[1].Policies, 0)
+	require.Equal(t, 50, a[1].VLANs[0].ID)
+	require.Len(t, a[1].Policies, 1)
 }
 
 func TestInterpretSingleVdomName(t *testing.T) {

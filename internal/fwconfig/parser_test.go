@@ -87,6 +87,34 @@ end`
 	require.Len(t, ve[1].configs("system interface"), 1)
 }
 
+func TestParseMultiLineQuotedValue(t *testing.T) {
+	// a quoted value (a PEM key) spans several lines containing config/next/end
+	// keywords — these must not be treated as structure, and the real policy
+	// after it must still parse.
+	cfg := `config vpn certificate local
+    edit "cert1"
+        set private-key "-----BEGIN
+config firewall policy
+next
+end
+-----END"
+    next
+end
+config firewall policy
+    edit 9
+        set srcintf "a"
+        set dstintf "b"
+        set action accept
+    next
+end`
+	root, err := parse(cfg)
+	require.NoError(t, err)
+	pol := root.configs("firewall policy")
+	require.Len(t, pol, 1)
+	require.Len(t, pol[0].edits(), 1)
+	require.Equal(t, "9", pol[0].edits()[0].Name)
+}
+
 func TestParseIgnoresCommentsAndHeader(t *testing.T) {
 	cfg := `#config-version=FGT60F-7.0.5
 # a comment

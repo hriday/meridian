@@ -8,49 +8,96 @@ import (
 )
 
 // interpret turns a parsed config tree into one Analysis per VDOM (or a single
-// Analysis named "" for a non-VDOM config).
+// Analysis named "" for a non-VDOM config). Real FortiGate multi-VDOM exports
+// keep interfaces under `config global` (tagged `set vdom`) and split a VDOM's
+// objects across more than one `config vdom` block, so scopes are built by
+// merging across all of them.
 func interpret(root *Block) ([]Analysis, error) {
-	var scopes []*Block
-	var names []string
-	if vdoms := root.configs("vdom"); len(vdoms) > 0 {
-		for _, e := range vdoms[0].edits() {
-			scopes = append(scopes, e)
-			names = append(names, e.Name)
-		}
-	}
-	if len(scopes) == 0 {
-		scopes = []*Block{root}
-		names = []string{""}
+	vdomBlocks := root.configs("vdom")
+	if len(vdomBlocks) == 0 {
+		// single, non-VDOM config: everything lives at the top level.
+		scope := []*Block{root}
+		a := analyzeScope("", collectEdits(scope, "system interface"), scope)
+		return []Analysis{a}, nil
 	}
 
-	out := make([]Analysis, 0, len(scopes))
-	for i, scope := range scopes {
-		a := newAnalysis(names[i])
-		readInterfaces(scope, &a)
-		readZones(scope, &a)
-		applyZones(&a)
-		readAddresses(scope, &a)
-		readServices(scope, &a)
-		readPolicies(scope, &a)
-		derive(&a)
-		out = append(out, a)
+	// VDOM names (ordered, unique) and their object edits, across all vdom blocks.
+	var names []string
+	seen := map[string]bool{}
+	editsByVdom := map[string][]*Block{}
+	for _, vb := range vdomBlocks {
+		for _, e := range vb.edits() {
+			if !seen[e.Name] {
+				seen[e.Name] = true
+				names = append(names, e.Name)
+			}
+			editsByVdom[e.Name] = append(editsByVdom[e.Name], e)
+		}
+	}
+
+	// Interfaces come from `config global` (and any top-level section), tagged
+	// with `set vdom`.
+	var globalIfaces []*Block
+	for _, g := range root.configs("global") {
+		globalIfaces = append(globalIfaces, collectEdits([]*Block{g}, "system interface")...)
+	}
+	globalIfaces = append(globalIfaces, collectEdits([]*Block{root}, "system interface")...)
+
+	out := make([]Analysis, 0, len(names))
+	for _, name := range names {
+		scope := editsByVdom[name]
+		ifaceEdits := filterByVdom(globalIfaces, name)
+		// also accept interfaces declared inside the VDOM scope (defensive).
+		ifaceEdits = append(ifaceEdits, collectEdits(scope, "system interface")...)
+		out = append(out, analyzeScope(name, ifaceEdits, scope))
 	}
 	return out, nil
 }
 
-func firstConfig(scope *Block, path string) *Block {
-	if cs := scope.configs(path); len(cs) > 0 {
-		return cs[0]
-	}
-	return nil
+// analyzeScope builds one VDOM's Analysis from its interface edits and the
+// config blocks that hold its firewall/zone sections.
+func analyzeScope(name string, ifaceEdits, scope []*Block) Analysis {
+	a := newAnalysis(name)
+	readInterfaces(ifaceEdits, &a)
+	readZones(collectEdits(scope, "system zone"), &a)
+	applyZones(&a)
+	readAddresses(collectEdits(scope, "firewall address"), collectEdits(scope, "firewall addrgrp"), &a)
+	readServices(collectEdits(scope, "firewall service custom"), collectEdits(scope, "firewall service group"), &a)
+	readPolicies(collectEdits(scope, "firewall policy"), &a)
+	derive(&a)
+	return a
 }
 
-func readInterfaces(scope *Block, a *Analysis) {
-	c := firstConfig(scope, "system interface")
-	if c == nil {
-		return
+// collectEdits returns every edit object across all `config <path>` sections
+// found directly in the given blocks.
+func collectEdits(blocks []*Block, path string) []*Block {
+	var out []*Block
+	for _, b := range blocks {
+		for _, c := range b.configs(path) {
+			out = append(out, c.edits()...)
+		}
 	}
-	for _, e := range c.edits() {
+	return out
+}
+
+// filterByVdom keeps interface edits tagged for the named VDOM; if none carry a
+// `set vdom`, it attributes all of them to the VDOM (single-interface-table
+// exports).
+func filterByVdom(ifaces []*Block, name string) []*Block {
+	var matched []*Block
+	for _, e := range ifaces {
+		if v, ok := e.get("vdom"); ok && v == name {
+			matched = append(matched, e)
+		}
+	}
+	if len(matched) == 0 {
+		return ifaces
+	}
+	return matched
+}
+
+func readInterfaces(edits []*Block, a *Analysis) {
+	for _, e := range edits {
 		if valOr(e, "role", "") == "wan" {
 			a.wan[e.Name] = true
 		}
@@ -70,12 +117,8 @@ func readInterfaces(scope *Block, a *Analysis) {
 	}
 }
 
-func readZones(scope *Block, a *Analysis) {
-	c := firstConfig(scope, "system zone")
-	if c == nil {
-		return
-	}
-	for _, e := range c.edits() {
+func readZones(edits []*Block, a *Analysis) {
+	for _, e := range edits {
 		a.Zones = append(a.Zones, Zone{Name: e.Name, Interfaces: e.getAll("interface")})
 	}
 }
@@ -93,18 +136,14 @@ func applyZones(a *Analysis) {
 	}
 }
 
-func readAddresses(scope *Block, a *Analysis) {
-	if c := firstConfig(scope, "firewall address"); c != nil {
-		for _, e := range c.edits() {
-			a.Addresses = append(a.Addresses, address(e))
-		}
+func readAddresses(addrs, groups []*Block, a *Analysis) {
+	for _, e := range addrs {
+		a.Addresses = append(a.Addresses, address(e))
 	}
-	if c := firstConfig(scope, "firewall addrgrp"); c != nil {
-		for _, e := range c.edits() {
-			a.Addresses = append(a.Addresses, Address{
-				Name: e.Name, Kind: "group", Value: strings.Join(e.getAll("member"), ", "),
-			})
-		}
+	for _, e := range groups {
+		a.Addresses = append(a.Addresses, Address{
+			Name: e.Name, Kind: "group", Value: strings.Join(e.getAll("member"), ", "),
+		})
 	}
 }
 
@@ -129,30 +168,21 @@ func address(e *Block) Address {
 	return a
 }
 
-func readServices(scope *Block, a *Analysis) {
-	if c := firstConfig(scope, "firewall service custom"); c != nil {
-		for _, e := range c.edits() {
-			s := Service{Name: e.Name, Proto: valOr(e, "protocol", "")}
-			ports := firstNonEmpty(valOr(e, "tcp-portrange", ""), valOr(e, "udp-portrange", ""))
-			s.Ports = ports
-			a.Services = append(a.Services, s)
-		}
+func readServices(customs, groups []*Block, a *Analysis) {
+	for _, e := range customs {
+		s := Service{Name: e.Name, Proto: valOr(e, "protocol", "")}
+		s.Ports = firstNonEmpty(valOr(e, "tcp-portrange", ""), valOr(e, "udp-portrange", ""))
+		a.Services = append(a.Services, s)
 	}
-	if c := firstConfig(scope, "firewall service group"); c != nil {
-		for _, e := range c.edits() {
-			a.Services = append(a.Services, Service{
-				Name: e.Name, Proto: "group", Ports: strings.Join(e.getAll("member"), ", "),
-			})
-		}
+	for _, e := range groups {
+		a.Services = append(a.Services, Service{
+			Name: e.Name, Proto: "group", Ports: strings.Join(e.getAll("member"), ", "),
+		})
 	}
 }
 
-func readPolicies(scope *Block, a *Analysis) {
-	c := firstConfig(scope, "firewall policy")
-	if c == nil {
-		return
-	}
-	for _, e := range c.edits() {
+func readPolicies(edits []*Block, a *Analysis) {
+	for _, e := range edits {
 		id, _ := strconv.Atoi(e.Name)
 		action := valOr(e, "action", "deny") // FortiGate default action is deny
 		p := Policy{
