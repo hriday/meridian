@@ -85,8 +85,11 @@ func queryServer(ctx context.Context, server, object string) (string, error) {
 	if _, err := conn.Write([]byte(object + "\r\n")); err != nil {
 		return "", err
 	}
+	// Many whois servers abort the connection (RST) right after sending the
+	// record, which surfaces as a read error even though the full response
+	// arrived. Keep whatever we read; only fail when nothing came back.
 	b, err := io.ReadAll(conn)
-	if err != nil {
+	if len(b) == 0 && err != nil {
 		return "", err
 	}
 	return string(b), nil

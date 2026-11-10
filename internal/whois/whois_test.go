@@ -16,6 +16,7 @@ import (
 type whoisServer struct {
 	resp     string
 	gotQuery string
+	rst      bool // abort the connection (RST) after writing, like real whois servers
 }
 
 // fakeNet wires dialWhois to in-memory listeners keyed by host (the "host" part
@@ -37,6 +38,11 @@ func fakeNet(t *testing.T, servers map[string]*whoisServer) {
 				line, _ := bufio.NewReader(c).ReadString('\n')
 				srv.gotQuery = line
 				_, _ = c.Write([]byte(srv.resp))
+				if srv.rst {
+					if tc, ok := c.(*net.TCPConn); ok {
+						_ = tc.SetLinger(0) // close with RST, not FIN
+					}
+				}
 				_ = c.Close()
 			}
 		}()
@@ -112,6 +118,19 @@ func TestQuerySendsObjectCRLF(t *testing.T) {
 	_, err := Query(context.Background(), "1.1.1.1", 3*time.Second)
 	require.NoError(t, err)
 	require.Equal(t, "1.1.1.1\r\n", iana.gotQuery)
+}
+
+func TestQueryToleratesResetAfterData(t *testing.T) {
+	// Real whois servers often RST the connection right after sending the record;
+	// the full response must still be returned, not discarded as a read error.
+	fakeNet(t, map[string]*whoisServer{
+		"whois.iana.org": {resp: "inetnum: 1.0.0.0\nrefer: rir.test\n", rst: true},
+		"rir.test":       {resp: "NetName: APNIC-1\nthe record\n", rst: true},
+	})
+	r, err := Query(context.Background(), "1.1.1.1", 3*time.Second)
+	require.NoError(t, err)
+	require.Contains(t, r.Raw, "the record")
+	require.Equal(t, "rir.test", r.Server)
 }
 
 func TestQueryDialError(t *testing.T) {
