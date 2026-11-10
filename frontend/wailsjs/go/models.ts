@@ -844,6 +844,39 @@ export namespace netcat {
 
 }
 
+export namespace netif {
+	
+	export class Iface {
+	    index: number;
+	    name: string;
+	    mac: string;
+	    mtu: number;
+	    up: boolean;
+	    loopback: boolean;
+	    flags: string[];
+	    ipv4: string[];
+	    ipv6: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Iface(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.name = source["name"];
+	        this.mac = source["mac"];
+	        this.mtu = source["mtu"];
+	        this.up = source["up"];
+	        this.loopback = source["loopback"];
+	        this.flags = source["flags"];
+	        this.ipv4 = source["ipv4"];
+	        this.ipv6 = source["ipv6"];
+	    }
+	}
+
+}
+
 export namespace netinput {
 	
 	export class Result {

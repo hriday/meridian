@@ -86,6 +86,10 @@ export function IPSpaceUnlock(arg1) {
   return window['go']['app']['App']['IPSpaceUnlock'](arg1);
 }
 
+export function Interfaces() {
+  return window['go']['app']['App']['Interfaces']();
+}
+
 export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
