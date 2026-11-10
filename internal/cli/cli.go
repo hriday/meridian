@@ -35,6 +35,7 @@ import (
 	"github.com/hriday/meridian/internal/tlscheck"
 	"github.com/hriday/meridian/internal/trace"
 	"github.com/hriday/meridian/internal/tracerun"
+	"github.com/hriday/meridian/internal/whois"
 	"github.com/hriday/meridian/internal/wol"
 )
 
@@ -82,6 +83,7 @@ usage:
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
   meridian-cli http <url> [--timeout 15s] [--json]
+  meridian-cli whois <domain|ip|asn> [--json]
   meridian-cli blocklist <ip> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli dnsaudit <domain> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
@@ -128,6 +130,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTLS(args[1:], stdout, stderr)
 	case "http":
 		return runHTTP(args[1:], stdout, stderr)
+	case "whois":
+		return runWhois(args[1:], stdout, stderr)
 	case "blocklist":
 		return runBlocklist(args[1:], stdout, stderr)
 	case "dnsaudit":
@@ -921,6 +925,36 @@ func runBGP(args []string, stdout, stderr io.Writer) int {
 	}
 	printBGPReport(stdout, rep)
 	return 0
+}
+
+func runWhois(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("whois", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "whois needs exactly one domain, IP, or ASN\n%s", usage)
+		return 2
+	}
+	r, err := whois.Query(context.Background(), pos[0], 15*time.Second)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	printWhoisResult(stdout, r)
+	return 0
+}
+
+func printWhoisResult(stdout io.Writer, r whois.Result) {
+	reportRow(stdout, "Servers", strings.Join(r.Chain, " → "))
+	fmt.Fprintln(stdout)
+	fmt.Fprintln(stdout, strings.TrimRight(r.Raw, "\n"))
 }
 
 func runHTTP(args []string, stdout, stderr io.Writer) int {

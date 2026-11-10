@@ -19,6 +19,7 @@ import {scan} from '../models';
 import {subnet} from '../models';
 import {tlscheck} from '../models';
 import {trace} from '../models';
+import {whois} from '../models';
 import {wordlist} from '../models';
 
 export function ADAuditDetect():Promise<pwaudit.CrackerInfo>;
@@ -114,6 +115,8 @@ export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function Whois(arg1:string):Promise<whois.Result>;
 
 export function WordlistCatalog():Promise<Array<wordlist.Entry>>;
 

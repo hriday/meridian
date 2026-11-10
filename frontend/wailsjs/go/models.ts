@@ -1510,6 +1510,29 @@ export namespace trace {
 
 }
 
+export namespace whois {
+	
+	export class Result {
+	    object: string;
+	    server: string;
+	    chain: string[];
+	    raw: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.object = source["object"];
+	        this.server = source["server"];
+	        this.chain = source["chain"];
+	        this.raw = source["raw"];
+	    }
+	}
+
+}
+
 export namespace wordlist {
 	
 	export class Entry {
