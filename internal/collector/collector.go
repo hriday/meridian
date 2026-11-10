@@ -70,7 +70,7 @@ func (c *Collector[T]) Start(port int) error {
 			if rerr != nil {
 				return // conn closed by Stop
 			}
-			if m, ok := parse(buf[:n], ap.Addr()); ok {
+			if m, ok := parse(buf[:n], ap.Addr().Unmap()); ok { // unmap ::ffff:v4 → v4
 				ring.Add(m)
 			}
 		}
