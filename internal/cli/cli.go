@@ -79,6 +79,7 @@ usage:
   meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
   meridian-cli macvendor <mac|oui> [--json]
   meridian-cli fwanalyze [<config-file>] [--json]   (reads stdin if no file)
+  meridian-cli webanalyze [<nginx -T file>] [--server nginx] [--json]   (reads stdin if no file)
   meridian-cli interfaces [--json]
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
@@ -135,6 +136,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runWhois(args[1:], stdout, stderr)
 	case "fwanalyze":
 		return runFwAnalyze(args[1:], stdout, stderr)
+	case "webanalyze":
+		return runWebAnalyze(args[1:], stdout, stderr)
 	case "blocklist":
 		return runBlocklist(args[1:], stdout, stderr)
 	case "dnsaudit":
