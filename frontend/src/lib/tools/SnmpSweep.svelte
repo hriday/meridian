@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { SnmpSweep, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import { newStreamID } from "../metrics/metricStream";
 
   let cidr = "10.0.0.0/24";
   let community = "";
@@ -13,13 +14,14 @@
   let err = "";
   let startedAt = 0;
   let elapsed = 0;
+  let curEvent = ""; // this run's unique "snmp:host:<id>" event
 
-  EventsOn("snmp:host", (h: any) => {
+  function onHost(h: any) {
     scanned += 1;
     if (h.responded) responded += 1;
     elapsed = (Date.now() - startedAt) / 1000;
-  });
-  onDestroy(() => { EventsOff("snmp:host"); ScanStop(); });
+  }
+  onDestroy(() => { if (curEvent) EventsOff(curEvent); ScanStop(); });
 
   // host count of a CIDR for the progress bar (IPv4; skip net+broadcast for < /31)
   function hostCount(c: string): number {
@@ -34,12 +36,19 @@
   async function run() {
     const c = cidr.trim();
     if (!c || scanning) return;
+    // Drop the previous run's listener so its late events can't count here; this
+    // run gets a fresh, unique event name (so there's never cross-talk anyway).
+    if (curEvent) EventsOff(curEvent);
+    const id = newStreamID();
+    curEvent = "snmp:host:" + id;
+    EventsOn(curEvent, onHost);
+
     err = ""; rows = []; scanned = 0; responded = 0;
     total = hostCount(c);
     startedAt = Date.now(); elapsed = 0;
     scanning = true;
     try {
-      const res = await SnmpSweep(c, community); // authoritative sorted responders
+      const res = await SnmpSweep(id, c, community); // authoritative sorted responders
       rows = res || [];
     } catch (e) {
       err = String(e);

@@ -18,8 +18,11 @@ type SweepHost struct {
 	UptimeTicks uint32 `json:"uptimeTicks"`
 }
 
-// sweepDial is the dialer seam (overridden in tests).
-var sweepDial = Dial
+// sweepDial is the dialer seam (overridden in tests). A sweep dials with no
+// retries so a silent host costs exactly one timeout, not a retransmit.
+var sweepDial = func(device, community string, timeout time.Duration) (Client, error) {
+	return dialRetries(device, community, timeout, 0)
+}
 
 // maxSweepHosts caps a sweep so an over-broad prefix can't fan out unbounded.
 const maxSweepHosts = 65536

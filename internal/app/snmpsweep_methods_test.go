@@ -7,7 +7,7 @@ import (
 )
 
 func TestSnmpSweepInvalidCIDR(t *testing.T) {
-	_, err := New().SnmpSweep("nonsense", "public")
+	_, err := New().SnmpSweep("s1", "nonsense", "public")
 	require.Error(t, err)
 	require.NotContains(t, err.Error(), "public")
 }

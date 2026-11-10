@@ -128,7 +128,7 @@ export function SetIfBaseline(arg1:string):Promise<void>;
 
 export function SetPingBaseline(arg1:string):Promise<void>;
 
-export function SnmpSweep(arg1:string,arg2:string):Promise<Array<snmp.SweepHost>>;
+export function SnmpSweep(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.SweepHost>>;
 
 export function StartDeviceMonitor(arg1:string,arg2:string,arg3:string):Promise<void>;
 

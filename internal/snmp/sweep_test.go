@@ -101,6 +101,16 @@ func TestSweepNoCommunityInResult(t *testing.T) {
 	require.NotContains(t, string(b), community)
 }
 
+func TestSweepDialUsesZeroRetries(t *testing.T) {
+	// a sweep must not retransmit to a silent host: one timeout per dead host.
+	c, err := sweepDial("127.0.0.1", "public", time.Second)
+	require.NoError(t, err)
+	defer c.Close()
+	gc, ok := c.(*gclient)
+	require.True(t, ok)
+	require.Equal(t, 0, gc.s.Retries)
+}
+
 func TestSweepCancel(t *testing.T) {
 	setSweepDial(t, func(string, string, time.Duration) (Client, error) {
 		return sweepFake{ok: false}, nil

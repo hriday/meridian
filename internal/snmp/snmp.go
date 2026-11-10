@@ -27,15 +27,23 @@ type Client interface {
 
 type gclient struct{ s *g.GoSNMP }
 
-// Dial opens an SNMPv2c session to device using community.
+// Dial opens an SNMPv2c session to device using community. It retries once, so
+// a dropped poll of a known device doesn't read as a failure (used by the
+// continuous monitors). A discovery sweep wants no retries — see dialRetries.
 func Dial(device, community string, timeout time.Duration) (Client, error) {
+	return dialRetries(device, community, timeout, 1)
+}
+
+// dialRetries opens an SNMPv2c session with an explicit retry count. A sweep
+// passes 0 so a silent host costs exactly one timeout, not a retransmit.
+func dialRetries(device, community string, timeout time.Duration, retries int) (Client, error) {
 	s := &g.GoSNMP{
 		Target:    device,
 		Port:      161,
 		Community: community,
 		Version:   g.Version2c,
 		Timeout:   timeout,
-		Retries:   1,
+		Retries:   retries,
 		MaxOids:   g.MaxOids,
 	}
 	if err := s.Connect(); err != nil {
