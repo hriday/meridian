@@ -194,6 +194,18 @@ export function SetAtlasKey(arg1) {
   return window['go']['app']['App']['SetAtlasKey'](arg1);
 }
 
+export function SetPingBaseline(arg1) {
+  return window['go']['app']['App']['SetPingBaseline'](arg1);
+}
+
+export function StartPingMonitor(arg1, arg2) {
+  return window['go']['app']['App']['StartPingMonitor'](arg1, arg2);
+}
+
+export function StopPingMonitor(arg1) {
+  return window['go']['app']['App']['StopPingMonitor'](arg1);
+}
+
 export function StopTrace() {
   return window['go']['app']['App']['StopTrace']();
 }

@@ -109,8 +109,9 @@
     u = null;
   });
 
-  // push new data on prop change
-  $: if (u) u.setData(data());
+  // push new data on prop change — reference xs/rtts/anomalies directly so
+  // Svelte tracks them as dependencies (a data() call would hide them).
+  $: if (u) u.setData([xs, rtts as any, anomalies as any]);
 </script>
 
 <div class="chartwrap" bind:this={el}></div>
