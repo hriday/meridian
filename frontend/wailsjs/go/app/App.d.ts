@@ -8,6 +8,7 @@ import {dnsx} from '../models';
 import {sysconf} from '../models';
 import {ipspace} from '../models';
 import {app} from '../models';
+import {netif} from '../models';
 import {lookup} from '../models';
 import {macvendor} from '../models';
 import {ntp} from '../models';
@@ -60,6 +61,8 @@ export function IPSpaceTree():Promise<Array<ipspace.TreeNode>>;
 export function IPSpaceUndo():Promise<void>;
 
 export function IPSpaceUnlock(arg1:string):Promise<void>;
+
+export function Interfaces():Promise<Array<netif.Iface>>;
 
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 
