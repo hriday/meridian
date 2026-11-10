@@ -25,6 +25,8 @@
   }
 
   const ok = (r: any) => r && r.verdict === "Valid";
+  // Expiring-soon is still valid & trusted — warn (amber), don't alarm (red).
+  const warn = (r: any) => r && typeof r.verdict === "string" && r.verdict.startsWith("Expiring");
 
   function fmtDate(s: string): string {
     if (!s) return "—";
@@ -75,7 +77,7 @@
   {#if error}<div class="hint">Couldn't connect: {error}</div>{/if}
 
   {#if report}
-    <div class="verdict" class:good={ok(report)} class:bad={!ok(report)}>
+    <div class="verdict" class:good={ok(report)} class:warn={warn(report)} class:bad={!ok(report) && !warn(report)}>
       <span class="vlabel">{report.verdict}</span>
       <span class="vnote">{verdictNote(report)}</span>
     </div>
@@ -149,9 +151,11 @@
   }
   .verdict.good { border-color: transparent; background: var(--good-bg, #102516); }
   .verdict.bad { border-color: var(--bad, #ff6b6b); background: color-mix(in srgb, var(--bad, #ff6b6b) 10%, transparent); }
+  .verdict.warn { border-color: var(--warn, #d9a441); background: color-mix(in srgb, var(--warn, #d9a441) 12%, transparent); }
   .vlabel { font-weight: 600; color: var(--text-strong); }
   .verdict.good .vlabel { color: var(--good, #5ad17a); }
   .verdict.bad .vlabel { color: var(--bad, #ff6b6b); }
+  .verdict.warn .vlabel { color: var(--warn, #d9a441); }
   .vnote { font-size: 0.82rem; color: var(--text-dim); }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }

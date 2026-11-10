@@ -7,6 +7,7 @@
 package tlscheck
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -74,6 +75,11 @@ func splitTarget(target string) (host, portStr string) {
 	if h, p, err := net.SplitHostPort(t); err == nil {
 		return h, p
 	}
+	// No port: a bracketed IPv6 literal ("[::1]") keeps its brackets through the
+	// SplitHostPort error path, so strip them before defaulting the port.
+	if strings.HasPrefix(t, "[") && strings.HasSuffix(t, "]") {
+		t = t[1 : len(t)-1]
+	}
 	return t, "443"
 }
 
@@ -120,10 +126,14 @@ func Check(ctx context.Context, target string, timeout time.Duration) (CertRepor
 	r.KeyType, r.KeyBits = keyInfo(leaf)
 	r.DaysToExpiry = int(time.Until(leaf.NotAfter).Hours() / 24)
 	r.HostnameMatch = leaf.VerifyHostname(host) == nil
-	r.SelfSigned = leaf.Subject.String() == leaf.Issuer.String() && leaf.CheckSignatureFrom(leaf) == nil
+	r.SelfSigned = selfSigned(leaf)
 
 	// Trust: verify against the roots plus any presented intermediates, dated
-	// inside the cert's own validity window so expiry doesn't mask trust.
+	// inside the cert's own validity window so expiry doesn't mask trust. (This
+	// assumes the chain's CAs are valid at the leaf's NotBefore, which real,
+	// long-lived CAs are; a backdated leaf under a freshly-rotated intermediate
+	// is the rare exception.) EKU is pinned to server authentication so a cert
+	// not meant for TLS servers can't read as fully valid.
 	inter := x509.NewCertPool()
 	for _, c := range st.PeerCertificates[1:] {
 		inter.AddCert(c)
@@ -132,7 +142,7 @@ func Check(ctx context.Context, target string, timeout time.Duration) (CertRepor
 		Roots:         systemRoots(),
 		Intermediates: inter,
 		CurrentTime:   leaf.NotBefore,
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	})
 	r.ChainTrusted = verr == nil
 
@@ -191,6 +201,17 @@ func assess(r *CertReport, leaf *x509.Certificate) (string, []string) {
 		}
 	}
 	return "Valid", warnings
+}
+
+// selfSigned reports whether a certificate signed itself. It checks the leaf's
+// own signature directly rather than via CheckSignatureFrom, which would apply
+// CA constraints to the leaf-as-parent and reject the common self-signed server
+// cert (CA:FALSE, server KeyUsage).
+func selfSigned(c *x509.Certificate) bool {
+	if !bytes.Equal(c.RawSubject, c.RawIssuer) {
+		return false
+	}
+	return c.CheckSignature(c.SignatureAlgorithm, c.RawTBSCertificate, c.Signature) == nil
 }
 
 func sans(c *x509.Certificate) []string {

@@ -21,6 +21,9 @@ func TestSplitTarget(t *testing.T) {
 		"example.com:8443":      {"example.com", "8443"},
 		"https://example.com/x": {"example.com", "443"},
 		"http://h.test:9000/a":  {"h.test", "9000"},
+		"[::1]:8443":            {"::1", "8443"},
+		"[::1]":                 {"::1", "443"},
+		"::1":                   {"::1", "443"},
 	}
 	for in, want := range cases {
 		h, p := splitTarget(in)
@@ -109,6 +112,49 @@ func serveLeaf(t *testing.T, spec leafSpec, trust bool) string {
 	return ln.Addr().String()
 }
 
+// serveSelfSigned serves a genuine self-signed server leaf (CA:FALSE, server
+// KeyUsage, subject==issuer) on a one-shot TLS listener with an empty roots
+// pool, and returns the addr.
+func serveSelfSigned(t *testing.T) string {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(7),
+		Subject:               pkix.Name{CommonName: "localhost"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
+		DNSNames:              []string{"localhost"},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	require.NoError(t, err)
+	ln, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
+		Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}},
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			if tc, ok := c.(*tls.Conn); ok {
+				_ = tc.Handshake()
+			}
+			_ = c.Close()
+		}
+	}()
+	old := systemRoots
+	systemRoots = func() *x509.CertPool { return x509.NewCertPool() }
+	t.Cleanup(func() { systemRoots = old })
+	return ln.Addr().String()
+}
+
 func port(addr string) string {
 	_, p, _ := net.SplitHostPort(addr)
 	return p
@@ -141,16 +187,27 @@ func TestCheckExpired(t *testing.T) {
 	require.True(t, r.ChainTrusted) // trust is independent of expiry
 }
 
-func TestCheckSelfSigned(t *testing.T) {
-	// A CA-signed leaf but with the CA NOT in roots reads as untrusted; to get a
-	// genuine self-signed, serve with an empty roots pool and a leaf whose issuer
-	// chains to a CA the verifier doesn't know. Simplest: untrusted CA pool.
+func TestCheckUntrustedChain(t *testing.T) {
+	// A CA-signed leaf whose CA is NOT in the roots pool: not self-signed, but
+	// the chain doesn't reach a trusted root.
 	addr := serveLeaf(t, defaultLeaf(), false)
 	r, err := Check(context.Background(), "localhost:"+port(addr), 3*time.Second)
 	require.NoError(t, err)
 	require.False(t, r.ChainTrusted)
+	require.False(t, r.SelfSigned)
 	require.Equal(t, "Untrusted chain", r.Verdict)
 	require.Contains(t, r.Warnings, "Untrusted chain")
+}
+
+func TestCheckSelfSigned(t *testing.T) {
+	// A genuine self-signed server leaf: CA:FALSE, server KeyUsage, its own issuer.
+	addr := serveSelfSigned(t)
+	r, err := Check(context.Background(), "localhost:"+port(addr), 3*time.Second)
+	require.NoError(t, err)
+	require.True(t, r.SelfSigned)
+	require.False(t, r.ChainTrusted)
+	require.Equal(t, "Self-signed", r.Verdict)
+	require.Contains(t, r.Warnings, "Self-signed")
 }
 
 func TestCheckHostnameMismatch(t *testing.T) {
