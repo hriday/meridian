@@ -6,9 +6,12 @@
 package wol
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
+	"syscall"
 )
 
 // MagicPacket validates mac (EUI-48, in colon/hyphen/dot or bare-hex form) and
@@ -51,6 +54,38 @@ func parseMAC(mac string) (net.HardwareAddr, error) {
 		return nil, fmt.Errorf("need a 6-byte (EUI-48) MAC, got %d bytes", len(hw))
 	}
 	return hw, nil
+}
+
+// Send broadcasts a magic packet for mac to bcast:port (default
+// 255.255.255.255:9) over UDP. A bad MAC returns an error before any socket is
+// opened. SO_BROADCAST is set so a broadcast destination is writable.
+func Send(ctx context.Context, mac, bcast string, port int) error {
+	pkt, err := MagicPacket(mac)
+	if err != nil {
+		return err
+	}
+	d := net.Dialer{
+		Control: func(_, _ string, c syscall.RawConn) error { return setBroadcast(c) },
+	}
+	conn, err := d.DialContext(ctx, "udp", target(bcast, port))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	_, err = conn.Write(pkt)
+	return err
+}
+
+// target resolves the broadcast address and port, applying the defaults
+// (255.255.255.255 and 9).
+func target(bcast string, port int) string {
+	if strings.TrimSpace(bcast) == "" {
+		bcast = "255.255.255.255"
+	}
+	if port <= 0 {
+		port = 9
+	}
+	return net.JoinHostPort(bcast, strconv.Itoa(port))
 }
 
 func isHex(s string) bool {
