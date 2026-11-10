@@ -128,9 +128,13 @@ export function SetIfBaseline(arg1:string):Promise<void>;
 
 export function SetPingBaseline(arg1:string):Promise<void>;
 
+export function StartDeviceMonitor(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function StartIfMonitor(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<void>;
 
 export function StartPingMonitor(arg1:string,arg2:string):Promise<void>;
+
+export function StopDeviceMonitor(arg1:string):Promise<void>;
 
 export function StopIfMonitor(arg1:string):Promise<void>;
 
