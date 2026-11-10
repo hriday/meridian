@@ -24,6 +24,7 @@ import (
 	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
+	"github.com/hriday/meridian/internal/ping"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/subnet"
@@ -68,6 +69,7 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli ping <host> [--count 5] [--interval 500ms] [--timeout 1s] [--json]
   meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
   meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
@@ -100,6 +102,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "ping":
+		return runPing(args[1:], stdout, stderr)
 	case "pingsweep":
 		return runPingSweep(args[1:], stdout, stderr)
 	case "portscan":
@@ -147,6 +151,56 @@ func parsePositionals(fs *flag.FlagSet, args []string) ([]string, bool) {
 		args = rest[1:]
 	}
 	return pos, true
+}
+
+func runPing(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("ping", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	count := fs.Int("count", 5, "number of echoes")
+	interval := fs.Duration("interval", 500*time.Millisecond, "delay between echoes")
+	timeout := fs.Duration("timeout", time.Second, "per-echo timeout")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "ping needs exactly one host\n%s", usage)
+		return 2
+	}
+	var onReply func(ping.Reply)
+	if !*asJSON {
+		onReply = func(r ping.Reply) {
+			if r.OK {
+				fmt.Fprintf(stdout, "seq %d  %.2f ms\n", r.Seq, r.RTTMillis)
+			} else {
+				fmt.Fprintf(stdout, "seq %d  timeout\n", r.Seq)
+			}
+		}
+	}
+	s, err := ping.Run(context.Background(), scan.NewICMPPinger(), pos[0], *count, *interval, *timeout, onReply)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, s)
+	}
+	printPingStats(stdout, s)
+	return 0
+}
+
+func printPingStats(stdout io.Writer, s ping.Stats) {
+	reportRow(stdout, "Host", strings.TrimSpace(s.Host+"  "+s.IP))
+	if !s.Available {
+		reportRow(stdout, "Result", "unprivileged ICMP isn't available on this host — can't measure latency (it may need elevated privilege).")
+		return
+	}
+	reportRow(stdout, "Packets", fmt.Sprintf("%d sent, %d received, %.0f%% loss", s.Sent, s.Received, s.LossPct))
+	if s.Received > 0 {
+		reportRow(stdout, "RTT (ms)", fmt.Sprintf("min %.2f / avg %.2f / max %.2f / stddev %.2f", s.MinMs, s.AvgMs, s.MaxMs, s.StddevMs))
+		reportRow(stdout, "Jitter", fmt.Sprintf("%.2f ms", s.JitterMs))
+	}
 }
 
 func runPingSweep(args []string, stdout, stderr io.Writer) int {
