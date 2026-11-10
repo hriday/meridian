@@ -81,6 +81,13 @@
     {/if}
   </form>
 
+  <p class="help">
+    Enter a subnet and your SNMP read community, then <strong>Scan</strong>. Each row is a device that
+    answered SNMP — its <strong>address</strong>, the <strong>name</strong> it reports (sysName),
+    <strong>what it is</strong> (model/OS, from sysDescr), and its <strong>uptime</strong>. A device
+    that doesn't appear simply didn't answer: SNMP off, a different community, or v3-only.
+  </p>
+
   {#if err}
     <div class="banner bad"><span class="vlabel">Couldn't sweep</span><span class="vnote">{err}</span></div>
   {/if}
@@ -122,6 +129,9 @@
   .field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 0 16px; height: 38px; font: inherit; font-size: 0.9rem; cursor: pointer; }
   .go:disabled { opacity: .6; cursor: default; }
+
+  .help { max-width: 880px; margin: 12px 0 0; padding: 9px 13px; border-left: 2px solid var(--accent); background: var(--well); border-radius: 0 7px 7px 0; font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+  .help strong { color: var(--text); font-weight: 600; }
 
   .banner { margin: 14px 0; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--bad, #ff6b6b); background: color-mix(in srgb, var(--bad,#ff6b6b) 10%, transparent); max-width: 880px; display: flex; flex-direction: column; gap: 3px; }
   .vlabel { font-weight: 600; color: var(--bad, #ff6b6b); }
