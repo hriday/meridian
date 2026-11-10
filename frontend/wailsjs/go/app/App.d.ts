@@ -6,6 +6,7 @@ import {netinput} from '../models';
 import {dnsaudit} from '../models';
 import {dnsx} from '../models';
 import {sysconf} from '../models';
+import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {app} from '../models';
 import {netif} from '../models';
@@ -39,6 +40,8 @@ export function DNSAudit(arg1:string,arg2:string):Promise<dnsaudit.Report>;
 export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Result>;
 
 export function DNSSystem():Promise<sysconf.Found>;
+
+export function HTTPCheck(arg1:string):Promise<httpcheck.Result>;
 
 export function IPSpaceAdd(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<ipspace.Record>;
 
