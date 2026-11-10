@@ -92,6 +92,19 @@ func TestFindingHSTSMissing(t *testing.T) {
 	require.NotEmpty(t, with(a, "HSTS"))
 }
 
+func TestFindingHSTSSuppressedByServerAddHeader(t *testing.T) {
+	// HSTS is set at http, but the server defines its own add_header — nginx
+	// then inherits NONE of the http add_headers, so HSTS is NOT actually sent.
+	a := extractCfg(t, `http {
+    add_header Strict-Transport-Security "max-age=1";
+    server {
+        listen 443 ssl; ssl_certificate x; server_name s;
+        add_header X-Frame-Options SAMEORIGIN;
+    }
+}`)
+	require.NotEmpty(t, with(a, "HSTS")) // not falsely reassured
+}
+
 func TestRoutingUsedBy(t *testing.T) {
 	a := extractCfg(t, `http {
     upstream api { server 1.1.1.1:80; }

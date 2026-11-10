@@ -62,73 +62,175 @@ func parse(text string) ([]*Directive, error) {
 }
 
 // lex scans the config into word/punctuation tokens, tracking the current
-// source file and per-file line number from `# configuration file …:` markers,
-// and skipping comments and the `nginx -T` preamble.
+// source file and per-file line from `# configuration file …:` markers. It
+// carries quote state across lines (multi-line values), skips comments and the
+// `nginx -T` preamble, and consumes embedded code bodies (`*_by_lua_block`)
+// opaquely so their braces/semicolons don't break the structure.
 func lex(text string) []token {
 	var toks []token
 	file := "pasted config"
-	lineInFile := 0
-	for _, raw := range strings.Split(text, "\n") {
-		lineInFile++
-		line := strings.TrimRight(raw, "\r")
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, markerPrefix) && strings.HasSuffix(trimmed, ":") {
-			file = strings.TrimSuffix(strings.TrimPrefix(trimmed, markerPrefix), ":")
-			lineInFile = 1
-			continue
-		}
-		if trimmed == "" || strings.HasPrefix(trimmed, "nginx:") {
-			continue
-		}
-		lexLine(line, file, lineInFile, &toks)
-	}
-	return toks
-}
-
-func lexLine(line, file string, lineNo int, toks *[]token) {
-	var b strings.Builder
-	var quote byte // 0, '"' or '\''
-	hasWord := false
+	line := 1
+	var word strings.Builder
+	hasWord, lineStart := false, true
+	firstWord := "" // first word of the current directive, for raw-body detection
+	var quote byte
 	escaped := false
-	flush := func() {
+
+	emit := func() {
 		if hasWord {
-			*toks = append(*toks, token{text: b.String(), file: file, line: lineNo})
-			b.Reset()
+			s := word.String()
+			if firstWord == "" {
+				firstWord = s
+			}
+			toks = append(toks, token{text: s, file: file, line: line})
+			word.Reset()
 			hasWord = false
 		}
 	}
-	for i := 0; i < len(line); i++ {
-		c := line[i]
-		switch {
-		case escaped:
-			b.WriteByte(c)
-			escaped = false
-			hasWord = true
-		case quote != 0 && c == '\\':
-			escaped = true
-		case quote != 0:
-			if c == quote {
+
+	for i := 0; i < len(text); {
+		c := text[i]
+		if quote != 0 {
+			switch {
+			case escaped:
+				word.WriteByte(c)
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == quote:
 				quote = 0
-			} else {
-				b.WriteByte(c)
+			case c == '\n':
+				word.WriteByte(c)
+				line++
+			default:
+				word.WriteByte(c)
 			}
-		case c == '"' || c == '\'':
+			hasWord = true
+			i++
+			continue
+		}
+		// skip an `nginx -T` preamble line.
+		if lineStart {
+			lineStart = false
+			k := i
+			for k < len(text) && (text[k] == ' ' || text[k] == '\t') {
+				k++
+			}
+			if strings.HasPrefix(text[k:], "nginx:") {
+				for i < len(text) && text[i] != '\n' {
+					i++
+				}
+				continue
+			}
+		}
+		switch c {
+		case '\n':
+			line++
+			lineStart = true
+			i++
+		case ' ', '\t', '\r':
+			emit()
+			i++
+		case '"', '\'':
 			quote = c
 			hasWord = true
-		case c == '#':
-			flush()
-			return // rest of line is a comment
-		case c == '{' || c == '}' || c == ';':
-			flush()
-			*toks = append(*toks, token{punct: c, file: file, line: lineNo})
-		case c == ' ' || c == '\t':
-			flush()
+			i++
+		case '#':
+			j := i
+			for j < len(text) && text[j] != '\n' {
+				j++
+			}
+			trimmed := strings.TrimSpace(text[i:j])
+			if strings.HasPrefix(trimmed, markerPrefix) && strings.HasSuffix(trimmed, ":") {
+				file = strings.TrimSuffix(strings.TrimPrefix(trimmed, markerPrefix), ":")
+				line = 1
+			}
+			emit()
+			i = j
+		case '{':
+			emit()
+			toks = append(toks, token{punct: '{', file: file, line: line})
+			if strings.HasSuffix(firstWord, "_by_lua_block") {
+				i = skipRawBody(text, i+1, &line)
+				toks = append(toks, token{punct: '}', file: file, line: line})
+			} else {
+				i++
+			}
+			firstWord = ""
+		case '}', ';':
+			emit()
+			toks = append(toks, token{punct: c, file: file, line: line})
+			firstWord = ""
+			i++
 		default:
-			b.WriteByte(c)
+			word.WriteByte(c)
 			hasWord = true
+			i++
 		}
 	}
-	flush()
+	emit()
+	return toks
+}
+
+// skipRawBody consumes an embedded code body (Lua) from just past its opening
+// '{' to the matching '}', honouring Lua strings, line comments and long
+// brackets so their braces aren't counted. Returns the index just past the '}'.
+func skipRawBody(s string, i int, line *int) int {
+	depth := 1
+	for i < len(s) {
+		c := s[i]
+		switch {
+		case c == '\n':
+			*line++
+			i++
+		case c == '"' || c == '\'':
+			i++
+			for i < len(s) && s[i] != c {
+				if s[i] == '\\' {
+					i++
+				} else if s[i] == '\n' {
+					*line++
+				}
+				i++
+			}
+			i++ // closing quote
+		case c == '-' && i+1 < len(s) && s[i+1] == '-':
+			if i+3 < len(s) && s[i+2] == '[' && s[i+3] == '[' {
+				i = skipLuaLong(s, i+4, line)
+			} else {
+				for i < len(s) && s[i] != '\n' {
+					i++
+				}
+			}
+		case c == '[' && i+1 < len(s) && s[i+1] == '[':
+			i = skipLuaLong(s, i+2, line)
+		case c == '{':
+			depth++
+			i++
+		case c == '}':
+			depth--
+			i++
+			if depth == 0 {
+				return i
+			}
+		default:
+			i++
+		}
+	}
+	return i
+}
+
+func skipLuaLong(s string, i int, line *int) int {
+	for i < len(s) {
+		if s[i] == '\n' {
+			*line++
+		}
+		if s[i] == ']' && i+1 < len(s) && s[i+1] == ']' {
+			return i + 2
+		}
+		i++
+	}
+	return i
 }
 
 // buildList parses directives from toks[start:] until EOF or, when inBlock, a

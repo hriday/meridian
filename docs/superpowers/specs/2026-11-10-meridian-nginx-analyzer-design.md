@@ -17,12 +17,15 @@ nginx Plus directives, so they aren't mistaken for errors.
 
 ## Input — the whole box via `nginx -T` (owner's call)
 
-The input is the **`nginx -T` dump**: that command prints the entire effective
-config with every `include` already inlined, each section preceded by a
-`# configuration file /path/...:` marker. The operator runs `nginx -T >
-conf.txt` and **pastes or loads** it. This gives us the complete, resolved
-config for free (no include-resolution engine) and lets us attribute each
-finding to its **source file:line**.
+The input is the **`nginx -T` dump**: that command prints every config file's
+text, each section preceded by a `# configuration file /path/...:` marker, so
+**all the included files are present** in one blob (it does not literally
+inline them — a file included inside `http` appears as a top-level `server {}`
+/ `upstream {}` block after the `http { include …; }` block; the analyzer
+treats top-level server/upstream blocks as belonging to the http context). The
+operator runs `nginx -T > conf.txt` and **pastes or loads** it. This gives us
+the complete config without an include-resolution engine and lets us attribute
+each finding to its **source file:line**.
 
 - A single raw `nginx.conf` (or any fragment) is also accepted; when its
   `include` directives can't be resolved (no `nginx -T`), Meridian parses what

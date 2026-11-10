@@ -109,6 +109,30 @@ func TestExtractPlusDirectivesNoError(t *testing.T) {
 	}
 }
 
+func TestExtractRealMultiFileDump(t *testing.T) {
+	// Real `nginx -T`: nginx.conf has http { include ...; }, and the included
+	// vhost/upstream appear as TOP-LEVEL blocks under their own marker.
+	a := extractCfg(t, `# configuration file /etc/nginx/nginx.conf:
+http {
+    server_tokens off;
+    include /etc/nginx/sites-enabled/*;
+}
+# configuration file /etc/nginx/sites-enabled/example.conf:
+server {
+    listen 443 ssl;
+    ssl_certificate /etc/ssl/x.crt;
+    server_name example.com;
+    location /api { proxy_pass http://api; }
+}
+upstream api { server 10.0.0.1:8080; }`)
+	require.Len(t, a.Servers, 1)
+	require.Equal(t, []string{"example.com"}, a.Servers[0].Names)
+	require.Len(t, a.Upstreams, 1)
+	require.Len(t, a.Upstreams[0].UsedBy, 1) // routing resolved across files
+	require.Empty(t, with(a, "server_tokens"))  // off inherited from http
+	require.Empty(t, with(a, "undefined"))      // api is defined
+}
+
 func TestExtractEmpty(t *testing.T) {
 	a := extractCfg(t, ``)
 	require.NotNil(t, a.Servers)

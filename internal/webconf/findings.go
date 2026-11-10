@@ -167,6 +167,12 @@ func effectiveHeader(s *Server, a *Analysis, name string) bool {
 			return true
 		}
 	}
+	// nginx add_header inheritance is all-or-nothing: a block that defines any
+	// add_header of its own inherits NONE from http, so http-level headers only
+	// apply when the server sets none.
+	if len(s.Headers) > 0 {
+		return false
+	}
 	for _, h := range a.httpHeaders {
 		if strings.EqualFold(h, name) {
 			return true

@@ -57,6 +57,36 @@ server {
 	require.Equal(t, 2, dirs[1].Line) // line within its file (marker is line 1)
 }
 
+func TestParseRawLuaBlock(t *testing.T) {
+	// A *_by_lua_block body contains Lua braces/semicolons/comments that are not
+	// nginx structure; they must not break the parse or hide later directives.
+	dirs, err := parse(`http {
+    server {
+        listen 80;
+        access_by_lua_block {
+            local t = { a = 1; b = 2 }
+            if ngx.var.uri == "/x" then ngx.exit(403) end
+            -- TODO: tidy this }
+        }
+        server_name after.com;
+    }
+}`)
+	require.NoError(t, err)
+	srv := dirs[0].children("server")[0]
+	require.Len(t, srv.children("server_name"), 1)
+	require.Equal(t, "after.com", srv.children("server_name")[0].arg(0))
+}
+
+func TestParseMultiLineQuoted(t *testing.T) {
+	// a quoted value spanning lines (e.g. log_format) must stay one token.
+	dirs, err := parse(`log_format main "$remote_addr
+    $request";
+worker_processes 2;`)
+	require.NoError(t, err)
+	require.Equal(t, "log_format", dirs[0].Name)
+	require.Equal(t, "worker_processes", dirs[1].Name)
+}
+
 func TestParseUnclosedBlockErrors(t *testing.T) {
 	_, err := parse(`http {
     server {

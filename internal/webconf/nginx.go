@@ -10,37 +10,43 @@ import (
 // read through without special handling.
 func extract(dirs []*Directive) Analysis {
 	a := newAnalysis()
-	for _, http := range findBlocks(dirs, "http") {
-		// http-level inheritance context
-		if st := lastArg(http, "server_tokens"); st != "" {
+	// http-level inheritance context, from any top-level http block.
+	for _, d := range dirs {
+		if d.Name != "http" {
+			continue
+		}
+		if st := lastArg(d, "server_tokens"); st != "" {
 			a.httpTokens = st
 		}
-		for _, h := range http.children("add_header") {
+		for _, h := range d.children("add_header") {
 			a.httpHeaders = append(a.httpHeaders, h.arg(0))
 		}
-		for _, s := range http.children("server") {
-			a.Servers = append(a.Servers, readServer(s))
-		}
-		for _, u := range http.children("upstream") {
-			a.Upstreams = append(a.Upstreams, readUpstream(u))
-		}
+	}
+	// `nginx -T` concatenates included files verbatim, so a server/upstream
+	// block defined in sites-enabled/ or conf.d/ (included inside http) appears
+	// at the TOP LEVEL of the dump, after the http{include...} block. Collect
+	// both the ones nested in http and the ones at the top level.
+	for _, s := range collectBlocks(dirs, "server") {
+		a.Servers = append(a.Servers, readServer(s))
+	}
+	for _, u := range collectBlocks(dirs, "upstream") {
+		a.Upstreams = append(a.Upstreams, readUpstream(u))
 	}
 	analyzeFindings(&a)
 	return a
 }
 
-// findBlocks returns directives named name among dirs (top level); nginx config
-// wraps servers/upstreams in `http`, but we tolerate them at top level too.
-func findBlocks(dirs []*Directive, name string) []*Directive {
+// collectBlocks returns directives named `name` that are at the top level or a
+// direct child of a top-level `http` block.
+func collectBlocks(dirs []*Directive, name string) []*Directive {
 	var out []*Directive
 	for _, d := range dirs {
 		if d.Name == name {
 			out = append(out, d)
 		}
-	}
-	if len(out) == 0 && name == "http" {
-		// no http wrapper: treat the top level as the http context.
-		return []*Directive{{Block: dirs}}
+		if d.Name == "http" {
+			out = append(out, d.children(name)...)
+		}
 	}
 	return out
 }
