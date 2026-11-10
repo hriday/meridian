@@ -95,16 +95,17 @@ func queryServer(ctx context.Context, server, object string) (string, error) {
 	return string(b), nil
 }
 
-// parseReferral returns the referred-to host from the first referral line
-// (refer: / whois: / Registrar WHOIS Server: / ReferralServer:), case-
-// insensitive, stripping a whois:// scheme and any port. "" if none.
+// parseReferral returns the referred-to host from a referral line, "" if none.
+// Prefixes are tried in priority order so a registry record's real registrar
+// referral wins over a stray "whois:" comment line elsewhere in the body; the
+// root-referral prefixes (refer:/whois:) are the fallback, which is what IANA
+// responses carry. Case-insensitive; a whois:// scheme and any port are stripped.
 func parseReferral(body string) string {
-	prefixes := []string{"refer:", "whois:", "registrar whois server:", "referralserver:"}
-	for _, line := range strings.Split(body, "\n") {
-		line = strings.TrimSpace(line)
-		low := strings.ToLower(line)
-		for _, p := range prefixes {
-			if strings.HasPrefix(low, p) {
+	lines := strings.Split(body, "\n")
+	for _, p := range []string{"registrar whois server:", "referralserver:", "refer:", "whois:"} {
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(strings.ToLower(line), p) {
 				if h := cleanHost(strings.TrimSpace(line[len(p):])); h != "" {
 					return h
 				}
@@ -114,6 +115,10 @@ func parseReferral(body string) string {
 	return ""
 }
 
+// cleanHost extracts the hostname from a referral value, dropping a whois://
+// scheme, trailing text, and any port. (The port is dropped because every hop is
+// queried on 43; a non-43 referral — e.g. an rwhois ReferralServer — is not
+// followed, which is out of scope for registry/RIR → registrar.)
 func cleanHost(v string) string {
 	v = strings.TrimPrefix(v, "whois://")
 	if i := strings.IndexAny(v, " \t"); i >= 0 {
@@ -126,15 +131,32 @@ func cleanHost(v string) string {
 }
 
 // ianaKey is what to ask IANA: a domain's TLD (its root-db key), or the object
-// itself for an IP/ASN.
+// itself for an IP/ASN. A trailing FQDN dot is stripped, and a last label is only
+// treated as a TLD when it is alphabetic (so a CIDR like 1.0.0.0/24 isn't keyed
+// to a bogus "0/24").
 func ianaKey(object string) string {
+	object = strings.TrimRight(object, ".")
 	if net.ParseIP(object) != nil {
 		return object
 	}
 	if i := strings.LastIndex(object, "."); i >= 0 && i < len(object)-1 {
-		return object[i+1:]
+		if tld := object[i+1:]; isAlpha(tld) {
+			return tld
+		}
 	}
 	return object
+}
+
+func isAlpha(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')) {
+			return false
+		}
+	}
+	return true
 }
 
 func contains(xs []string, x string) bool {

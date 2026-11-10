@@ -74,9 +74,10 @@ func TestParseReferral(t *testing.T) {
 }
 
 func TestQueryFollowsChain(t *testing.T) {
+	registry := &whoisServer{resp: "domain: example.com\nRegistrar WHOIS Server: registrar.test\n"}
 	fakeNet(t, map[string]*whoisServer{
 		"whois.iana.org": {resp: "refer: registry.test\n"},
-		"registry.test":  {resp: "domain: example.com\nRegistrar WHOIS Server: registrar.test\n"},
+		"registry.test":  registry,
 		"registrar.test": {resp: "domain: example.com\nRegistrar: Example Registrar\n"},
 	})
 	r, err := Query(context.Background(), "example.com", 3*time.Second)
@@ -84,6 +85,23 @@ func TestQueryFollowsChain(t *testing.T) {
 	require.Contains(t, r.Raw, "Example Registrar")
 	require.Equal(t, "registrar.test", r.Server)
 	require.Equal(t, []string{"whois.iana.org", "registry.test", "registrar.test"}, r.Chain)
+	require.Equal(t, "example.com\r\n", registry.gotQuery) // the full object, not the TLD, after IANA
+}
+
+func TestIanaKey(t *testing.T) {
+	require.Equal(t, "com", ianaKey("example.com"))
+	require.Equal(t, "com", ianaKey("example.com."), "a trailing-dot FQDN must still key the TLD")
+	require.Equal(t, "uk", ianaKey("example.co.uk"))
+	require.Equal(t, "1.1.1.1", ianaKey("1.1.1.1"))
+	require.Equal(t, "AS13335", ianaKey("AS13335"))
+	require.Equal(t, "1.0.0.0/24", ianaKey("1.0.0.0/24"), "a CIDR must not key a bogus TLD like 0/24")
+}
+
+func TestParseReferralPrefersRegistrar(t *testing.T) {
+	// A stray non-referral "whois:" line in a registry record must not hijack the
+	// referral over the real Registrar WHOIS Server line.
+	body := "whois: ignore-me.test\nRegistrar WHOIS Server: real-registrar.test\n"
+	require.Equal(t, "real-registrar.test", parseReferral(body))
 }
 
 func TestQueryTerminal(t *testing.T) {
@@ -109,7 +127,7 @@ func TestQueryCapsHops(t *testing.T) {
 	})
 	r, err := Query(context.Background(), "example.com", 3*time.Second)
 	require.NoError(t, err)
-	require.LessOrEqual(t, len(r.Chain), 3) // iana + at most 2 hops
+	require.Equal(t, 3, len(r.Chain)) // iana + exactly 2 hops, then stop (not early, not runaway)
 }
 
 func TestQuerySendsObjectCRLF(t *testing.T) {
