@@ -122,6 +122,10 @@ export function NetcatSend(arg1) {
   return window['go']['app']['App']['NetcatSend'](arg1);
 }
 
+export function PickFile(arg1) {
+  return window['go']['app']['App']['PickFile'](arg1);
+}
+
 export function PingSweep(arg1, arg2) {
   return window['go']['app']['App']['PingSweep'](arg1, arg2);
 }
