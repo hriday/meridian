@@ -19,6 +19,7 @@ import (
 	"github.com/hriday/meridian/internal/dnsaudit"
 	"github.com/hriday/meridian/internal/dnsbl"
 	"github.com/hriday/meridian/internal/dnsx"
+	"github.com/hriday/meridian/internal/httpcheck"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/macvendor"
@@ -80,6 +81,7 @@ usage:
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
+  meridian-cli http <url> [--timeout 15s] [--json]
   meridian-cli blocklist <ip> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli dnsaudit <domain> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
@@ -124,6 +126,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runBGP(args[1:], stdout, stderr)
 	case "tls":
 		return runTLS(args[1:], stdout, stderr)
+	case "http":
+		return runHTTP(args[1:], stdout, stderr)
 	case "blocklist":
 		return runBlocklist(args[1:], stdout, stderr)
 	case "dnsaudit":
@@ -917,6 +921,51 @@ func runBGP(args []string, stdout, stderr io.Writer) int {
 	}
 	printBGPReport(stdout, rep)
 	return 0
+}
+
+func runHTTP(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("http", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	timeout := fs.Duration("timeout", 15*time.Second, "overall timeout")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "http needs exactly one URL\n%s", usage)
+		return 2
+	}
+	r, err := httpcheck.Check(context.Background(), pos[0], *timeout)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	printHTTPResult(stdout, r)
+	return 0
+}
+
+func printHTTPResult(stdout io.Writer, r httpcheck.Result) {
+	reportRow(stdout, "URL", r.FinalURL)
+	reportRow(stdout, "Status", fmt.Sprintf("%d %s  (%s)", r.Status, r.StatusText, r.Proto))
+	for _, h := range r.Redirects {
+		fmt.Fprintf(stdout, "  ↳ %d  %s\n", h.Status, h.URL)
+	}
+	if r.TLSVersion != "" {
+		reportRow(stdout, "TLS", r.TLSVersion)
+	}
+	if r.Server != "" {
+		reportRow(stdout, "Server", r.Server)
+	}
+	if r.ContentType != "" {
+		reportRow(stdout, "Content-Type", r.ContentType)
+	}
+	t := r.Timing
+	reportRow(stdout, "Timing (ms)", fmt.Sprintf("dns %.0f · connect %.0f · tls %.0f · ttfb %.0f · total %.0f",
+		t.DNSMillis, t.ConnectMillis, t.TLSMillis, t.TTFBMillis, t.TotalMillis))
 }
 
 func runTLS(args []string, stdout, stderr io.Writer) int {
