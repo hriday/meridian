@@ -128,12 +128,13 @@ func Check(ctx context.Context, target string, timeout time.Duration) (CertRepor
 	r.HostnameMatch = leaf.VerifyHostname(host) == nil
 	r.SelfSigned = selfSigned(leaf)
 
-	// Trust: verify against the roots plus any presented intermediates, dated
-	// inside the cert's own validity window so expiry doesn't mask trust. (This
-	// assumes the chain's CAs are valid at the leaf's NotBefore, which real,
-	// long-lived CAs are; a backdated leaf under a freshly-rotated intermediate
-	// is the rare exception.) EKU is pinned to server authentication so a cert
-	// not meant for TLS servers can't read as fully valid.
+	// Trust: verify against the roots plus any presented intermediates. EKU is
+	// pinned to server authentication so a cert not meant for TLS servers can't
+	// read as fully valid. CurrentTime is left at now for an in-date cert and
+	// only backdated for an out-of-date one (see trustTime) — setting it on
+	// macOS forces Go off the system verifier onto a stricter fallback that
+	// rejects otherwise-valid public chains (e.g. a Google Trust Services leaf)
+	// as "not standards compliant".
 	inter := x509.NewCertPool()
 	for _, c := range st.PeerCertificates[1:] {
 		inter.AddCert(c)
@@ -141,13 +142,26 @@ func Check(ctx context.Context, target string, timeout time.Duration) (CertRepor
 	_, verr := leaf.Verify(x509.VerifyOptions{
 		Roots:         systemRoots(),
 		Intermediates: inter,
-		CurrentTime:   leaf.NotBefore,
+		CurrentTime:   trustTime(leaf, time.Now()),
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	})
 	r.ChainTrusted = verr == nil
 
 	r.Verdict, r.Warnings = assess(&r, leaf)
 	return r, nil
+}
+
+// trustTime is the time to assess chain trust at. For an in-date cert it returns
+// the zero time, which x509.Verify treats as "now" and which keeps macOS on its
+// system verifier. Only for an out-of-date cert does it backdate to the leaf's
+// NotBefore, so an expired-but-otherwise-trusted cert still reads as trusted
+// (its expiry is reported separately); that path is already off the fast system
+// verifier, so it costs nothing extra.
+func trustTime(leaf *x509.Certificate, now time.Time) time.Time {
+	if now.Before(leaf.NotBefore) || now.After(leaf.NotAfter) {
+		return leaf.NotBefore
+	}
+	return time.Time{}
 }
 
 // assess builds the warning list and selects the worst-case verdict.
