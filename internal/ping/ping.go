@@ -22,12 +22,17 @@ type Pinger interface {
 
 // resolveIP turns a host (IP literal or name) into an address. Package var so
 // tests stay offline. An IP literal is used as-is; a name resolves via the
-// system resolver (first address).
+// system resolver, preferring IPv4 (the ping default) and falling back to IPv6
+// only when there is no A record — otherwise a dual-stack name on an IPv4-only
+// network could resolve to an unreachable AAAA and read as 100% loss.
 var resolveIP = func(ctx context.Context, host string) (netip.Addr, error) {
 	if a, err := netip.ParseAddr(host); err == nil {
 		return a, nil
 	}
-	addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+	if addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip4", host); err == nil && len(addrs) > 0 {
+		return addrs[0].Unmap(), nil
+	}
+	addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip6", host)
 	if err != nil {
 		return netip.Addr{}, err
 	}

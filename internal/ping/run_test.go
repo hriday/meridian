@@ -86,6 +86,40 @@ func TestRunCancel(t *testing.T) {
 	}
 	s, err := Run(ctx, f, "127.0.0.1", 5, 50*time.Millisecond, time.Second, nil)
 	require.NoError(t, err)
-	require.LessOrEqual(t, s.Received, 5)
+	require.Less(t, s.Sent, 5, "cancellation must stop the run before all pings")
 	require.Greater(t, s.Sent, 0)
+}
+
+func TestRunPropagatesResolveError(t *testing.T) {
+	old := resolveIP
+	resolveIP = func(context.Context, string) (netip.Addr, error) {
+		return netip.Addr{}, errTestResolve
+	}
+	t.Cleanup(func() { resolveIP = old })
+
+	s, err := Run(context.Background(), pingN(), "nope.invalid", 3, 0, time.Second, nil)
+	require.ErrorIs(t, err, errTestResolve)
+	require.Equal(t, "nope.invalid", s.Host)
+	require.Equal(t, 0, s.Sent)
+}
+
+var errTestResolve = errResolve("boom")
+
+type errResolve string
+
+func (e errResolve) Error() string { return string(e) }
+
+func TestResolveIPLiteral(t *testing.T) {
+	a, err := resolveIP(context.Background(), "127.0.0.1")
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1", a.String())
+}
+
+func TestResolveIPPrefersIPv4(t *testing.T) {
+	// localhost is dual-stack (127.0.0.1 and ::1); the v4-first rule must pick v4.
+	a, err := resolveIP(context.Background(), "localhost")
+	if err != nil {
+		t.Skip("localhost did not resolve in this environment")
+	}
+	require.True(t, a.Is4(), "expected an IPv4 address, got %s", a)
 }

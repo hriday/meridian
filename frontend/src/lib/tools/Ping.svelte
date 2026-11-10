@@ -33,6 +33,12 @@
     return replies.map((r: any) => ({ h: r.ok ? Math.max(6, (r.rttMillis / max) * 100) : 0, ok: r.ok }));
   }
 
+  // A run is "jumpy" when jitter is high in absolute terms or relative to the
+  // average — used by both the verdict text and the banner colour so they agree.
+  const jumpy = (s: any) => s && (s.jitterMs > 30 || (s.avgMs > 0 && s.jitterMs > s.avgMs * 0.5));
+  // A clean run: reachable, no loss, and not jumpy — only then is the banner green.
+  const healthy = (s: any) => s && s.available && s.received > 0 && s.lossPct === 0 && !jumpy(s);
+
   // One-line plain-language read of the result.
   function verdict(s: any): string {
     if (!s) return "";
@@ -40,8 +46,7 @@
     if (s.received === 0) return "No replies — the host didn't answer (it may be down or blocking ICMP).";
     const parts: string[] = [];
     if (s.lossPct > 0) parts.push(`${s.lossPct.toFixed(0)}% packet loss`);
-    const jumpy = s.jitterMs > 30 || (s.avgMs > 0 && s.jitterMs > s.avgMs * 0.5);
-    if (jumpy) parts.push("high jitter — the connection is uneven");
+    if (jumpy(s)) parts.push("high jitter — the connection is uneven");
     if (parts.length === 0) {
       if (s.avgMs < 30) return "Low, steady latency — a healthy connection.";
       if (s.avgMs < 100) return "Moderate latency, steady.";
@@ -73,7 +78,7 @@
   {#if error}<div class="banner bad"><span class="vlabel">Couldn't ping</span><span class="vnote">{error}</span></div>{/if}
 
   {#if stats}
-    <div class="verdict" class:good={stats.available && stats.received > 0 && stats.lossPct === 0} class:warn={stats.available && (stats.received === 0 || stats.lossPct > 0)} class:bad={!stats.available}>
+    <div class="verdict" class:good={healthy(stats)} class:warn={stats.available && !healthy(stats)} class:bad={!stats.available}>
       <span class="vlabel">{stats.host}{#if stats.ip && stats.ip !== stats.host} · {stats.ip}{/if}</span>
       <span class="vnote">{verdict(stats)}</span>
     </div>

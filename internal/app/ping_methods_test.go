@@ -16,6 +16,14 @@ func (okPinger) Ping(_ context.Context, _ netip.Addr, _ time.Duration) (time.Dur
 	return 12 * time.Millisecond, true, true
 }
 
+func TestClampCount(t *testing.T) {
+	require.Equal(t, 5, clampCount(0))
+	require.Equal(t, 5, clampCount(-3))
+	require.Equal(t, 5, clampCount(5))
+	require.Equal(t, 30, clampCount(30))
+	require.Equal(t, 30, clampCount(1000)) // ceiling
+}
+
 func TestPingHostMethod(t *testing.T) {
 	old := newICMPPinger
 	newICMPPinger = func() ping.Pinger { return okPinger{} }

@@ -191,7 +191,11 @@ func runPing(args []string, stdout, stderr io.Writer) int {
 }
 
 func printPingStats(stdout io.Writer, s ping.Stats) {
-	reportRow(stdout, "Host", strings.TrimSpace(s.Host+"  "+s.IP))
+	host := s.Host
+	if s.IP != "" && s.IP != s.Host {
+		host += "  " + s.IP
+	}
+	reportRow(stdout, "Host", host)
 	if !s.Available {
 		reportRow(stdout, "Result", "unprivileged ICMP isn't available on this host — can't measure latency (it may need elevated privilege).")
 		return
