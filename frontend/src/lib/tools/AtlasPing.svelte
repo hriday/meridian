@@ -165,11 +165,16 @@
     {/if}
 
     {#if r}
-      {#if r.responding > 0}
-        <div class="verdict good">
-          <span class="vlabel">{r.responding} / {r.probes.length} probes responding · avg {fmt(r.avgMs)} ms</span>
+      {#if r.probes.length > 0}
+        <div class="verdict"
+          class:good={r.responding === r.probes.length}
+          class:warn={r.responding > 0 && r.responding < r.probes.length}
+          class:bad={r.responding === 0}>
+          <span class="vlabel">
+            {r.responding} / {r.probes.length} probes got a reply{#if r.responding > 0} · avg {fmt(r.avgMs)} ms{:else} · target did not respond{/if}
+          </span>
           <span class="vnote">
-            min {fmt(r.minMs)} · avg {fmt(r.avgMs)} · max {fmt(r.maxMs)} ms · mean loss {Math.round(r.lossPct)}%
+            {#if r.responding > 0}min {fmt(r.minMs)} · avg {fmt(r.avgMs)} · max {fmt(r.maxMs)} ms · {/if}mean loss {Math.round(r.lossPct)}%
             <span class="mono">· msm #{r.measurementId}</span>
           </span>
         </div>
@@ -194,7 +199,7 @@
       {:else}
         <div class="banner warn">
           <span class="vlabel">No probes reported in time</span>
-          <span class="vnote">The measurement (msm #{r.measurementId}) was scheduled but no probes returned results before the timeout. Try again, or check your Atlas credits.</span>
+          <span class="vnote">The measurement (msm #{r.measurementId}) was scheduled but no probes returned results before the timeout — try again (probes can take a little longer under load), or check your Atlas credits.</span>
         </div>
       {/if}
     {/if}
@@ -229,12 +234,12 @@
 
   .verdict, .banner { margin: 14px 0; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; gap: 3px; max-width: 820px; }
   .verdict.good { border-color: transparent; background: var(--good-bg, #102516); }
-  .banner.warn { border-color: var(--warn, #d9a441); background: color-mix(in srgb, var(--warn, #d9a441) 12%, transparent); }
-  .banner.bad { border-color: var(--bad, #ff6b6b); background: color-mix(in srgb, var(--bad, #ff6b6b) 10%, transparent); }
+  .verdict.warn, .banner.warn { border-color: var(--warn, #d9a441); background: color-mix(in srgb, var(--warn, #d9a441) 12%, transparent); }
+  .verdict.bad, .banner.bad { border-color: var(--bad, #ff6b6b); background: color-mix(in srgb, var(--bad, #ff6b6b) 10%, transparent); }
   .vlabel { font-weight: 600; color: var(--text-strong); }
   .verdict.good .vlabel { color: var(--good, #5ad17a); }
-  .banner.warn .vlabel { color: var(--warn, #d9a441); }
-  .banner.bad .vlabel { color: var(--bad, #ff6b6b); }
+  .verdict.warn .vlabel, .banner.warn .vlabel { color: var(--warn, #d9a441); }
+  .verdict.bad .vlabel, .banner.bad .vlabel { color: var(--bad, #ff6b6b); }
   .vnote { font-size: 0.8rem; color: var(--text-dim); overflow-wrap: anywhere; }
 
   .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 10px; padding: 13px 15px; max-width: 820px; margin-bottom: 13px; }
