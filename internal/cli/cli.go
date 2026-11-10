@@ -169,14 +169,29 @@ func runNC(args []string, stdout, stderr io.Writer) int {
 	defer s.Close()
 
 	var mu sync.Mutex
+	remoteClosed := make(chan struct{})
 	s.Start(func(b []byte) {
 		mu.Lock()
 		_, _ = stdout.Write(b)
 		mu.Unlock()
-	}, func(error) {})
+	}, func(error) { close(remoteClosed) })
 
-	_, _ = io.Copy(ncWriter{s}, ncStdin)
-	time.Sleep(ncGrace) // let late responses arrive before closing
+	in := ncStdin // snapshot the seam so a late goroutine read can't race a test reset
+	stdinDone := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(ncWriter{s}, in)
+		close(stdinDone)
+	}()
+
+	// Exit when the remote hangs up, or shortly after our own input ends.
+	select {
+	case <-remoteClosed:
+	case <-stdinDone:
+		select {
+		case <-remoteClosed:
+		case <-time.After(ncGrace): // drain late responses, then close
+		}
+	}
 	return 0
 }
 

@@ -66,16 +66,16 @@ func (l *Listener) Close() error {
 // udpConn adapts a UDP packet conn bound to one peer into a net.Conn, so a
 // listened UDP session reads from and writes to that single peer.
 type udpConn struct {
-	pc        net.PacketConn
-	peer      net.Addr
-	first     []byte
-	firstDone bool
+	pc    net.PacketConn
+	peer  net.Addr
+	first []byte // unread remainder of the first datagram
 }
 
 func (u *udpConn) Read(b []byte) (int, error) {
-	if !u.firstDone && len(u.first) > 0 {
-		u.firstDone = true
-		return copy(b, u.first), nil
+	if len(u.first) > 0 {
+		n := copy(b, u.first)
+		u.first = u.first[n:] // keep the tail for the next read (no truncation)
+		return n, nil
 	}
 	for {
 		n, addr, err := u.pc.ReadFrom(b)

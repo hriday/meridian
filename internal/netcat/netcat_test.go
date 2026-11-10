@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -62,6 +63,19 @@ func TestSessionCloseStopsLoop(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("onClose not called after Close")
 	}
+}
+
+func TestSessionCloseFiresOnCloseOnce(t *testing.T) {
+	s, _, err := Dial(context.Background(), Config{Network: "tcp", Addr: echoServer(t)})
+	require.NoError(t, err)
+
+	var count int32
+	s.Start(func([]byte) {}, func(error) { atomic.AddInt32(&count, 1) })
+	require.NoError(t, s.Close())
+	require.NoError(t, s.Close()) // idempotent — must not trigger a second onClose
+
+	time.Sleep(150 * time.Millisecond)
+	require.Equal(t, int32(1), atomic.LoadInt32(&count))
 }
 
 func TestDialTLSVerifies(t *testing.T) {

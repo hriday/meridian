@@ -56,6 +56,13 @@ func (a *App) NetcatListen(network, addr string) (string, error) {
 			return
 		}
 		a.ncMu.Lock()
+		if a.ncListener != l {
+			// The user closed/replaced this listener while we were waiting;
+			// don't adopt the late peer — close it.
+			a.ncMu.Unlock()
+			s.Close()
+			return
+		}
 		a.ncSession = s
 		a.ncMu.Unlock()
 		a.ncStart(s)
@@ -102,6 +109,11 @@ func (a *App) ncStart(s *netcat.Session) {
 			a.ncEmit("netcat:recv", map[string]any{"text": string(b), "hex": netcat.HexDump(b), "n": len(b)})
 		},
 		func(err error) {
+			a.ncMu.Lock()
+			if a.ncSession == s {
+				a.ncSession = nil // drop the dead session so Send reports "not connected"
+			}
+			a.ncMu.Unlock()
 			msg := ""
 			if err != nil && err != io.EOF {
 				msg = err.Error()

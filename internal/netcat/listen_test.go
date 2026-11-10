@@ -68,6 +68,27 @@ func TestListenUDPAccept(t *testing.T) {
 	require.Equal(t, "world", string(buf[:n]))
 }
 
+// A first datagram larger than the read buffer must be delivered across reads,
+// not truncated. (UDP max-datagram limits make this unreachable via a real
+// socket on macOS, so exercise the adapter's retention logic directly.)
+func TestUDPConnReadRetainsRemainder(t *testing.T) {
+	u := &udpConn{first: []byte("hello world")}
+	b := make([]byte, 5)
+
+	n, err := u.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, "hello", string(b[:n]))
+
+	n, err = u.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, " worl", string(b[:n]))
+
+	n, err = u.Read(b)
+	require.NoError(t, err)
+	require.Equal(t, "d", string(b[:n])) // tail kept, nothing dropped
+	require.Empty(t, u.first)
+}
+
 func TestListenCloseUnblocksAccept(t *testing.T) {
 	l, err := Listen(context.Background(), Config{Network: "tcp", Addr: "127.0.0.1:0"})
 	require.NoError(t, err)
