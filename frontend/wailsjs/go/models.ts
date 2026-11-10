@@ -796,6 +796,31 @@ export namespace lookup {
 
 }
 
+export namespace macvendor {
+	
+	export class Result {
+	    input: string;
+	    oui: string;
+	    vendor: string;
+	    found: boolean;
+	    locallyAdministered: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.input = source["input"];
+	        this.oui = source["oui"];
+	        this.vendor = source["vendor"];
+	        this.found = source["found"];
+	        this.locallyAdministered = source["locallyAdministered"];
+	    }
+	}
+
+}
+
 export namespace netcat {
 	
 	export class CertInfo {

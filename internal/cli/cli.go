@@ -21,6 +21,7 @@ import (
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/macvendor"
 	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
@@ -73,6 +74,7 @@ usage:
   meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
   meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
+  meridian-cli macvendor <mac|oui> [--json]
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
@@ -110,6 +112,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPortScan(args[1:], stdout, stderr)
 	case "wol":
 		return runWOL(args[1:], stdout, stderr)
+	case "macvendor":
+		return runMACVendor(args[1:], stdout, stderr)
 	case "nc":
 		return runNC(args[1:], stdout, stderr)
 	case "bgp":
@@ -1010,6 +1014,43 @@ func printBlocklistReport(stdout io.Writer, r dnsbl.Report) {
 			fmt.Fprintf(stdout, "           note: %s\n", l.Note)
 		}
 	}
+}
+
+func runMACVendor(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("macvendor", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "macvendor needs exactly one MAC or OUI\n%s", usage)
+		return 2
+	}
+	r, err := macvendor.Lookup(context.Background(), &http.Client{Timeout: 8 * time.Second}, pos[0])
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	printMACVendorReport(stdout, r)
+	return 0
+}
+
+func printMACVendorReport(stdout io.Writer, r macvendor.Result) {
+	reportRow(stdout, "OUI", r.OUI)
+	if r.Found {
+		reportRow(stdout, "Vendor", r.Vendor)
+		return
+	}
+	note := "not a registered OUI"
+	if r.LocallyAdministered {
+		note += " — this is a locally-administered or randomized MAC, which has no vendor"
+	}
+	reportRow(stdout, "Result", note)
 }
 
 func runWOL(args []string, stdout, stderr io.Writer) int {

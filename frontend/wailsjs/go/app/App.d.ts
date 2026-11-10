@@ -9,6 +9,7 @@ import {sysconf} from '../models';
 import {ipspace} from '../models';
 import {app} from '../models';
 import {lookup} from '../models';
+import {macvendor} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
 import {ping} from '../models';
@@ -69,6 +70,8 @@ export function LookupDomain(arg1:string):Promise<lookup.DomainReport>;
 export function LookupIP(arg1:string):Promise<lookup.IPReport>;
 
 export function LookupPrefix(arg1:string):Promise<lookup.PrefixReport>;
+
+export function MACVendor(arg1:string):Promise<macvendor.Result>;
 
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
