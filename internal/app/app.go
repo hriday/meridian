@@ -11,6 +11,7 @@ import (
 
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
 )
 
 // App is the Wails-bound controller. Its public methods are exposed to the
@@ -28,6 +29,11 @@ type App struct {
 	ipPass     string
 	ipStore    *ipspace.Store
 	ipUnlocked bool
+
+	ncMu       sync.Mutex
+	ncSession  *netcat.Session
+	ncListener *netcat.Listener
+	ncRecvHook func([]byte) // test observation hook; nil in production
 }
 
 // New returns a controller with no context; the context arrives at startup.
