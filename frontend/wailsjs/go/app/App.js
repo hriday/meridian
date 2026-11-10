@@ -30,6 +30,10 @@ export function Classify(arg1) {
   return window['go']['app']['App']['Classify'](arg1);
 }
 
+export function DNSAudit(arg1, arg2) {
+  return window['go']['app']['App']['DNSAudit'](arg1, arg2);
+}
+
 export function DNSQuery(arg1, arg2, arg3) {
   return window['go']['app']['App']['DNSQuery'](arg1, arg2, arg3);
 }
