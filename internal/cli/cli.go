@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hriday/meridian/internal/dnsbl"
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
@@ -70,6 +71,7 @@ usage:
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
+  meridian-cli blocklist <ip> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
@@ -104,6 +106,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runBGP(args[1:], stdout, stderr)
 	case "tls":
 		return runTLS(args[1:], stdout, stderr)
+	case "blocklist":
+		return runBlocklist(args[1:], stdout, stderr)
 	case "adaudit":
 		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
@@ -875,6 +879,61 @@ func printTLSReport(stdout io.Writer, r tlscheck.CertReport) {
 	reportRow(stdout, "TLS", strings.TrimSpace(r.TLSVersion+"  "+r.CipherSuite))
 	if len(r.Warnings) > 0 {
 		reportRow(stdout, "Warnings", strings.Join(r.Warnings, "; "))
+	}
+}
+
+func runBlocklist(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("blocklist", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	resolver := fs.String("resolver", "", "resolver to query (default: system)")
+	timeout := fs.Duration("timeout", 8*time.Second, "overall timeout")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "blocklist needs exactly one IP\n%s", usage)
+		return 2
+	}
+	srv := *resolver
+	if srv == "" {
+		if f := sysconf.Resolvers(); len(f.Values) > 0 {
+			srv = f.Values[0]
+		} else {
+			srv = "1.1.1.1"
+		}
+	}
+	rep, err := dnsbl.Check(context.Background(), pos[0], srv, dnsbl.DefaultZones(), *timeout)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printBlocklistReport(stdout, rep)
+	return 0
+}
+
+func printBlocklistReport(stdout io.Writer, r dnsbl.Report) {
+	reportRow(stdout, "Verdict", r.Verdict)
+	reportRow(stdout, "IP", r.IP)
+	reportRow(stdout, "Resolver", r.Resolver)
+	reportRow(stdout, "Summary", r.Summary)
+	fmt.Fprintln(stdout)
+	for _, l := range r.Listings {
+		line := fmt.Sprintf("%-10s %s (%s)", string(l.Status), l.Name, l.Zone)
+		if len(l.Codes) > 0 {
+			line += "  " + strings.Join(l.Codes, ",")
+		}
+		fmt.Fprintln(stdout, line)
+		if l.Reason != "" {
+			fmt.Fprintf(stdout, "           reason: %s\n", l.Reason)
+		}
+		if l.Note != "" {
+			fmt.Fprintf(stdout, "           note: %s\n", l.Note)
+		}
 	}
 }
 
