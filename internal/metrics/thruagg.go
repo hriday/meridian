@@ -28,8 +28,9 @@ type ThruSnapshot struct {
 	OperStatus  string  `json:"operStatus"`
 	BandLo      float64 `json:"bandLo"`
 	BandHi      float64 `json:"bandHi"`
-	State       string  `json:"state"` // warming | steady | busy | saturated | down
+	State       string  `json:"state"` // warming | steady | busy | saturated | down | unreachable | error
 	Warming     bool    `json:"warming"`
+	Note        string  `json:"note"` // human message, e.g. for error/unreachable
 }
 
 // ThruAgg keeps the last `window` throughput samples for an interface and
