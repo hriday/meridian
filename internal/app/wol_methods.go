@@ -14,13 +14,5 @@ func (a *App) WakeOnLAN(mac, bcast string, port int) (string, error) {
 	if err := wol.Send(a.lookupCtx(), mac, bcast, port); err != nil {
 		return "", err
 	}
-	b := bcast
-	if b == "" {
-		b = "255.255.255.255"
-	}
-	p := port
-	if p <= 0 {
-		p = 9
-	}
-	return fmt.Sprintf("Magic packet sent to %s via %s:%d", mac, b, p), nil
+	return fmt.Sprintf("Magic packet sent to %s via %s", mac, wol.Target(bcast, port)), nil
 }

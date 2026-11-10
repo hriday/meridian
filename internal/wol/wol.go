@@ -67,7 +67,7 @@ func Send(ctx context.Context, mac, bcast string, port int) error {
 	d := net.Dialer{
 		Control: func(_, _ string, c syscall.RawConn) error { return setBroadcast(c) },
 	}
-	conn, err := d.DialContext(ctx, "udp", target(bcast, port))
+	conn, err := d.DialContext(ctx, "udp", Target(bcast, port))
 	if err != nil {
 		return err
 	}
@@ -76,9 +76,11 @@ func Send(ctx context.Context, mac, bcast string, port int) error {
 	return err
 }
 
-// target resolves the broadcast address and port, applying the defaults
-// (255.255.255.255 and 9).
-func target(bcast string, port int) string {
+// Target resolves the broadcast address and port that Send will use, applying
+// the defaults (255.255.255.255 and 9) and trimming whitespace. It is the single
+// source of this resolution so a confirmation message can report exactly where
+// the packet went.
+func Target(bcast string, port int) string {
 	if strings.TrimSpace(bcast) == "" {
 		bcast = "255.255.255.255"
 	}

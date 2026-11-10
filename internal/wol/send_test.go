@@ -37,13 +37,26 @@ func TestSendDeliversMagicPacket(t *testing.T) {
 }
 
 func TestSendRejectsBadMAC(t *testing.T) {
-	err := Send(context.Background(), "nope", "127.0.0.1", 9)
-	require.Error(t, err)
+	// A bad MAC must error before any socket is opened — no datagram sent.
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = pc.Close() })
+	_, portStr, _ := net.SplitHostPort(pc.LocalAddr().String())
+	port, _ := net.LookupPort("udp", portStr)
+
+	sendErr := Send(context.Background(), "nope", "127.0.0.1", port)
+	require.Error(t, sendErr)
+
+	_ = pc.SetReadDeadline(time.Now().Add(300 * time.Millisecond))
+	buf := make([]byte, 128)
+	_, _, rerr := pc.ReadFrom(buf)
+	require.Error(t, rerr, "no datagram should arrive for a rejected MAC")
 }
 
-func TestSendDefaults(t *testing.T) {
-	require.Equal(t, "255.255.255.255:9", target("", 0))
-	require.Equal(t, "192.168.1.255:7", target("192.168.1.255", 7))
+func TestTargetDefaults(t *testing.T) {
+	require.Equal(t, "255.255.255.255:9", Target("", 0))
+	require.Equal(t, "255.255.255.255:9", Target("   ", 9)) // whitespace normalises too
+	require.Equal(t, "192.168.1.255:7", Target("192.168.1.255", 7))
 }
 
 func atoiMust(t *testing.T, s string) int {

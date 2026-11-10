@@ -971,7 +971,7 @@ func runWOL(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "Magic packet sent to %s via %s:%d\n", pos[0], *bcast, *port)
+	fmt.Fprintf(stdout, "Magic packet sent to %s via %s\n", pos[0], wol.Target(*bcast, *port))
 	fmt.Fprintln(stdout, "Note: \"sent\" isn't \"woke\" — the target needs Wake-on-LAN enabled, and broadcasts don't cross subnets.")
 	return 0
 }

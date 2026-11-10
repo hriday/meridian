@@ -9,13 +9,10 @@
   let sent = "";
 
   async function run() {
-    const m = mac.trim();
-    if (!m) {
-      sent = "";
-      return;
-    }
     error = "";
     sent = "";
+    const m = mac.trim();
+    if (!m) return;
     busy = true;
     try {
       sent = await WakeOnLAN(m, bcast.trim(), Number(port) || 9);
