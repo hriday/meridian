@@ -9,14 +9,17 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/pwaudit"
@@ -31,6 +34,13 @@ import (
 var newLookupClient = func() *lookup.Client {
 	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
+
+// nc seams: input piped to the connection, and the grace period to drain
+// responses after stdin EOF before closing. Tests override both.
+var (
+	ncStdin io.Reader = os.Stdin
+	ncGrace           = 200 * time.Millisecond
+)
 
 // newCracker builds the password cracker the CLI uses; tests override it.
 var newCracker = func() pwaudit.Cracker { return pwaudit.NewHashcatCracker() }
@@ -50,6 +60,7 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
@@ -75,6 +86,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "nc":
+		return runNC(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
 	case "adaudit":
@@ -108,6 +121,85 @@ func parsePositionals(fs *flag.FlagSet, args []string) ([]string, bool) {
 		args = rest[1:]
 	}
 	return pos, true
+}
+
+type ncWriter struct{ s *netcat.Session }
+
+func (w ncWriter) Write(b []byte) (int, error) { return w.s.Send(b) }
+
+func runNC(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("nc", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	udp := fs.Bool("udp", false, "use UDP")
+	useTLS := fs.Bool("tls", false, "wrap the connection in TLS")
+	insecure := fs.Bool("insecure", false, "skip TLS verification")
+	listen := fs.Bool("listen", false, "listen on the local port instead of connecting")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 2 {
+		fmt.Fprintf(stderr, "nc needs <host> <port>\n%s", usage)
+		return 2
+	}
+	network := "tcp"
+	if *udp {
+		network = "udp"
+	}
+	cfg := netcat.Config{Network: network, Addr: net.JoinHostPort(pos[0], pos[1]), TLS: *useTLS, Insecure: *insecure}
+	ctx := context.Background()
+
+	var s *netcat.Session
+	if *listen {
+		l, err := netcat.Listen(ctx, cfg)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		defer l.Close()
+		fmt.Fprintf(stderr, "listening on %s (%s)\n", l.Addr(), network)
+		if s, err = l.Accept(); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+	} else {
+		var cert *netcat.CertInfo
+		var err error
+		if s, cert, err = netcat.Dial(ctx, cfg); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if cert != nil {
+			fmt.Fprintf(stderr, "TLS subject %s · expires %s · verified=%v\n", cert.Subject, cert.NotAfter, cert.Verified)
+		}
+	}
+	defer s.Close()
+
+	var mu sync.Mutex
+	remoteClosed := make(chan struct{})
+	s.Start(func(b []byte) {
+		mu.Lock()
+		_, _ = stdout.Write(b)
+		mu.Unlock()
+	}, func(error) { close(remoteClosed) })
+
+	in := ncStdin // snapshot the seam so a late goroutine read can't race a test reset
+	stdinDone := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(ncWriter{s}, in)
+		close(stdinDone)
+	}()
+
+	// Exit when the remote hangs up, or shortly after our own input ends.
+	select {
+	case <-remoteClosed:
+	case <-stdinDone:
+		select {
+		case <-remoteClosed:
+		case <-time.After(ncGrace): // drain late responses, then close
+		}
+	}
+	return 0
 }
 
 func runClassify(args []string, stdout, stderr io.Writer) int {

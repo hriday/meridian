@@ -557,6 +557,29 @@ export namespace lookup {
 
 }
 
+export namespace netcat {
+	
+	export class CertInfo {
+	    subject: string;
+	    issuer: string;
+	    notAfter: string;
+	    verified: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CertInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.subject = source["subject"];
+	        this.issuer = source["issuer"];
+	        this.notAfter = source["notAfter"];
+	        this.verified = source["verified"];
+	    }
+	}
+
+}
+
 export namespace netinput {
 	
 	export class Result {
