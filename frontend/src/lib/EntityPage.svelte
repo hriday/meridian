@@ -48,6 +48,34 @@
       /* clipboard blocked; ignore */
     }
   }
+
+  // Plain-language gloss for the common domain status codes, shown as a tooltip
+  // on each status chip. RDAP (RFC 9083) reports these space-separated and
+  // lowercase (e.g. "client transfer prohibited"), not the EPP camelCase, so the
+  // lookup normalises both forms to the spaced lowercase key.
+  const STATUS_GLOSS: Record<string, string> = {
+    "client transfer prohibited": "The registrar has locked the domain against transfer (normal, anti-hijack).",
+    "server transfer prohibited": "The registry has locked the domain against transfer.",
+    "client delete prohibited": "The registrar has locked the domain against deletion.",
+    "server delete prohibited": "The registry has locked the domain against deletion.",
+    "client update prohibited": "The registrar has locked the domain against changes.",
+    "server update prohibited": "The registry has locked the domain against changes.",
+    "client renew prohibited": "The registrar has locked the domain against renewal.",
+    "client hold": "The registrar has stopped the domain from resolving.",
+    "server hold": "The registry has stopped the domain from resolving.",
+    "auto renew period": "Recently auto-renewed; still within the grace period.",
+    "pending delete": "Scheduled for deletion — it will drop soon.",
+    "pending transfer": "A transfer to another registrar is in progress.",
+    "redemption period": "Expired and in the redemption grace period; the owner can still restore it.",
+    ok: "Active with no pending operations or locks.",
+    active: "Active with no pending operations or locks.",
+  };
+  // Normalise an EPP camelCase code ("clientHold") to RDAP's spaced lowercase
+  // ("client hold") so either form resolves.
+  const normStatus = (s: string): string =>
+    s.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().trim();
+  const statusGloss = (s: string): string =>
+    STATUS_GLOSS[normStatus(s)] ?? "A domain status code reported by the registry.";
 </script>
 
 <div class="entity">
@@ -259,9 +287,15 @@
       <dl class="mono">
         <dt>Registrar</dt><dd>{data.registrar || "—"}</dd>
         <dt>Created</dt><dd>{data.created || "—"}</dd>
+        {#if data.updated}<dt>Updated</dt><dd>{data.updated}</dd>{/if}
         <dt>Expires</dt><dd>{data.expires || "—"}</dd>
         <dt>DNSSEC</dt><dd>{data.dnssec || "—"}</dd>
+        {#if data.statuses?.length}
+          <dt>Status</dt>
+          <dd class="statuses">{#each data.statuses as s}<span class="schip" title={statusGloss(s)}>{s}</span>{/each}</dd>
+        {/if}
         <dt>Nameservers</dt><dd>{data.nameservers?.join(", ") || "—"}</dd>
+        {#if data.abuseEmail}<dt>Abuse</dt><dd><a href={`mailto:${data.abuseEmail}`}>{data.abuseEmail}</a></dd>{/if}
       </dl>
     </div></div>
   {/if}
@@ -316,5 +350,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .pchip { display: inline-flex; gap: 5px; align-items: baseline; font-size: 0.76rem; padding: 2px 9px; border-radius: 7px; border: 1px solid var(--border-soft); background: var(--card); }
   .pchip.more { color: var(--text-dim); border-style: dashed; }
+  .statuses { display: flex; flex-wrap: wrap; gap: 6px; }
+  .schip { display: inline-flex; font-size: 0.74rem; padding: 2px 8px; border-radius: 7px; border: 1px solid var(--border-soft); background: var(--well); cursor: help; }
   .mono { font-family: var(--font-mono); }
 </style>

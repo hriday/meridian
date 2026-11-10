@@ -628,9 +628,12 @@ export namespace lookup {
 	    hostedBy: string[];
 	    registrar: string;
 	    created: string;
+	    updated: string;
 	    expires: string;
 	    dnssec: string;
+	    statuses: string[];
 	    nameservers: string[];
+	    abuseEmail: string;
 	    dnsSrc: Source;
 	    registrySrc: Source;
 	
@@ -647,9 +650,12 @@ export namespace lookup {
 	        this.hostedBy = source["hostedBy"];
 	        this.registrar = source["registrar"];
 	        this.created = source["created"];
+	        this.updated = source["updated"];
 	        this.expires = source["expires"];
 	        this.dnssec = source["dnssec"];
+	        this.statuses = source["statuses"];
 	        this.nameservers = source["nameservers"];
+	        this.abuseEmail = source["abuseEmail"];
 	        this.dnsSrc = this.convertValues(source["dnsSrc"], Source);
 	        this.registrySrc = this.convertValues(source["registrySrc"], Source);
 	    }
