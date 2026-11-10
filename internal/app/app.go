@@ -11,6 +11,7 @@ import (
 
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/pwaudit"
 )
 
@@ -29,6 +30,11 @@ type App struct {
 	ipPass     string
 	ipStore    *ipspace.Store
 	ipUnlocked bool
+
+	ncMu       sync.Mutex
+	ncSession  *netcat.Session
+	ncListener *netcat.Listener
+	ncRecvHook func([]byte) // test observation hook; nil in production
 
 	adCracker   pwaudit.Cracker
 	adReport    *pwaudit.AuditReport // last run, held for an encrypted save
