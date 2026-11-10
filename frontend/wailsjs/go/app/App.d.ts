@@ -11,6 +11,7 @@ import {app} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
+import {ping} from '../models';
 import {scan} from '../models';
 import {subnet} from '../models';
 import {tlscheck} from '../models';
@@ -82,6 +83,8 @@ export function NetcatListen(arg1:string,arg2:string):Promise<string>;
 export function NetcatSend(arg1:string):Promise<void>;
 
 export function PickFile(arg1:string):Promise<string>;
+
+export function PingHost(arg1:string,arg2:number):Promise<ping.Stats>;
 
 export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
 
