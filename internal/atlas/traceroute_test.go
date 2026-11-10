@@ -85,12 +85,40 @@ func TestTracePollsUntilResults(t *testing.T) {
 			_, _ = w.Write([]byte(traceReached))
 		}
 	})
-	rep, err := Trace(context.Background(), http.DefaultClient, "k", "1.1.1.1", 5, 5*time.Millisecond, 2*time.Second)
+	rep, err := Trace(context.Background(), http.DefaultClient, "k", "1.1.1.1", 1, 5*time.Millisecond, 2*time.Second)
 	require.NoError(t, err)
 	require.Equal(t, 7, rep.MeasurementID)
+	require.Equal(t, 1, rep.Requested)
 	require.Len(t, rep.Probes, 1)
 	require.Equal(t, 1, rep.Responding)
 	require.Equal(t, 1, rep.Reached)
+	require.GreaterOrEqual(t, polls, 2)
+}
+
+// a 2-probe result, both reaching the target.
+const traceTwo = `[` +
+	`{"prb_id":101,"from":"2.2.2.2","dst_addr":"1.1.1.1","result":[{"hop":1,"result":[{"from":"1.1.1.1","rtt":1.0}]}]},` +
+	`{"prb_id":102,"from":"3.3.3.3","dst_addr":"1.1.1.1","result":[{"hop":1,"result":[{"from":"1.1.1.1","rtt":2.0}]}]}]`
+
+func TestTraceWaitsForRequested(t *testing.T) {
+	var polls int
+	serve(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			_, _ = w.Write([]byte(`{"measurements":[7]}`))
+			return
+		}
+		polls++
+		if polls < 3 {
+			_, _ = w.Write([]byte(traceReached)) // only 1 probe reported yet
+		} else {
+			_, _ = w.Write([]byte(traceTwo)) // both requested probes in
+		}
+	})
+	rep, err := Trace(context.Background(), http.DefaultClient, "k", "1.1.1.1", 2, 5*time.Millisecond, 2*time.Second)
+	require.NoError(t, err)
+	require.Equal(t, 2, rep.Requested)
+	require.Len(t, rep.Probes, 2, "should wait for the 2nd requested probe, not return on the 1st")
+	require.Equal(t, 2, rep.Responding)
 }
 
 func TestTraceTimeoutEmpty(t *testing.T) {

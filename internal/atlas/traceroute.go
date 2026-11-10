@@ -28,6 +28,7 @@ type TraceProbe struct {
 type TraceReport struct {
 	Target        string       `json:"target"`
 	MeasurementID int          `json:"measurementId"`
+	Requested     int          `json:"requested"`
 	Probes        []TraceProbe `json:"probes"`
 	Responding    int          `json:"responding"`
 	Reached       int          `json:"reached"`
@@ -111,31 +112,36 @@ func Trace(ctx context.Context, d Doer, key, target string, probes int, poll, ti
 	if err != nil {
 		return TraceReport{}, err
 	}
-	rep := TraceReport{Target: target, MeasurementID: id}
+	rep := TraceReport{Target: target, MeasurementID: id, Requested: probes}
 
+	// Atlas results accumulate: each poll returns every probe that has reported
+	// so far. Keep polling until all requested probes have reported or we run
+	// out of time, so the user gets the paths they asked for — not just the
+	// first probe to come back.
 	deadline := time.Now().Add(timeout)
+collect:
 	for {
 		ps, err := traceResults(ctx, d, key, id)
 		if err != nil {
 			if ctx.Err() != nil {
-				return rep, nil
+				break // timeout/cancel: return the fullest set so far
 			}
 			return TraceReport{}, err
 		}
-		if len(ps) > 0 {
+		if len(ps) > len(rep.Probes) {
 			rep.Probes = ps
-			aggregateTrace(&rep)
-			return rep, nil
 		}
-		if !time.Now().Before(deadline) {
-			return rep, nil
+		if len(rep.Probes) >= probes || !time.Now().Before(deadline) {
+			break
 		}
 		select {
 		case <-ctx.Done():
-			return rep, nil
+			break collect
 		case <-time.After(poll):
 		}
 	}
+	aggregateTrace(&rep)
+	return rep, nil
 }
 
 // aggregateTrace fills Responding (probes that produced any hops) and Reached.

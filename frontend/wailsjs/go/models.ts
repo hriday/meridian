@@ -160,6 +160,7 @@ export namespace atlas {
 	export class TraceReport {
 	    target: string;
 	    measurementId: number;
+	    requested: number;
 	    probes: TraceProbe[];
 	    responding: number;
 	    reached: number;
@@ -172,6 +173,7 @@ export namespace atlas {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.target = source["target"];
 	        this.measurementId = source["measurementId"];
+	        this.requested = source["requested"];
 	        this.probes = this.convertValues(source["probes"], TraceProbe);
 	        this.responding = source["responding"];
 	        this.reached = source["reached"];

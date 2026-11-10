@@ -89,12 +89,12 @@
     {/if}
 
     {#if r}
-      {#if r.probes.length > 0}
+      {#if r.probes && r.probes.length > 0}
         <div class="verdict"
           class:good={r.reached > 0}
           class:warn={r.reached === 0}>
           <span class="vlabel">
-            {r.responding} / {r.probes.length} probes traced · {r.reached} reached {r.target}
+            {r.probes.length} of {r.requested} probes reported · {r.reached} reached {r.target}
           </span>
           <span class="vnote mono">msm #{r.measurementId}</span>
         </div>
@@ -107,7 +107,7 @@
               <span class="reached" class:ok={p.reached}>{p.reached ? "reached " + p.dest : "did not reach"}</span>
             </div>
             <table class="mono hops"><tbody>
-              {#each p.hops as h}
+              {#each p.hops ?? [] as h}
                 <tr class:timeout={h.timeout}>
                   <td class="hn">{h.number}</td>
                   <td class="haddr">{h.timeout ? "*" : (h.from || "*")}</td>
