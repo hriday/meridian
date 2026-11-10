@@ -3,6 +3,7 @@ module github.com/hriday/meridian
 go 1.23
 
 require (
+	github.com/gosnmp/gosnmp v1.37.0
 	github.com/miekg/dns v1.1.62
 	github.com/stretchr/testify v1.10.0
 	github.com/wailsapp/wails/v2 v2.10.1

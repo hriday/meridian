@@ -1687,6 +1687,31 @@ export namespace scan {
 
 }
 
+export namespace snmp {
+	
+	export class Interface {
+	    index: number;
+	    descr: string;
+	    alias: string;
+	    speedBps: number;
+	    operStatus: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Interface(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.descr = source["descr"];
+	        this.alias = source["alias"];
+	        this.speedBps = source["speedBps"];
+	        this.operStatus = source["operStatus"];
+	    }
+	}
+
+}
+
 export namespace subnet {
 	
 	export class Info {

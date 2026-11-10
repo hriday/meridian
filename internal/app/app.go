@@ -46,7 +46,7 @@ type App struct {
 	newPinger  func() scan.Pinger
 
 	monMu    sync.Mutex
-	monitors map[string]*pingMonitor
+	monitors map[string]*monitor
 }
 
 // New returns a controller with no context; the context arrives at startup.

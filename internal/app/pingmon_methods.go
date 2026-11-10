@@ -23,11 +23,58 @@ var (
 
 const pingWindow = 120
 
-type pingMonitor struct {
-	cancel context.CancelFunc
-	done   chan struct{}
-	mu     sync.Mutex
-	agg    *metrics.Aggregator
+// monitor is a running realtime stream (ping or SNMP): its cancel, a done
+// channel that closes when the goroutine exits, and a baseline hook.
+type monitor struct {
+	cancel   context.CancelFunc
+	done     chan struct{}
+	baseline func()
+}
+
+func (a *App) registerMonitor(id string, m *monitor) error {
+	a.monMu.Lock()
+	defer a.monMu.Unlock()
+	if a.monitors == nil {
+		a.monitors = map[string]*monitor{}
+	}
+	if _, exists := a.monitors[id]; exists {
+		return fmt.Errorf("a monitor with that id is already running")
+	}
+	a.monitors[id] = m
+	return nil
+}
+
+// stopMonitor cancels a stream and blocks until its goroutine has exited.
+func (a *App) stopMonitor(id string) {
+	a.monMu.Lock()
+	m := a.monitors[id]
+	delete(a.monitors, id)
+	a.monMu.Unlock()
+	if m != nil {
+		m.cancel()
+		<-m.done
+	}
+}
+
+func (a *App) monitorBaseline(id string) {
+	a.monMu.Lock()
+	m := a.monitors[id]
+	a.monMu.Unlock()
+	if m != nil && m.baseline != nil {
+		m.baseline()
+	}
+}
+
+func (a *App) stopAllMonitors() {
+	a.monMu.Lock()
+	ids := make([]string, 0, len(a.monitors))
+	for id := range a.monitors {
+		ids = append(ids, id)
+	}
+	a.monMu.Unlock()
+	for _, id := range ids {
+		a.stopMonitor(id)
+	}
 }
 
 // StartPingMonitor begins a live ping to target, streaming a metrics.Snapshot
@@ -39,34 +86,29 @@ func (a *App) StartPingMonitor(streamID, target string) error {
 		return fmt.Errorf("enter a host to ping")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &pingMonitor{cancel: cancel, done: make(chan struct{}), agg: metrics.NewAggregator(pingWindow)}
-
-	a.monMu.Lock()
-	if a.monitors == nil {
-		a.monitors = map[string]*pingMonitor{}
-	}
-	if _, exists := a.monitors[streamID]; exists {
-		a.monMu.Unlock()
+	agg := metrics.NewAggregator(pingWindow)
+	var mu sync.Mutex
+	m := &monitor{cancel: cancel, done: make(chan struct{}),
+		baseline: func() { mu.Lock(); agg.SetBaseline(); mu.Unlock() }}
+	if err := a.registerMonitor(streamID, m); err != nil {
 		cancel()
-		return fmt.Errorf("a monitor with that id is already running")
+		return err
 	}
-	a.monitors[streamID] = m
-	a.monMu.Unlock()
 
-	var pinger ping.Pinger = a.newPinger() // scan.Pinger satisfies ping.Pinger
+	var pinger ping.Pinger = a.newPinger()
 	event := "metrics:" + streamID
 	emitCtx := a.lookupCtx()
 
 	go func() {
 		defer close(m.done)
 		available, err := ping.Monitor(ctx, pinger, target, pingInterval, pingTimeout, func(r ping.Reply) {
-			m.mu.Lock()
-			snap := m.agg.Add(r.RTTMillis, r.OK)
-			m.mu.Unlock()
+			mu.Lock()
+			snap := agg.Add(r.RTTMillis, r.OK)
+			mu.Unlock()
 			emitEvent(emitCtx, event, snap)
 		})
 		if ctx.Err() != nil {
-			return // stopped
+			return
 		}
 		if err != nil {
 			emitEvent(emitCtx, event, metrics.Snapshot{State: "error", Note: err.Error()})
@@ -81,37 +123,7 @@ func (a *App) StartPingMonitor(streamID, target string) error {
 }
 
 // StopPingMonitor cancels a stream and blocks until its goroutine has exited.
-func (a *App) StopPingMonitor(streamID string) {
-	a.monMu.Lock()
-	m := a.monitors[streamID]
-	delete(a.monitors, streamID)
-	a.monMu.Unlock()
-	if m != nil {
-		m.cancel()
-		<-m.done
-	}
-}
+func (a *App) StopPingMonitor(streamID string) { a.stopMonitor(streamID) }
 
 // SetPingBaseline freezes the stream's current band as the known-good range.
-func (a *App) SetPingBaseline(streamID string) {
-	a.monMu.Lock()
-	m := a.monitors[streamID]
-	a.monMu.Unlock()
-	if m != nil {
-		m.mu.Lock()
-		m.agg.SetBaseline()
-		m.mu.Unlock()
-	}
-}
-
-func (a *App) stopAllMonitors() {
-	a.monMu.Lock()
-	ids := make([]string, 0, len(a.monitors))
-	for id := range a.monitors {
-		ids = append(ids, id)
-	}
-	a.monMu.Unlock()
-	for _, id := range ids {
-		a.StopPingMonitor(id)
-	}
-}
+func (a *App) SetPingBaseline(streamID string) { a.monitorBaseline(streamID) }
