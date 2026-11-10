@@ -6,7 +6,13 @@
 package dnsaudit
 
 import (
+	"context"
+	"errors"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/hriday/meridian/internal/dnsx"
 )
 
 // Status is a per-check grade.
@@ -117,4 +123,153 @@ func dmarcPolicy(record string) string {
 		}
 	}
 	return ""
+}
+
+// queryFn is the DNS exchange, behind a package var so tests can inject a fake.
+var queryFn = dnsx.Query
+
+// Audit resolves domain's NS/MX/SPF/DMARC records and DNSSEC state via resolver
+// and grades each. It errors if domain or resolver is empty. A DNS-level
+// refusal (SERVFAIL/REFUSED) makes that check an error, never a false
+// "missing" (dnsx returns no error for a response that arrives, so the rcode is
+// inspected directly).
+func Audit(ctx context.Context, domain, resolver string, timeout time.Duration) (Report, error) {
+	domain = strings.TrimSpace(domain)
+	if domain == "" {
+		return Report{}, errors.New("no domain to audit")
+	}
+	if strings.TrimSpace(resolver) == "" {
+		return Report{}, errors.New("no resolver specified")
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	rep := Report{Domain: domain, Resolver: resolver}
+
+	// Nameservers (also the query whose AD flag we read for DNSSEC).
+	nsRes, nsErr := queryFn(ctx, domain, "NS", resolver)
+	ns := Check{Name: "Nameservers"}
+	switch {
+	case nsErr != nil:
+		ns.Status, ns.Note = StatusError, "Couldn't query NS: "+nsErr.Error()
+	case refused(nsRes.Rcode):
+		ns.Status, ns.Note = StatusError, "The resolver returned "+nsRes.Rcode+" for NS — the check couldn't be performed."
+	default:
+		ns.Records = values(nsRes, "NS")
+		if len(ns.Records) == 0 {
+			ns.Status, ns.Note = StatusMissing, "No NS records — the domain has no nameservers (or doesn't exist)."
+		} else {
+			ns.Status, ns.Note = StatusOK, "Served by "+strconv.Itoa(len(ns.Records))+" nameserver(s)."
+		}
+	}
+	rep.Checks = append(rep.Checks, ns)
+
+	// Mail (MX).
+	mxRes, mxErr := queryFn(ctx, domain, "MX", resolver)
+	mx := Check{Name: "Mail (MX)"}
+	switch {
+	case mxErr != nil:
+		mx.Status, mx.Note = StatusError, "Couldn't query MX: "+mxErr.Error()
+	case refused(mxRes.Rcode):
+		mx.Status, mx.Note = StatusError, "The resolver returned "+mxRes.Rcode+" for MX — the check couldn't be performed."
+	default:
+		mx.Records = values(mxRes, "MX")
+		switch {
+		case len(mx.Records) == 0:
+			mx.Status, mx.Note = StatusWarn, "No MX records — this domain can't receive mail."
+		case isNullMX(mx.Records):
+			mx.Status, mx.Note = StatusWarn, "Null MX (0 .) — the domain explicitly accepts no mail, by design."
+		default:
+			mx.Status, mx.Note = StatusOK, "Accepts mail via "+strconv.Itoa(len(mx.Records))+" host(s)."
+		}
+	}
+	rep.Checks = append(rep.Checks, mx)
+
+	// SPF (apex TXT).
+	txtRes, txtErr := queryFn(ctx, domain, "TXT", resolver)
+	spf := Check{Name: "SPF"}
+	if txtErr != nil {
+		spf.Status, spf.Note = StatusError, "Couldn't query TXT: "+txtErr.Error()
+	} else if refused(txtRes.Rcode) {
+		spf.Status, spf.Note = StatusError, "The resolver returned "+txtRes.Rcode+" for TXT — the check couldn't be performed."
+	} else {
+		spf.Status, spf.Note, spf.Records = spfVerdict(values(txtRes, "TXT"))
+	}
+	rep.Checks = append(rep.Checks, spf)
+
+	// DMARC (_dmarc TXT).
+	dRes, dErr := queryFn(ctx, "_dmarc."+domain, "TXT", resolver)
+	dmarc := Check{Name: "DMARC"}
+	if dErr != nil {
+		dmarc.Status, dmarc.Note = StatusError, "Couldn't query _dmarc TXT: "+dErr.Error()
+	} else if refused(dRes.Rcode) {
+		dmarc.Status, dmarc.Note = StatusError, "The resolver returned "+dRes.Rcode+" for _dmarc — the check couldn't be performed."
+	} else {
+		dmarc.Status, dmarc.Note, dmarc.Records = dmarcVerdict(values(dRes, "TXT"))
+	}
+	rep.Checks = append(rep.Checks, dmarc)
+
+	// DNSSEC (AD flag from the NS response).
+	sec := Check{Name: "DNSSEC"}
+	switch {
+	case nsErr != nil || refused(nsRes.Rcode):
+		sec.Status, sec.Note = StatusError, "Couldn't determine DNSSEC — the apex query didn't complete."
+	case nsRes.Authenticated:
+		sec.Status, sec.Note = StatusOK, "Answers are DNSSEC-validated (your resolver set the AD flag)."
+	default:
+		sec.Status, sec.Note = StatusWarn, "Not DNSSEC-validated. This reflects your resolver: an unsigned zone and a non-validating resolver look the same, so this is a signal, not a proof."
+	}
+	rep.Checks = append(rep.Checks, sec)
+
+	rep.Summary = summarize(&rep)
+	return rep, nil
+}
+
+// refused reports whether a DNS rcode means the query was refused/failed rather
+// than answered (NOERROR) or a clean "no such name" (NXDOMAIN).
+func refused(rcode string) bool {
+	return rcode != "" && rcode != "NOERROR" && rcode != "NXDOMAIN"
+}
+
+// values returns the answer values of the given record type, with surrounding
+// quotes stripped (dnsx renders TXT values quoted).
+func values(res dnsx.Result, rtype string) []string {
+	var out []string
+	for _, a := range res.Answers {
+		if a.Type == rtype {
+			out = append(out, strings.Trim(a.Value, `"`))
+		}
+	}
+	return out
+}
+
+func isNullMX(records []string) bool {
+	if len(records) != 1 {
+		return false
+	}
+	f := strings.Fields(records[0])
+	return len(f) == 2 && f[0] == "0" && (f[1] == "." || f[1] == "")
+}
+
+// summarize counts the grades and names the first thing to fix, in severity-
+// ordered check order (NS, MX, SPF, DMARC, DNSSEC).
+func summarize(r *Report) string {
+	for _, c := range r.Checks {
+		switch c.Status {
+		case StatusOK:
+			r.OKs++
+		case StatusWarn:
+			r.Warns++
+		case StatusMissing:
+			r.Missing++
+		case StatusError:
+			r.Errors++
+		}
+	}
+	for _, c := range r.Checks {
+		if c.Status != StatusOK {
+			return c.Name + " needs attention — " + c.Note
+		}
+	}
+	return "Posture looks healthy — nameservers, mail, SPF, DMARC and DNSSEC all check out."
 }
