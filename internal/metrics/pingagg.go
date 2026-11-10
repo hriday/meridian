@@ -13,9 +13,10 @@ type Snapshot struct {
 	JitterMs float64 `json:"jitterMs"`
 	BandLo   float64 `json:"bandLo"`
 	BandHi   float64 `json:"bandHi"`
-	State    string  `json:"state"` // warming | steady | degraded | loss | anomaly
+	State    string  `json:"state"` // warming | steady | degraded | loss | anomaly | error
 	Warming  bool    `json:"warming"`
 	HasRTT   bool    `json:"hasRtt"`
+	Note     string  `json:"note"` // human message, e.g. for the error state
 }
 
 type sample struct {

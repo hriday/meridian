@@ -44,6 +44,9 @@ type App struct {
 	scanMu     sync.Mutex
 	scanCancel context.CancelFunc
 	newPinger  func() scan.Pinger
+
+	monMu    sync.Mutex
+	monitors map[string]*pingMonitor
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -66,6 +69,12 @@ func OnStartup(a *App) func(context.Context) {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+// OnShutdown returns the Wails OnShutdown callback: stop every running monitor
+// so no polling goroutine outlives the app.
+func OnShutdown(a *App) func(context.Context) {
+	return func(context.Context) { a.stopAllMonitors() }
 }
 
 // lookupCtx is the context for outbound lookups: the Wails startup context
