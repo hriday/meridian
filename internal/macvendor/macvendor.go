@@ -47,14 +47,16 @@ func normalize(input string) (oui, query string, localAdmin bool, err error) {
 		}
 		return r
 	}, input)
-	if len(s) < 6 {
-		return "", "", false, fmt.Errorf("need at least a 3-byte OUI (6 hex digits), got %q", input)
+	// The whole address must be hex and a whole number of bytes, so a typo'd tail
+	// (e.g. "fc:fb:fb:dd:ee:gg") is rejected rather than silently truncated to a
+	// confident OUI answer.
+	if len(s) < 6 || len(s)%2 != 0 {
+		return "", "", false, fmt.Errorf("need a 3-to-6-byte MAC/OUI (an even run of hex digits), got %q", input)
 	}
-	s = s[:6]
 	if !isHex(s) {
 		return "", "", false, fmt.Errorf("not a hex MAC/OUI: %q", input)
 	}
-	up := strings.ToUpper(s)
+	up := strings.ToUpper(s[:6])
 	first, err := hexByte(up[:2])
 	if err != nil {
 		return "", "", false, err

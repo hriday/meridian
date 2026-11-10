@@ -1050,7 +1050,7 @@ func printMACVendorReport(stdout io.Writer, r macvendor.Result) {
 	if r.LocallyAdministered {
 		note += " — this is a locally-administered or randomized MAC, which has no vendor"
 	}
-	reportRow(stdout, "Vendor", note)
+	reportRow(stdout, "Result", note)
 }
 
 func runWOL(args []string, stdout, stderr io.Writer) int {

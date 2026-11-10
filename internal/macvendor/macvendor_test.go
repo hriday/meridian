@@ -27,7 +27,12 @@ func TestNormalizeSpellings(t *testing.T) {
 }
 
 func TestNormalizeRejects(t *testing.T) {
-	for _, in := range []string{"", "fc:fb", "fcfb", "zz:fb:fb", "   "} {
+	for _, in := range []string{
+		"", "fc:fb", "fcfb", "zz:fb:fb", "   ",
+		"fcfbfbZZZZZZ",      // valid OUI prefix but garbage tail
+		"fc:fb:fb:dd:ee:gg", // a typo'd MAC (non-hex g)
+		"fcfbfbd",           // odd number of hex digits
+	} {
 		_, _, _, err := normalize(in)
 		require.Errorf(t, err, "expected error for %q", in)
 	}
@@ -86,6 +91,28 @@ func TestLookupRateLimited(t *testing.T) {
 type errDoer struct{}
 
 func (errDoer) Do(*http.Request) (*http.Response, error) { return nil, errors.New("boom") }
+
+func TestLookupSendsOnlyOUI(t *testing.T) {
+	// Privacy contract: only the OUI (first 3 bytes) is sent — never the
+	// device-specific last 3 bytes — with the generic User-Agent.
+	var gotPath, gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotUA = r.Header.Get("User-Agent")
+		_, _ = w.Write([]byte("Cisco Systems, Inc"))
+	}))
+	t.Cleanup(srv.Close)
+	old := baseURL
+	baseURL = srv.URL + "/"
+	t.Cleanup(func() { baseURL = old })
+
+	_, err := Lookup(context.Background(), srv.Client(), "fc:fb:fb:dd:ee:ff")
+	require.NoError(t, err)
+	require.Contains(t, gotPath, "FCFBFB")
+	require.NotContains(t, strings.ToUpper(gotPath), "DDEEFF", "device bytes must not be sent")
+	require.Equal(t, userAgent, gotUA)
+	require.NotContains(t, gotUA, "@", "User-Agent must carry no identity")
+}
 
 func TestLookupNetworkError(t *testing.T) {
 	_, err := Lookup(context.Background(), errDoer{}, "fc:fb:fb")
