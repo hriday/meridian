@@ -794,8 +794,17 @@ func printDomainReport(stdout io.Writer, r lookup.DomainReport) {
 	}
 	reportRow(stdout, "Registrar", r.Registrar)
 	reportRow(stdout, "Created", r.Created)
+	if r.Updated != "" {
+		reportRow(stdout, "Updated", r.Updated)
+	}
 	reportRow(stdout, "Expires", r.Expires)
 	reportRow(stdout, "DNSSEC", r.DNSSEC)
+	if len(r.Statuses) > 0 {
+		reportRow(stdout, "Status", strings.Join(r.Statuses, ", "))
+	}
+	if r.AbuseEmail != "" {
+		reportRow(stdout, "Abuse", r.AbuseEmail)
+	}
 	if len(r.Nameservers) > 0 {
 		reportRow(stdout, "Nameservers", strings.Join(r.Nameservers, ", "))
 	}
