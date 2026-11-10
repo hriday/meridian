@@ -24,6 +24,21 @@ func TestNormalizeURL(t *testing.T) {
 	require.Error(t, err)
 	_, err = normalizeURL("   ")
 	require.Error(t, err)
+	_, err = normalizeURL("http://") // scheme but no host
+	require.Error(t, err)
+}
+
+func TestCheckSendsGenericUA(t *testing.T) {
+	var gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+	_, err := Check(context.Background(), srv.URL, 5*time.Second)
+	require.NoError(t, err)
+	require.Equal(t, userAgent, gotUA)
+	require.NotContains(t, gotUA, "@", "User-Agent must carry no identity")
 }
 
 func TestCheckOK(t *testing.T) {
@@ -58,6 +73,9 @@ func TestCheckRedirectChain(t *testing.T) {
 	require.Equal(t, 301, r.Redirects[0].Status)
 	require.Equal(t, 200, r.Status)
 	require.True(t, strings.HasSuffix(r.FinalURL, "/b"), r.FinalURL)
+	// The final hop reuses the pooled connection, so its own connect time is 0;
+	// the aggregate must still reflect the real connect from the first hop.
+	require.Greater(t, r.Timing.ConnectMillis, 0.0, "hop-1 connect time must not be lost on a redirect")
 }
 
 func TestCheckNotFound(t *testing.T) {

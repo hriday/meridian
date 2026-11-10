@@ -30,9 +30,6 @@
   // Bar width as a fraction of total, for the timing row.
   const pct = (v: number, total: number) => (total > 0 ? Math.min(100, (v / total) * 100) : 0);
 
-  // Pull out the highlighted headers; the rest go in the full list.
-  const special = ["Server", "Content-Type", "Content-Length"];
-  const otherHeaders = (hs: any[]) => (hs ?? []).filter((h) => !special.includes(h[0]));
 </script>
 
 <div class="tool">
@@ -87,11 +84,11 @@
       </div>
     </div>
 
-    {#if otherHeaders(r.headers).length}
+    {#if r.headers?.length}
       <div class="card span">
         <div class="k">All headers</div>
         <table class="mono"><tbody>
-          {#each otherHeaders(r.headers) as h}<tr><td class="hk">{h[0]}</td><td class="hv">{h[1]}</td></tr>{/each}
+          {#each r.headers as h}<tr><td class="hk">{h[0]}</td><td class="hv">{h[1]}</td></tr>{/each}
         </tbody></table>
       </div>
     {/if}

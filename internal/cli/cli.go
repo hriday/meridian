@@ -963,6 +963,9 @@ func printHTTPResult(stdout io.Writer, r httpcheck.Result) {
 	if r.ContentType != "" {
 		reportRow(stdout, "Content-Type", r.ContentType)
 	}
+	if r.ContentLength >= 0 {
+		reportRow(stdout, "Content-Length", fmt.Sprintf("%d", r.ContentLength))
+	}
 	t := r.Timing
 	reportRow(stdout, "Timing (ms)", fmt.Sprintf("dns %.0f · connect %.0f · tls %.0f · ttfb %.0f · total %.0f",
 		t.DNSMillis, t.ConnectMillis, t.TLSMillis, t.TTFBMillis, t.TotalMillis))

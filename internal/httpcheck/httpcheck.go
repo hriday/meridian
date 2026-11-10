@@ -97,6 +97,7 @@ func Check(ctx context.Context, rawURL string, timeout time.Duration) (Result, e
 	res := Result{URL: norm}
 	start := time.Now()
 	cur := norm
+	var agg Timing // accumulated phase timings across all hops
 
 	for i := 0; ; i++ {
 		if i > maxRedirects {
@@ -106,10 +107,21 @@ func Check(ctx context.Context, rawURL string, timeout time.Duration) (Result, e
 		if err != nil {
 			return Result{}, err
 		}
+		// Sum the connection phases across hops and keep the latest hop's TTFB:
+		// a reused connection reports 0 for DNS/connect/TLS on later hops, so
+		// summing preserves the real time spent on the hop that connected.
+		agg.DNSMillis += timing.DNSMillis
+		agg.ConnectMillis += timing.ConnectMillis
+		agg.TLSMillis += timing.TLSMillis
+		agg.TTFBMillis = timing.TTFBMillis
+
 		loc := resp.Header.Get("Location")
 		if isRedirect(resp.StatusCode) && loc != "" {
 			res.Redirects = append(res.Redirects, Hop{Status: resp.StatusCode, URL: cur})
 			next, rerr := resolve(cur, loc)
+			// Drain the redirect body so the connection can be reused for the
+			// next hop (keeps a same-host redirect on one connection).
+			io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
 			resp.Body.Close()
 			if rerr != nil {
 				return Result{}, rerr
@@ -131,8 +143,8 @@ func Check(ctx context.Context, rawURL string, timeout time.Duration) (Result, e
 		if resp.TLS != nil {
 			res.TLSVersion = tlsName(resp.TLS.Version)
 		}
-		timing.TotalMillis = ms(time.Since(start))
-		res.Timing = timing
+		agg.TotalMillis = ms(time.Since(start))
+		res.Timing = agg
 		return res, nil
 	}
 }
