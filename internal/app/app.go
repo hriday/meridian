@@ -12,6 +12,7 @@ import (
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netcat"
+	"github.com/hriday/meridian/internal/pwaudit"
 )
 
 // App is the Wails-bound controller. Its public methods are exposed to the
@@ -34,13 +35,19 @@ type App struct {
 	ncSession  *netcat.Session
 	ncListener *netcat.Listener
 	ncRecvHook func([]byte) // test observation hook; nil in production
+
+	adCracker   pwaudit.Cracker
+	adReport    *pwaudit.AuditReport // last run, held for an encrypted save
+	wordlistDir string
 }
 
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
 	return &App{
-		lookup: lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
-		ipPath: ipspace.DefaultPath(),
+		lookup:      lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
+		ipPath:      ipspace.DefaultPath(),
+		adCracker:   pwaudit.NewHashcatCracker(),
+		wordlistDir: defaultWordlistDir(),
 	}
 }
 
