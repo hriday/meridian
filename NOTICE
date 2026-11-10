@@ -1,0 +1,10 @@
+Meridian
+Copyright 2026 Hriday Balachandran
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product bundles the Geist and Geist Mono fonts, licensed under the SIL
+Open Font License, Version 1.1 (see frontend/src/assets/fonts/GEIST-OFL.txt).
+
+Built with Wails (https://wails.io) and other open-source Go and npm
+dependencies; see go.mod and frontend/package.json for the full list.
