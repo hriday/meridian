@@ -118,6 +118,10 @@ export function Interfaces() {
   return window['go']['app']['App']['Interfaces']();
 }
 
+export function ListInterfaces(arg1, arg2) {
+  return window['go']['app']['App']['ListInterfaces'](arg1, arg2);
+}
+
 export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
@@ -194,12 +198,24 @@ export function SetAtlasKey(arg1) {
   return window['go']['app']['App']['SetAtlasKey'](arg1);
 }
 
+export function SetIfBaseline(arg1) {
+  return window['go']['app']['App']['SetIfBaseline'](arg1);
+}
+
 export function SetPingBaseline(arg1) {
   return window['go']['app']['App']['SetPingBaseline'](arg1);
 }
 
+export function StartIfMonitor(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['StartIfMonitor'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function StartPingMonitor(arg1, arg2) {
   return window['go']['app']['App']['StartPingMonitor'](arg1, arg2);
+}
+
+export function StopIfMonitor(arg1) {
+  return window['go']['app']['App']['StopIfMonitor'](arg1);
 }
 
 export function StopPingMonitor(arg1) {
