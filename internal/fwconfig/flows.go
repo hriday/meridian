@@ -41,7 +41,7 @@ func derive(a *Analysis) {
 	var order []key
 	svcSeen := map[key]map[string]bool{}
 
-	addFlow := func(src, dst, action string, services []string) {
+	addFlow := func(src, dst, action string, services []string, policyID int) {
 		k := key{src, dst, action}
 		f, ok := agg[k]
 		if !ok {
@@ -55,6 +55,9 @@ func derive(a *Analysis) {
 				svcSeen[k][s] = true
 				f.Services = append(f.Services, s)
 			}
+		}
+		if n := len(f.PolicyIDs); n == 0 || f.PolicyIDs[n-1] != policyID {
+			f.PolicyIDs = append(f.PolicyIDs, policyID)
 		}
 	}
 
@@ -87,7 +90,7 @@ func derive(a *Analysis) {
 		}
 		for _, s := range srcs {
 			for _, d := range dsts {
-				addFlow(s, d, action, p.Services)
+				addFlow(s, d, action, p.Services, p.ID)
 			}
 		}
 	}

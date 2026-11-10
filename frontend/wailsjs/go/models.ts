@@ -401,6 +401,200 @@ export namespace dnsx {
 
 }
 
+export namespace fwconfig {
+	
+	export class Address {
+	    name: string;
+	    kind: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Address(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.value = source["value"];
+	    }
+	}
+	export class Counts {
+	    vlans: number;
+	    policies: number;
+	    addresses: number;
+	    subnetsIps: number;
+	    services: number;
+	    zones: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Counts(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.vlans = source["vlans"];
+	        this.policies = source["policies"];
+	        this.addresses = source["addresses"];
+	        this.subnetsIps = source["subnetsIps"];
+	        this.services = source["services"];
+	        this.zones = source["zones"];
+	    }
+	}
+	export class Flow {
+	    src: string;
+	    dst: string;
+	    services: string[];
+	    action: string;
+	    policyIds: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Flow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.src = source["src"];
+	        this.dst = source["dst"];
+	        this.services = source["services"];
+	        this.action = source["action"];
+	        this.policyIds = source["policyIds"];
+	    }
+	}
+	export class Policy {
+	    id: number;
+	    name: string;
+	    srcIntf: string[];
+	    dstIntf: string[];
+	    srcAddr: string[];
+	    dstAddr: string[];
+	    services: string[];
+	    action: string;
+	    disabled: boolean;
+	    negated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Policy(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.srcIntf = source["srcIntf"];
+	        this.dstIntf = source["dstIntf"];
+	        this.srcAddr = source["srcAddr"];
+	        this.dstAddr = source["dstAddr"];
+	        this.services = source["services"];
+	        this.action = source["action"];
+	        this.disabled = source["disabled"];
+	        this.negated = source["negated"];
+	    }
+	}
+	export class Service {
+	    name: string;
+	    proto: string;
+	    ports: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Service(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.proto = source["proto"];
+	        this.ports = source["ports"];
+	    }
+	}
+	export class Zone {
+	    name: string;
+	    interfaces: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Zone(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.interfaces = source["interfaces"];
+	    }
+	}
+	export class VLAN {
+	    id: number;
+	    name: string;
+	    interface: string;
+	    subnet: string;
+	    zone: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VLAN(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.interface = source["interface"];
+	        this.subnet = source["subnet"];
+	        this.zone = source["zone"];
+	    }
+	}
+	export class Analysis {
+	    vdom: string;
+	    vlans: VLAN[];
+	    zones: Zone[];
+	    addresses: Address[];
+	    services: Service[];
+	    policies: Policy[];
+	    flows: Flow[];
+	    counts: Counts;
+	    notes: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Analysis(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.vdom = source["vdom"];
+	        this.vlans = this.convertValues(source["vlans"], VLAN);
+	        this.zones = this.convertValues(source["zones"], Zone);
+	        this.addresses = this.convertValues(source["addresses"], Address);
+	        this.services = this.convertValues(source["services"], Service);
+	        this.policies = this.convertValues(source["policies"], Policy);
+	        this.flows = this.convertValues(source["flows"], Flow);
+	        this.counts = this.convertValues(source["counts"], Counts);
+	        this.notes = source["notes"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+	
+	
+
+}
+
 export namespace httpcheck {
 	
 	export class Hop {

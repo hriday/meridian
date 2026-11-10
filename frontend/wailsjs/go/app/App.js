@@ -22,6 +22,10 @@ export function ADAuditSave(arg1, arg2) {
   return window['go']['app']['App']['ADAuditSave'](arg1, arg2);
 }
 
+export function AnalyzeFirewall(arg1, arg2) {
+  return window['go']['app']['App']['AnalyzeFirewall'](arg1, arg2);
+}
+
 export function AtlasKeyStatus() {
   return window['go']['app']['App']['AtlasKeyStatus']();
 }

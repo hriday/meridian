@@ -50,10 +50,11 @@ type Policy struct {
 // Flow is one VLAN-to-VLAN permitted/denied relationship, aggregated across
 // policies by (Src, Dst, Action).
 type Flow struct {
-	Src      string   `json:"src"`
-	Dst      string   `json:"dst"`
-	Services []string `json:"services"`
-	Action   string   `json:"action"` // allow | deny
+	Src       string   `json:"src"`
+	Dst       string   `json:"dst"`
+	Services  []string `json:"services"`
+	Action    string   `json:"action"` // allow | deny
+	PolicyIDs []int    `json:"policyIds"`
 }
 
 // Counts are the headline numbers.

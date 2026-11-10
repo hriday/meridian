@@ -87,6 +87,25 @@ end`)[0]
 	require.NotNil(t, findFlow(a.Flows, "port1.30", "Internet (any)", "allow"))
 }
 
+func TestDeriveFlowPolicyIDs(t *testing.T) {
+	a := analyze(t, `config firewall policy
+    edit 3
+        set srcintf "port1.30"
+        set dstintf "port1.20"
+        set action accept
+    next
+    edit 5
+        set srcintf "port1.30"
+        set dstintf "port1.20"
+        set action accept
+    next
+end`)[0]
+	// two accept policies on the same pair aggregate to one flow carrying both IDs
+	f := findFlow(a.Flows, "port1.30", "port1.20", "allow")
+	require.NotNil(t, f)
+	require.Equal(t, []int{3, 5}, f.PolicyIDs)
+}
+
 func TestDeriveSkipsDisabled(t *testing.T) {
 	a := analyze(t, `config firewall policy
     edit 1
