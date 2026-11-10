@@ -22,6 +22,7 @@
   let streamID = "";
   let unsub: (() => void) | null = null;
   let error = "";
+  let baselined = false;
 
   let snap: any = null;
   let xs: number[] = [];
@@ -63,6 +64,7 @@
     if (!d || selected < 0 || running) return;
     error = "";
     snap = null;
+    baselined = false;
     xs = []; rx = []; tx = []; counter = 0;
     streamID = newStreamID();
     unsub = subscribe(streamID, onSnapshot);
@@ -95,7 +97,10 @@
   }
 
   function baseline() {
-    if (running && streamID) SetIfBaseline(streamID);
+    if (running && streamID) {
+      SetIfBaseline(streamID);
+      baselined = true;
+    }
   }
 
   onDestroy(() => { if (running) stop(); });
@@ -107,6 +112,10 @@
 
   // gauge states
   $: warming = !snap || snap.warming;
+  // known-good band is the normal TOTAL (rx+tx) throughput range, in bps — shown
+  // as labelled Mbps text (the chart lines are per-direction, so a shared rect
+  // would misread). Frozen once the user sets a baseline.
+  $: bandMbps = snap && snap.bandHi > snap.bandLo ? [snap.bandLo / 1e6, snap.bandHi / 1e6] : null;
   $: utilState = !snap?.hasUtil ? "idle" : snap.utilPct > 90 ? "bad" : snap.utilPct > 70 ? "warn" : "good";
   $: cpuState = !snap?.hasCpu ? "idle" : snap.cpuPct > 90 ? "bad" : snap.cpuPct > 75 ? "warn" : "good";
   $: memState = !snap?.hasMem ? "idle" : snap.memPct > 90 ? "bad" : snap.memPct > 80 ? "warn" : "good";
@@ -170,6 +179,7 @@
       <span class="dot" style="background:{stateColor}"></span>
       <span class="state-word" style="color:{stateColor}">{stateWord[0]}</span>
       {#if picked}<span class="state-sub">{picked.descr || `if ${picked.index}`}{picked.speedBps ? ` · ${speedLabel(picked.speedBps)}bps link` : ""}</span>{/if}
+      {#if !warming && bandMbps}<span class="state-sub">known-good{baselined ? " (baseline)" : ""} {bandMbps[0].toFixed(1)}–{bandMbps[1].toFixed(1)} Mbps total</span>{/if}
       {#if errDelta > 0}<span class="state-sub err">+{errDelta} errors</span>{/if}
     </div>
 
