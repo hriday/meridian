@@ -206,12 +206,20 @@ export function SetPingBaseline(arg1) {
   return window['go']['app']['App']['SetPingBaseline'](arg1);
 }
 
+export function StartDeviceMonitor(arg1, arg2, arg3) {
+  return window['go']['app']['App']['StartDeviceMonitor'](arg1, arg2, arg3);
+}
+
 export function StartIfMonitor(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['StartIfMonitor'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function StartPingMonitor(arg1, arg2) {
   return window['go']['app']['App']['StartPingMonitor'](arg1, arg2);
+}
+
+export function StopDeviceMonitor(arg1) {
+  return window['go']['app']['App']['StopDeviceMonitor'](arg1);
 }
 
 export function StopIfMonitor(arg1) {
