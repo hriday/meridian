@@ -1,0 +1,74 @@
+package collector
+
+import (
+	"net"
+	"net/netip"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
+
+// echoParse keeps every datagram as a string message.
+func echoParse(b []byte, _ netip.Addr) (string, bool) {
+	if len(b) == 0 {
+		return "", false
+	}
+	return string(b), true
+}
+
+func sendUDP(t *testing.T, port int, s string) {
+	t.Helper()
+	c, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+	require.NoError(t, err)
+	defer c.Close()
+	_, err = c.Write([]byte(s))
+	require.NoError(t, err)
+}
+
+func TestCollectorReceivesAndPolls(t *testing.T) {
+	c := New[string](100, echoParse)
+	require.NoError(t, c.Start(0)) // 0 → OS picks a free port
+	defer c.Stop()
+	port := c.PollSince(0).Port
+	require.NotZero(t, port)
+	sendUDP(t, port, "hello")
+	sendUDP(t, port, "world")
+	require.Eventually(t, func() bool {
+		return len(c.PollSince(0).Items) >= 2
+	}, 2*time.Second, 10*time.Millisecond)
+	p := c.PollSince(0)
+	require.True(t, p.Running)
+}
+
+func TestCollectorStopNoLeak(t *testing.T) {
+	c := New[string](100, echoParse)
+	require.NoError(t, c.Start(0))
+	c.Stop() // must block until the read loop has exited
+	p := c.PollSince(0)
+	require.False(t, p.Running)
+	require.Empty(t, p.Items)
+}
+
+func TestCollectorRestartBumpsEpoch(t *testing.T) {
+	c := New[string](100, echoParse)
+	require.NoError(t, c.Start(0))
+	defer c.Stop()
+	e1 := c.PollSince(0).Epoch
+	require.NoError(t, c.Start(0)) // restart
+	e2 := c.PollSince(0).Epoch
+	require.Greater(t, e2, e1)
+}
+
+func TestCollectorBindInUse(t *testing.T) {
+	// hold a UDP port, then try to bind it.
+	held, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
+	require.NoError(t, err)
+	defer held.Close()
+	port := held.LocalAddr().(*net.UDPAddr).Port
+
+	c := New[string](100, echoParse)
+	err = c.Start(port)
+	require.Error(t, err)
+	require.False(t, c.PollSince(0).Running)
+}
