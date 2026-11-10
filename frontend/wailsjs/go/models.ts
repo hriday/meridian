@@ -17,6 +17,77 @@ export namespace app {
 
 }
 
+export namespace dnsbl {
+	
+	export class Listing {
+	    zone: string;
+	    name: string;
+	    status: string;
+	    codes?: string[];
+	    reason?: string;
+	    note?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Listing(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.zone = source["zone"];
+	        this.name = source["name"];
+	        this.status = source["status"];
+	        this.codes = source["codes"];
+	        this.reason = source["reason"];
+	        this.note = source["note"];
+	    }
+	}
+	export class Report {
+	    ip: string;
+	    resolver: string;
+	    checked: number;
+	    listed: number;
+	    unreachable: number;
+	    verdict: string;
+	    summary: string;
+	    listings: Listing[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.resolver = source["resolver"];
+	        this.checked = source["checked"];
+	        this.listed = source["listed"];
+	        this.unreachable = source["unreachable"];
+	        this.verdict = source["verdict"];
+	        this.summary = source["summary"];
+	        this.listings = this.convertValues(source["listings"], Listing);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace dnsx {
 	
 	export class Record {
