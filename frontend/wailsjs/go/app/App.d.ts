@@ -3,6 +3,7 @@
 import {pwaudit} from '../models';
 import {dnsbl} from '../models';
 import {netinput} from '../models';
+import {dnsaudit} from '../models';
 import {dnsx} from '../models';
 import {sysconf} from '../models';
 import {ipspace} from '../models';
@@ -29,6 +30,8 @@ export function ADAuditSave(arg1:string,arg2:string):Promise<void>;
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
 
 export function Classify(arg1:string):Promise<netinput.Result>;
+
+export function DNSAudit(arg1:string,arg2:string):Promise<dnsaudit.Report>;
 
 export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Result>;
 
