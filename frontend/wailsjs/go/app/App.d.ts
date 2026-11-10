@@ -13,6 +13,7 @@ import {sysconf} from '../models';
 import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {netif} from '../models';
+import {snmp} from '../models';
 import {lookup} from '../models';
 import {macvendor} from '../models';
 import {ntp} from '../models';
@@ -83,6 +84,8 @@ export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function Interfaces():Promise<Array<netif.Iface>>;
 
+export function ListInterfaces(arg1:string,arg2:string):Promise<Array<snmp.Interface>>;
+
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 
 export function LookupBGP(arg1:string):Promise<lookup.BGPReport>;
@@ -121,9 +124,15 @@ export function ScanStop():Promise<void>;
 
 export function SetAtlasKey(arg1:string):Promise<void>;
 
+export function SetIfBaseline(arg1:string):Promise<void>;
+
 export function SetPingBaseline(arg1:string):Promise<void>;
 
+export function StartIfMonitor(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<void>;
+
 export function StartPingMonitor(arg1:string,arg2:string):Promise<void>;
+
+export function StopIfMonitor(arg1:string):Promise<void>;
 
 export function StopPingMonitor(arg1:string):Promise<void>;
 
