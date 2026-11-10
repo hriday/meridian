@@ -49,7 +49,7 @@ func TestListFormatsInterface(t *testing.T) {
 	require.Equal(t, 1500, i.MTU)
 	require.True(t, i.Up)
 	require.False(t, i.Loopback)
-	require.Subset(t, i.Flags, []string{"up", "broadcast", "multicast"})
+	require.Equal(t, []string{"up", "broadcast", "multicast", "running"}, i.Flags) // exact order, no stray flags
 	require.Equal(t, []string{"192.168.1.20/24"}, i.IPv4)
 	require.Equal(t, []string{"fe80::1/64"}, i.IPv6)
 }
@@ -61,16 +61,17 @@ func TestListEmptyMAC(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "", got[0].MAC)
 	require.True(t, got[0].Loopback)
-	require.Contains(t, got[0].Flags, "loopback")
+	require.Equal(t, []string{"up", "loopback"}, got[0].Flags)
 }
 
 func TestListAddrErrorStillListed(t *testing.T) {
-	ifaces := []net.Interface{{Index: 3, Name: "utun0", MTU: 1400, Flags: net.FlagUp}}
+	ifaces := []net.Interface{{Index: 3, Name: "utun0", MTU: 1400, Flags: net.FlagUp | net.FlagPointToPoint}}
 	setFakes(t, ifaces, nil, map[int]error{3: errors.New("boom")})
 	got, err := List()
 	require.NoError(t, err)
 	require.Len(t, got, 1)
 	require.Equal(t, "utun0", got[0].Name)
+	require.Contains(t, got[0].Flags, "point-to-point")
 	require.Empty(t, got[0].IPv4)
 	require.Empty(t, got[0].IPv6)
 }

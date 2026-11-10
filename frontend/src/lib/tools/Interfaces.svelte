@@ -19,6 +19,8 @@
   load();
 
   const addrs = (i: any) => [...(i.ipv4 ?? []), ...(i.ipv6 ?? [])];
+  // up/loopback are already shown as pills, so drop them from the flag chips.
+  const otherFlags = (i: any) => (i.flags ?? []).filter((f: string) => f !== "up" && f !== "loopback");
 </script>
 
 <div class="tool">
@@ -43,9 +45,9 @@
         <dl>
           {#if i.mac}<dt>MAC</dt><dd class="mono">{i.mac}</dd>{/if}
           <dt>MTU</dt><dd>{i.mtu}</dd>
-          {#if i.flags?.length}
+          {#if otherFlags(i).length}
             <dt>Flags</dt>
-            <dd class="chips">{#each i.flags as f}<span class="chip">{f}</span>{/each}</dd>
+            <dd class="chips">{#each otherFlags(i) as f}<span class="chip">{f}</span>{/each}</dd>
           {/if}
           {#if addrs(i).length}
             <dt>Addresses</dt>

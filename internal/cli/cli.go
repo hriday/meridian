@@ -1024,7 +1024,12 @@ func runInterfaces(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("interfaces", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	asJSON := fs.Bool("json", false, "output JSON")
-	if _, ok := parsePositionals(fs, args); !ok {
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 0 {
+		fmt.Fprintf(stderr, "interfaces takes no arguments\n%s", usage)
 		return 2
 	}
 	ifaces, err := netif.List()

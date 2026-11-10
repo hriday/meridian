@@ -22,6 +22,13 @@ func TestPrintInterfaces(t *testing.T) {
 	}
 }
 
+func TestRunInterfacesRejectsArg(t *testing.T) {
+	var out, errb bytes.Buffer
+	if code := runInterfaces([]string{"en0"}, &out, &errb); code != 2 {
+		t.Errorf("runInterfaces with a stray arg: got exit %d, want 2", code)
+	}
+}
+
 func TestRunInterfacesJSON(t *testing.T) {
 	var out, errb bytes.Buffer
 	code := runInterfaces([]string{"--json"}, &out, &errb)
