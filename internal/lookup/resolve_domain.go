@@ -11,8 +11,8 @@ import (
 // DNSQuery is the DNS query seam (tests inject a fake); dnsServer is the
 // resolver domain lookups use.
 var (
-	DNSQuery = dnsx.Query
-	dnsServer  = "1.1.1.1"
+	DNSQuery  = dnsx.Query
+	dnsServer = "1.1.1.1"
 )
 
 var domainRecordTypes = []string{"A", "AAAA", "MX", "NS", "TXT"}
@@ -28,9 +28,12 @@ type DomainReport struct {
 	HostedBy    []string      `json:"hostedBy"`
 	Registrar   string        `json:"registrar"`
 	Created     string        `json:"created"`
+	Updated     string        `json:"updated"`
 	Expires     string        `json:"expires"`
 	DNSSEC      string        `json:"dnssec"`
+	Statuses    []string      `json:"statuses"`
 	Nameservers []string      `json:"nameservers"`
+	AbuseEmail  string        `json:"abuseEmail"`
 	DNSSrc      Source        `json:"dnsSrc"`
 	RegistrySrc Source        `json:"registrySrc"`
 }
@@ -91,7 +94,8 @@ func (c *Client) LookupDomain(ctx context.Context, name string) (DomainReport, e
 		r.RegistrySrc.Err = err.Error()
 	} else {
 		r.Registrar, r.Created, r.Expires = reg.Registrar, reg.Created, reg.Expires
-		r.DNSSEC, r.Nameservers = reg.DNSSEC, reg.Nameservers
+		r.Updated, r.DNSSEC, r.Nameservers = reg.Updated, reg.DNSSEC, reg.Nameservers
+		r.Statuses, r.AbuseEmail = reg.Statuses, reg.AbuseEmail
 	}
 	return r, nil
 }
