@@ -9,14 +9,17 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/subnet"
@@ -30,6 +33,13 @@ import (
 var newLookupClient = func() *lookup.Client {
 	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
+
+// nc seams: input piped to the connection, and the grace period to drain
+// responses after stdin EOF before closing. Tests override both.
+var (
+	ncStdin io.Reader = os.Stdin
+	ncGrace           = 200 * time.Millisecond
+)
 
 // Query functions behind package vars so tests inject fakes.
 var (
@@ -46,6 +56,7 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
@@ -70,6 +81,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "nc":
+		return runNC(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
 	case "ipspace":
@@ -101,6 +114,70 @@ func parsePositionals(fs *flag.FlagSet, args []string) ([]string, bool) {
 		args = rest[1:]
 	}
 	return pos, true
+}
+
+type ncWriter struct{ s *netcat.Session }
+
+func (w ncWriter) Write(b []byte) (int, error) { return w.s.Send(b) }
+
+func runNC(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("nc", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	udp := fs.Bool("udp", false, "use UDP")
+	useTLS := fs.Bool("tls", false, "wrap the connection in TLS")
+	insecure := fs.Bool("insecure", false, "skip TLS verification")
+	listen := fs.Bool("listen", false, "listen on the local port instead of connecting")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 2 {
+		fmt.Fprintf(stderr, "nc needs <host> <port>\n%s", usage)
+		return 2
+	}
+	network := "tcp"
+	if *udp {
+		network = "udp"
+	}
+	cfg := netcat.Config{Network: network, Addr: net.JoinHostPort(pos[0], pos[1]), TLS: *useTLS, Insecure: *insecure}
+	ctx := context.Background()
+
+	var s *netcat.Session
+	if *listen {
+		l, err := netcat.Listen(ctx, cfg)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		defer l.Close()
+		fmt.Fprintf(stderr, "listening on %s (%s)\n", l.Addr(), network)
+		if s, err = l.Accept(); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+	} else {
+		var cert *netcat.CertInfo
+		var err error
+		if s, cert, err = netcat.Dial(ctx, cfg); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if cert != nil {
+			fmt.Fprintf(stderr, "TLS subject %s · expires %s · verified=%v\n", cert.Subject, cert.NotAfter, cert.Verified)
+		}
+	}
+	defer s.Close()
+
+	var mu sync.Mutex
+	s.Start(func(b []byte) {
+		mu.Lock()
+		_, _ = stdout.Write(b)
+		mu.Unlock()
+	}, func(error) {})
+
+	_, _ = io.Copy(ncWriter{s}, ncStdin)
+	time.Sleep(ncGrace) // let late responses arrive before closing
+	return 0
 }
 
 func runClassify(args []string, stdout, stderr io.Writer) int {
