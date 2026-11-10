@@ -3,6 +3,7 @@
   import Lookup from "./tools/Lookup.svelte";
   import Traceroute from "./tools/Traceroute.svelte";
   import Bgp from "./tools/Bgp.svelte";
+  import Tls from "./tools/Tls.svelte";
   import Netcat from "./tools/Netcat.svelte";
   import AdAudit from "./tools/AdAudit.svelte";
   import Ntp from "./tools/Ntp.svelte";
@@ -18,6 +19,7 @@
     { id: "lookup", name: "Lookup", group: "Internet", ready: true },
     { id: "trace", name: "Traceroute (AS)", group: "Internet", ready: true },
     { id: "bgp", name: "BGP & looking glass", group: "Internet", ready: true },
+    { id: "tls", name: "TLS certificate", group: "Internet", ready: true },
     { id: "subnet", name: "Subnet calculator", group: "Addressing", ready: true },
     { id: "ipspace", name: "IP space", group: "Addressing", ready: true },
     { id: "ntp", name: "NTP", group: "Local / environment", ready: true },
@@ -140,7 +142,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "tls"}<Tls />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{/if}
     </main>
   </div>
 </div>
