@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import {
     ADAuditDetect, ADAuditParseText, ADAuditParseFile, ADAuditRun, ADAuditSave,
-    WordlistCatalog, WordlistInstalled, WordlistDir, WordlistDownload,
+    WordlistCatalog, WordlistInstalled, WordlistDir, WordlistDownload, PickFile,
   } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
 
@@ -11,6 +11,7 @@
   let catalog: any[] = [];
   let installed: string[] = [];
   let selectedWordlist = "";
+  let customWordlist = ""; // a wordlist you picked from disk
   let rulesPath = "";
 
   let pasteText = "";
@@ -67,16 +68,30 @@
     finally { downloading = ""; }
   }
 
+  async function pickWordlist() {
+    try {
+      const p = await PickFile("Choose a wordlist");
+      if (p) customWordlist = p;
+    } catch (e) { parseErr = String(e); }
+  }
+  async function pickRules() {
+    try {
+      const p = await PickFile("Choose a hashcat rules file");
+      if (p) rulesPath = p;
+    } catch (e) { parseErr = String(e); }
+  }
+
   $: humanAccounts = accounts.filter((a) => !a.machine).length;
+  // The wordlist actually used: your picked file wins, else the selected installed one.
+  $: wordlistPath = customWordlist || (selectedWordlist ? (dir ? `${dir}/${selectedWordlist}` : selectedWordlist) : "");
 
   async function run() {
     runErr = ""; report = null;
-    if (!selectedWordlist) { runErr = "Pick a wordlist first."; return; }
+    if (!wordlistPath) { runErr = "Pick a wordlist first (download one, or Browse to your own)."; return; }
     running = true;
     progress = { recovered: 0, total: 0, percent: 0 };
     try {
-      const path = dir ? `${dir}/${selectedWordlist}` : selectedWordlist;
-      report = await ADAuditRun(accounts, path, rulesPath ? [rulesPath] : []);
+      report = await ADAuditRun(accounts, wordlistPath, rulesPath ? [rulesPath] : []);
     } catch (e) { runErr = String(e); }
     finally { running = false; }
   }
@@ -130,6 +145,12 @@
           {/if}
         {/each}
       </div>
+      <div class="sub">…or use your own list (rockyou, a custom one)</div>
+      <div class="line">
+        <input class="field sm mono grow" bind:value={customWordlist} placeholder="/path/to/your/wordlist.txt" />
+        <button class="go ghost" on:click={pickWordlist}>Browse…</button>
+        {#if customWordlist}<button class="link" on:click={() => (customWordlist = "")}>clear</button>{/if}
+      </div>
     </div>
   </div>
 
@@ -150,8 +171,17 @@
   <!-- Run -->
   <div class="card span">
     <div class="k">Run audit</div>
+    <div class="sub">Rules (optional)</div>
     <div class="line">
-      <input class="field sm mono" bind:value={rulesPath} placeholder="optional hashcat rules file" />
+      <input class="field sm mono grow" bind:value={rulesPath} placeholder="hashcat rules file — e.g. best64.rule" />
+      <button class="go ghost" on:click={pickRules}>Browse…</button>
+    </div>
+    <div class="cap">
+      Rules mutate each word into many variations (add a year, capitalize, a→@ …), so <span class="mono">password</span>
+      also tries <span class="mono">Password1</span>, <span class="mono">P@ssw0rd!</span>, etc. Leave empty for a plain wordlist run;
+      <span class="mono">best64.rule</span> (shipped in hashcat's <span class="mono">rules/</span> folder) is a good default.
+    </div>
+    <div class="line">
       <button class="go" on:click={run} disabled={running || !cracker.available || accounts.length === 0}>
         {running ? "Cracking…" : "Run audit"}
       </button>
@@ -226,6 +256,9 @@
   .card.span { grid-column: 1 / -1; }
   .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 8px; }
   .cap { font-size: 0.73rem; color: var(--text-dim); line-height: 1.45; margin-top: 7px; }
+  .sub { font-size: 0.74rem; color: var(--text-dim); margin: 8px 0 4px; }
+  .grow { flex: 1; min-width: 180px; }
+  .link { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.73rem; padding: 0 2px; }
   .line { display: flex; align-items: center; gap: 8px; margin: 7px 0; flex-wrap: wrap; }
   .line.wrap { flex-wrap: wrap; }
   .line.between { justify-content: space-between; }
