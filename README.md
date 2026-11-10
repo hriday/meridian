@@ -37,18 +37,44 @@ really say?* — and explains every answer in plain language, not just raw numbe
   plain-language verdict.
 - **DNS** — resolve any record type against any resolver, with DNSSEC signals.
 
+**Local network**
+- **Ping sweep** — discover live hosts on a subnet via unprivileged ICMP with a
+  TCP-connect fallback, with RTT and reverse DNS.
+- **Port scanner** — TCP-connect scan a host → open / closed / filtered, with
+  service names for well-known ports.
+
+**Security** *(defensive, self-use — for systems you administer)*
+- **AD password audit** — import your own NTLM hashes, crack them with a detected
+  hashcat, and get a report of weak passwords: plaintext, strength, pattern, and
+  reuse. Local only; results optionally encrypted.
+- **Netcat** — a raw connection tool: connect or listen over TCP/UDP (with TLS),
+  exchanging bytes shown as text or hex.
+
 ## Screenshots
 
-_Added per release — see `docs/media/`._
-
-<!-- ![Lookup](docs/media/lookup.png) -->
-<!-- ![BGP & looking glass](docs/media/bgp.png) -->
+| Lookup — one page per IP/ASN/prefix/domain, everything pivots | BGP & looking glass |
+|---|---|
+| ![Lookup](docs/media/lookup.png) | ![BGP](docs/media/bgp.png) |
+| **AD password audit** (defensive self-audit) | **Ping sweep** |
+| ![AD password audit](docs/media/adaudit.png) | ![Ping sweep](docs/media/pingsweep.png) |
 
 ## Install
 
-Builds are attached to each [GitHub Release](../../releases). Meridian is **not
-yet code-signed**, so your OS will warn on first launch — this is expected for an
-open-source app without a paid signing certificate.
+Meridian is **unsigned** (no paid code-signing cert), so the two warning-free
+paths are **Homebrew** (it strips the quarantine flag for you) and **building
+from source** (apps you compile aren't quarantined at all). Raw binary downloads
+work too, with a documented one-time "open anyway" step.
+
+### Homebrew (macOS — recommended)
+
+```bash
+brew install --cask hriday/tap/meridian
+```
+
+### Binaries
+
+Builds are attached to each [GitHub Release](../../releases); your OS will warn
+on first launch (expected for an unsigned app):
 
 - **macOS** — download the `.dmg`, drag Meridian to Applications, then launch it
   the first time:
@@ -67,6 +93,9 @@ open-source app without a paid signing certificate.
   ```
 
 ## Build from source
+
+The cleanest path — a binary you compile yourself is never quarantined, so there
+are no Gatekeeper/SmartScreen prompts.
 
 ### Prerequisites
 - **Go 1.23+** — https://go.dev/dl/
