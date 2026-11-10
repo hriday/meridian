@@ -101,6 +101,8 @@ export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
+export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
+
 export function WordlistCatalog():Promise<Array<wordlist.Entry>>;
 
 export function WordlistDir():Promise<string>;
