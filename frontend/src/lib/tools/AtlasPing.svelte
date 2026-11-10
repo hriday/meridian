@@ -81,7 +81,9 @@
     }
   }
 
-  const fmt = (v: number) => (v == null ? "–" : v.toFixed(1));
+  // Atlas reports min/avg/max = -1 for a probe that received no packets; show
+  // that as no-data rather than a bogus negative latency.
+  const fmt = (v: number) => (v == null || v < 0 ? "–" : v.toFixed(1));
   const loss = (p: any) =>
     p.sent > 0 ? Math.round(((p.sent - p.received) / p.sent) * 100) : 0;
 </script>

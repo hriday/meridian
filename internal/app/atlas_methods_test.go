@@ -30,6 +30,16 @@ func TestAtlasKeyStatusMasks(t *testing.T) {
 	require.NotContains(t, st.Hint, "abcdef1234567890")
 }
 
+func TestAtlasKeyStatusMasksShortKey(t *testing.T) {
+	useTempSettings(t)
+	require.NoError(t, settings.SetAtlasKey("abcde")) // 5 chars
+
+	st, err := New().AtlasKeyStatus()
+	require.NoError(t, err)
+	require.True(t, st.Set)
+	require.NotContains(t, st.Hint, "abcde", "short key must never appear in the hint")
+}
+
 func TestAtlasKeyStatusUnset(t *testing.T) {
 	useTempSettings(t)
 	st, err := New().AtlasKeyStatus()

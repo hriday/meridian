@@ -39,10 +39,12 @@ func (a *App) AtlasKeyStatus() (AtlasKeyStatus, error) {
 	return AtlasKeyStatus{Set: true, Hint: maskKey(key)}, nil
 }
 
-// maskKey returns a hint showing only the last 6 characters.
+// maskKey returns a hint showing only the last 6 characters. For short keys it
+// reveals nothing — the hint must never carry the full secret, whatever its
+// length.
 func maskKey(key string) string {
 	if len(key) <= 6 {
-		return "…" + key
+		return "……"
 	}
 	return "…" + key[len(key)-6:]
 }

@@ -52,11 +52,16 @@ type Report struct {
 	LossPct       float64 `json:"lossPct"`
 }
 
-// atlasError is the RIPE Atlas error envelope.
+// atlasError is the RIPE Atlas error envelope. The most specific message (e.g.
+// the insufficient-credits text) often lives in the nested errors[] array while
+// the top-level detail is a generic "There was a problem with your request".
 type atlasError struct {
 	Error struct {
 		Detail string `json:"detail"`
 		Status int    `json:"status"`
+		Errors []struct {
+			Detail string `json:"detail"`
+		} `json:"errors"`
 	} `json:"error"`
 }
 
@@ -124,15 +129,30 @@ func schedule(ctx context.Context, d Doer, key, target string, probes int) (int,
 func scheduleError(status int, body []byte) error {
 	var ae atlasError
 	_ = json.Unmarshal(body, &ae)
-	detail := ae.Error.Detail
-	low := strings.ToLower(detail)
+
+	// Collect every message in the envelope; the nested errors[] entries are the
+	// most specific, so prefer the last of them for the fallback text.
+	var parts []string
+	if ae.Error.Detail != "" {
+		parts = append(parts, ae.Error.Detail)
+	}
+	for _, e := range ae.Error.Errors {
+		if e.Detail != "" {
+			parts = append(parts, e.Detail)
+		}
+	}
+	combined := strings.ToLower(strings.Join(parts, " "))
+
 	switch {
-	case strings.Contains(low, "credit"):
+	case strings.Contains(combined, "credit"):
 		return fmt.Errorf("atlas: insufficient credits — host a probe or get Atlas credits to run measurements")
-	case status == 401 || status == 403 || strings.Contains(low, "key") || strings.Contains(low, "auth"):
-		return fmt.Errorf("atlas: the API key was rejected — check your RIPE Atlas key")
-	case detail != "":
-		return fmt.Errorf("atlas: %s", detail)
+	case status == 401 || status == 403 ||
+		strings.Contains(combined, "key") ||
+		strings.Contains(combined, "auth") ||
+		strings.Contains(combined, "permission"):
+		return fmt.Errorf("atlas: the API key was rejected — check your RIPE Atlas key (it needs the \"Schedule a new measurement\" permission)")
+	case len(parts) > 0:
+		return fmt.Errorf("atlas: %s", parts[len(parts)-1])
 	default:
 		return fmt.Errorf("atlas: measurement request failed (HTTP %d)", status)
 	}
@@ -202,6 +222,11 @@ func Ping(ctx context.Context, d Doer, key, target string, probes int, poll, tim
 	for {
 		ps, err := results(ctx, d, key, id)
 		if err != nil {
+			// A context deadline/cancel reached while polling is a timeout, not a
+			// hard failure: return whatever reported so far (possibly nothing).
+			if ctx.Err() != nil {
+				return rep, nil
+			}
 			return Report{}, err
 		}
 		if len(ps) > 0 {
@@ -214,7 +239,7 @@ func Ping(ctx context.Context, d Doer, key, target string, probes int, poll, tim
 		}
 		select {
 		case <-ctx.Done():
-			return rep, ctx.Err()
+			return rep, nil // timeout/cancel: graceful empty report
 		case <-time.After(poll):
 		}
 	}

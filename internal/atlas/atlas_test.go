@@ -52,6 +52,37 @@ func TestScheduleInvalidKey(t *testing.T) {
 	require.Contains(t, strings.ToLower(err.Error()), "key")
 }
 
+func TestScheduleInsufficientCreditsNested(t *testing.T) {
+	// The real Atlas envelope: generic top-level detail, credits message nested
+	// in errors[]. The mapping must still surface a credits-specific error.
+	serve(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(400)
+		_, _ = w.Write([]byte(`{"error":{"detail":"There was a problem with your request","status":400,"title":"Bad Request","code":102,"errors":[{"source":{"pointer":""},"detail":"You do not have enough credit to schedule this measurement. The cost of this measurement is: 18.0cr, while your current balance is 0cr."}]}}`))
+	})
+	_, err := schedule(context.Background(), http.DefaultClient, "k", "1.1.1.1", 10)
+	require.Error(t, err)
+	require.Contains(t, strings.ToLower(err.Error()), "credit")
+}
+
+func TestPingCtxDeadlineGraceful(t *testing.T) {
+	// When the surrounding context deadline is reached while polling (as the app
+	// wires it, ctx timeout == poll timeout), Ping must return gracefully with an
+	// empty Report and no error — not a raw context-deadline error.
+	serve(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			_, _ = w.Write([]byte(`{"measurements":[7]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`[]`)) // never reports
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Millisecond)
+	defer cancel()
+	rep, err := Ping(ctx, http.DefaultClient, "k", "1.1.1.1", 3, 10*time.Millisecond, 60*time.Millisecond)
+	require.NoError(t, err)
+	require.Empty(t, rep.Probes)
+	require.Equal(t, 7, rep.MeasurementID)
+}
+
 func TestResultsParsesPing(t *testing.T) {
 	serve(t, func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`[{"prb_id":1,"from":"9.9.9.9","min":1.1,"avg":1.5,"max":2.0,"sent":3,"rcvd":3}]`))
