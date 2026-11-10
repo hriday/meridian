@@ -31,6 +31,7 @@ import (
 	"github.com/hriday/meridian/internal/tlscheck"
 	"github.com/hriday/meridian/internal/trace"
 	"github.com/hriday/meridian/internal/tracerun"
+	"github.com/hriday/meridian/internal/wol"
 )
 
 // newLookupClient builds the lookup client the CLI uses; tests override it to
@@ -69,6 +70,7 @@ usage:
   meridian-cli trace <host> [--6] [--json]
   meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
   meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
+  meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
   meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
@@ -102,6 +104,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPingSweep(args[1:], stdout, stderr)
 	case "portscan":
 		return runPortScan(args[1:], stdout, stderr)
+	case "wol":
+		return runWOL(args[1:], stdout, stderr)
 	case "nc":
 		return runNC(args[1:], stdout, stderr)
 	case "bgp":
@@ -948,6 +952,28 @@ func printBlocklistReport(stdout io.Writer, r dnsbl.Report) {
 			fmt.Fprintf(stdout, "           note: %s\n", l.Note)
 		}
 	}
+}
+
+func runWOL(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("wol", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	bcast := fs.String("bcast", "255.255.255.255", "broadcast address")
+	port := fs.Int("port", 9, "UDP port")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "wol needs exactly one MAC address\n%s", usage)
+		return 2
+	}
+	if err := wol.Send(context.Background(), pos[0], *bcast, *port); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "Magic packet sent to %s via %s:%d\n", pos[0], *bcast, *port)
+	fmt.Fprintln(stdout, "Note: \"sent\" isn't \"woke\" — the target needs Wake-on-LAN enabled, and broadcasts don't cross subnets.")
+	return 0
 }
 
 func runDNSAudit(args []string, stdout, stderr io.Writer) int {
