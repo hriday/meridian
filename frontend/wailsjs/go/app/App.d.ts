@@ -74,6 +74,8 @@ export function NetcatListen(arg1:string,arg2:string):Promise<string>;
 
 export function NetcatSend(arg1:string):Promise<void>;
 
+export function PickFile(arg1:string):Promise<string>;
+
 export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;

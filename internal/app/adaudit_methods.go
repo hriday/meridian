@@ -26,6 +26,15 @@ func (a *App) emit(event string, data any) {
 	}
 }
 
+// PickFile opens a native file picker and returns the chosen path (empty if
+// cancelled). Used to select your own wordlist or a hashcat rules file.
+func (a *App) PickFile(title string) (string, error) {
+	if a.ctx == nil {
+		return "", errors.New("no window context for the file dialog")
+	}
+	return wruntime.OpenFileDialog(a.ctx, wruntime.OpenDialogOptions{Title: title})
+}
+
 // ADAuditDetect reports which cracker (hashcat) is available.
 func (a *App) ADAuditDetect() pwaudit.CrackerInfo {
 	return a.adCracker.Detect(a.lookupCtx())
