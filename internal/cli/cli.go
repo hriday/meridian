@@ -19,6 +19,7 @@ import (
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
+	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/subnet"
 	"github.com/hriday/meridian/internal/sysconf"
 	"github.com/hriday/meridian/internal/trace"
@@ -30,6 +31,9 @@ import (
 var newLookupClient = func() *lookup.Client {
 	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
+
+// newPinger builds the ping-sweep pinger; tests override it to inject a fake.
+var newPinger = func() scan.Pinger { return scan.NewICMPPinger() }
 
 // Query functions behind package vars so tests inject fakes.
 var (
@@ -46,6 +50,8 @@ usage:
   meridian-cli ntp <server> [--json]
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
+  meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
+  meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
@@ -70,6 +76,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "pingsweep":
+		return runPingSweep(args[1:], stdout, stderr)
+	case "portscan":
+		return runPortScan(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
 	case "ipspace":
@@ -101,6 +111,97 @@ func parsePositionals(fs *flag.FlagSet, args []string) ([]string, bool) {
 		args = rest[1:]
 	}
 	return pos, true
+}
+
+func runPingSweep(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("pingsweep", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	portsSpec := fs.String("ports", "80,443,22", "TCP ports for the fallback probe")
+	timeout := fs.Duration("timeout", time.Second, "per-host timeout")
+	concurrency := fs.Int("concurrency", 64, "max concurrent probes")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "pingsweep needs a CIDR\n%s", usage)
+		return 2
+	}
+	tcpPorts, err := scan.ParsePorts(*portsSpec)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 2
+	}
+	res, err := scan.Sweep(context.Background(), pos[0], newPinger(), tcpPorts, *timeout, *concurrency, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, res)
+	}
+	up := 0
+	for _, h := range res {
+		if h.Alive {
+			up++
+			name := h.Name
+			if name != "" {
+				name = "  " + name
+			}
+			fmt.Fprintf(stdout, "%-15s up (%s)%s\n", h.IP, h.Method, name)
+		}
+	}
+	fmt.Fprintf(stdout, "%d of %d hosts up\n", up, len(res))
+	return 0
+}
+
+func runPortScan(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("portscan", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	common := fs.Bool("common", false, "scan a preset of common ports")
+	timeout := fs.Duration("timeout", time.Second, "per-port timeout")
+	concurrency := fs.Int("concurrency", 128, "max concurrent connects")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) < 1 {
+		fmt.Fprintf(stderr, "portscan needs a host\n%s", usage)
+		return 2
+	}
+	var ports []int
+	var err error
+	if *common {
+		ports = scan.CommonPorts()
+	} else {
+		if len(pos) < 2 {
+			fmt.Fprintf(stderr, "portscan needs ports (or --common)\n%s", usage)
+			return 2
+		}
+		if ports, err = scan.ParsePorts(pos[1]); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 2
+		}
+	}
+	res, err := scan.ScanPorts(context.Background(), pos[0], ports, *timeout, *concurrency, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, res)
+	}
+	open := 0
+	for _, r := range res {
+		if r.State == "open" {
+			open++
+			fmt.Fprintf(stdout, "%5d/tcp  open  %s\n", r.Port, r.Service)
+		}
+	}
+	fmt.Fprintf(stdout, "%d open of %d scanned\n", open, len(res))
+	return 0
 }
 
 func runClassify(args []string, stdout, stderr io.Writer) int {
