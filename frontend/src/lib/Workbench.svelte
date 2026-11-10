@@ -3,6 +3,8 @@
   import Lookup from "./tools/Lookup.svelte";
   import Traceroute from "./tools/Traceroute.svelte";
   import Bgp from "./tools/Bgp.svelte";
+  import Netcat from "./tools/Netcat.svelte";
+  import AdAudit from "./tools/AdAudit.svelte";
   import Ntp from "./tools/Ntp.svelte";
   import Dns from "./tools/Dns.svelte";
   import PingSweep from "./tools/PingSweep.svelte";
@@ -22,6 +24,8 @@
     { id: "dns", name: "DNS", group: "Local / environment", ready: true },
     { id: "ping", name: "Ping sweep", group: "Local network", ready: true },
     { id: "ports", name: "Port scanner", group: "Local network", ready: true },
+    { id: "nc", name: "Netcat", group: "Security", ready: true },
+    { id: "adaudit", name: "AD password audit", group: "Security", ready: true },
   ];
   const groups = [...new Set(tools.map((t) => t.group))];
 
@@ -136,7 +140,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{/if}
     </main>
   </div>
 </div>
