@@ -19,6 +19,7 @@ import (
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netinput"
 	"github.com/hriday/meridian/internal/ntp"
+	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/subnet"
 	"github.com/hriday/meridian/internal/sysconf"
 	"github.com/hriday/meridian/internal/trace"
@@ -30,6 +31,9 @@ import (
 var newLookupClient = func() *lookup.Client {
 	return lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute)
 }
+
+// newCracker builds the password cracker the CLI uses; tests override it.
+var newCracker = func() pwaudit.Cracker { return pwaudit.NewHashcatCracker() }
 
 // Query functions behind package vars so tests inject fakes.
 var (
@@ -47,6 +51,7 @@ usage:
   meridian-cli dns <name> [--type A] [--server <ip>] [--json]
   meridian-cli trace <host> [--6] [--json]
   meridian-cli bgp <prefix|ip> [--json]
+  meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
 
@@ -72,6 +77,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTrace(args[1:], stdout, stderr)
 	case "bgp":
 		return runBGP(args[1:], stdout, stderr)
+	case "adaudit":
+		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
 		return runIPSpace(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
@@ -549,6 +556,92 @@ func runBGP(args []string, stdout, stderr io.Writer) int {
 	}
 	printBGPReport(stdout, rep)
 	return 0
+}
+
+func runADAudit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("adaudit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	dump := fs.String("dump", "", "secretsdump/pwdump file to audit")
+	wl := fs.String("wordlist", "", "wordlist file for the crack")
+	rulesFile := fs.String("rules", "", "optional hashcat rules file")
+	show := fs.Bool("show", false, "reveal recovered plaintext passwords")
+	asJSON := fs.Bool("json", false, "output JSON")
+	if _, ok := parsePositionals(fs, args); !ok {
+		return 2
+	}
+	if *dump == "" {
+		fmt.Fprintf(stderr, "adaudit needs --dump <file>\n%s", usage)
+		return 2
+	}
+	f, err := os.Open(*dump)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	defer f.Close()
+	accounts, err := pwaudit.ParseDump(f)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+
+	var rules []string
+	if *rulesFile != "" {
+		rules = []string{*rulesFile}
+	}
+	rep, err := pwaudit.RunAudit(context.Background(), accounts, newCracker(), *wl, rules, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		if !*show {
+			rep = redactReport(rep)
+		}
+		return writeJSON(stdout, stderr, rep)
+	}
+	printADAuditReport(stdout, rep, *show)
+	return 0
+}
+
+// redactReport blanks recovered plaintext for output when --show is not set.
+func redactReport(r pwaudit.AuditReport) pwaudit.AuditReport {
+	for i := range r.Results {
+		if r.Results[i].Cracked {
+			r.Results[i].Plaintext = "••••••"
+		}
+	}
+	for i := range r.Reuse {
+		if r.Reuse[i].Plaintext != "" && r.Reuse[i].Plaintext != "(empty password)" {
+			r.Reuse[i].Plaintext = "••••••"
+		}
+	}
+	return r
+}
+
+func printADAuditReport(stdout io.Writer, r pwaudit.AuditReport, show bool) {
+	reportRow(stdout, "Cracker", r.CrackerUsed)
+	reportRow(stdout, "Accounts", fmt.Sprintf("%d", r.Total))
+	reportRow(stdout, "Cracked", fmt.Sprintf("%d (%.0f%%)", r.Cracked, r.PercentCracked))
+	for _, p := range r.Patterns {
+		reportRow(stdout, "Pattern", fmt.Sprintf("%s × %d", p.Pattern, p.Count))
+	}
+	if len(r.Reuse) > 0 {
+		reportRow(stdout, "Reused", fmt.Sprintf("%d group(s)", len(r.Reuse)))
+	}
+	for _, res := range r.Results {
+		if !res.Cracked {
+			continue
+		}
+		pw := "••••••"
+		if show {
+			pw = res.Plaintext
+		}
+		fmt.Fprintf(stdout, "%-20s %-8s %-14s %s\n", res.Account.Name, res.Strength, res.Pattern, pw)
+	}
+	if !show {
+		fmt.Fprintln(stdout, "(passwords hidden; re-run with --show to reveal)")
+	}
 }
 
 func printBGPReport(stdout io.Writer, r lookup.BGPReport) {
