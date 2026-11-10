@@ -106,6 +106,10 @@ export function LookupPrefix(arg1) {
   return window['go']['app']['App']['LookupPrefix'](arg1);
 }
 
+export function MACVendor(arg1) {
+  return window['go']['app']['App']['MACVendor'](arg1);
+}
+
 export function NTPQuery(arg1) {
   return window['go']['app']['App']['NTPQuery'](arg1);
 }
