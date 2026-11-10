@@ -39,6 +39,7 @@
   function onSnapshot(s: any) {
     if (s.state === "error") {
       error = s.note || "monitor error";
+      stop(); // the backend monitor has already exited — return to a clean Start state
       return;
     }
     snap = s;
