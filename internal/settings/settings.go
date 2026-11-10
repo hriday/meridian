@@ -17,6 +17,15 @@ import (
 // it at a temp dir.
 var configDir = os.UserConfigDir
 
+// SetConfigDirForTest overrides the config-dir resolver and returns a restore
+// func. It is exported only so tests in other packages can redirect this
+// package's storage to a temp dir; production code never calls it.
+func SetConfigDirForTest(fn func() (string, error)) func() {
+	old := configDir
+	configDir = fn
+	return func() { configDir = old }
+}
+
 type file struct {
 	AtlasAPIKey string `json:"atlasApiKey"`
 }
