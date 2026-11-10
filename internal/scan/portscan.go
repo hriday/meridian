@@ -5,12 +5,14 @@ package scan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -81,7 +83,9 @@ func scanPort(ctx context.Context, host string, port int, timeout time.Duration)
 		c.Close()
 		return "open"
 	}
-	if strings.Contains(err.Error(), "refused") {
+	// ECONNREFUSED is portable (Windows maps WSAECONNREFUSED to it); the string
+	// check is a fallback for odd wrappers.
+	if errors.Is(err, syscall.ECONNREFUSED) || strings.Contains(err.Error(), "refused") {
 		return "closed"
 	}
 	return "filtered"
@@ -102,9 +106,14 @@ func ScanPorts(ctx context.Context, host string, ports []int, timeout time.Durat
 	var mu sync.Mutex
 	var results []PortResult
 
+Loop:
 	for _, port := range ports {
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break Loop // stop launching promptly on cancel
+		}
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(port int) {
 			defer wg.Done()
 			defer func() { <-sem }()

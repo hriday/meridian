@@ -62,12 +62,14 @@ func Sweep(ctx context.Context, cidr string, p Pinger, tcpPorts []int, timeout t
 	var mu sync.Mutex
 	results := make([]HostResult, 0, len(hosts))
 
+Loop:
 	for _, ip := range hosts {
-		if ctx.Err() != nil {
-			break
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			break Loop // stop launching promptly on cancel
 		}
 		wg.Add(1)
-		sem <- struct{}{}
 		go func(ip netip.Addr) {
 			defer wg.Done()
 			defer func() { <-sem }()
@@ -119,9 +121,12 @@ func probeHost(ctx context.Context, ip netip.Addr, p Pinger, tcpPorts []int, tim
 		}
 	}
 	if r.Alive {
-		if names, err := net.DefaultResolver.LookupAddr(ctx, ip.String()); err == nil && len(names) > 0 {
+		// Best-effort reverse DNS, bounded so a slow PTR can't stall the worker.
+		dnsCtx, cancel := context.WithTimeout(ctx, timeout)
+		if names, err := net.DefaultResolver.LookupAddr(dnsCtx, ip.String()); err == nil && len(names) > 0 {
 			r.Name = strings.TrimSuffix(names[0], ".")
 		}
+		cancel()
 	}
 	return r
 }

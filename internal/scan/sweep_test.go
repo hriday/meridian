@@ -114,6 +114,45 @@ func TestSweepHostEnumeration(t *testing.T) {
 	require.Equal(t, "192.0.2.5", res[0].IP)
 }
 
+type slowPinger struct{}
+
+func (slowPinger) Ping(ctx context.Context, _ netip.Addr, _ time.Duration) (time.Duration, bool, bool) {
+	select {
+	case <-time.After(200 * time.Millisecond):
+	case <-ctx.Done():
+	}
+	return 0, false, true
+}
+
+func TestSweepCancelStopsEarly(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() { time.Sleep(60 * time.Millisecond); cancel() }()
+
+	start := time.Now()
+	res, err := Sweep(ctx, "192.0.2.0/24", slowPinger{}, nil, time.Second, 4, nil)
+	require.NoError(t, err)
+	require.Less(t, time.Since(start), 2*time.Second) // stopped promptly, not 254×200ms
+	require.Less(t, len(res), 254)                    // partial results, launch loop broke on cancel
+}
+
+func TestSweepRejectsWideIPv6(t *testing.T) {
+	_, err := Sweep(context.Background(), "2001:db8::/64", &fakePinger{available: true}, nil, time.Second, 8, nil)
+	require.Error(t, err) // a /64 is far above the host cap
+}
+
+func TestSweepEnumeratesSlash31(t *testing.T) {
+	res, err := Sweep(context.Background(), "192.0.2.0/31", &fakePinger{available: true}, nil, 50*time.Millisecond, 8, nil)
+	require.NoError(t, err)
+	require.Len(t, res, 2) // /31: both addresses, no network/broadcast trim
+	require.ElementsMatch(t, []string{"192.0.2.0", "192.0.2.1"}, []string{res[0].IP, res[1].IP})
+}
+
+func TestSweepEnumeratesIPv6(t *testing.T) {
+	res, err := Sweep(context.Background(), "2001:db8::/126", &fakePinger{available: true}, nil, 50*time.Millisecond, 8, nil)
+	require.NoError(t, err)
+	require.Len(t, res, 4) // /126 = 4 addresses; IPv6 has no network/broadcast trimming
+}
+
 func TestSweepBoundedConcurrency(t *testing.T) {
 	fp := &fakePinger{available: true, reply: map[string]time.Duration{}}
 	_, err := Sweep(context.Background(), "192.0.2.0/28", fp, nil, 200*time.Millisecond, 4, nil)

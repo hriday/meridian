@@ -57,6 +57,7 @@ func TestScanPortStates(t *testing.T) {
 }
 
 func TestScanPortFilteredOnCancel(t *testing.T) {
+	// A cancelled dial classifies as filtered (not a false open/closed).
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	defer ln.Close()
@@ -65,9 +66,16 @@ func TestScanPortFilteredOnCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	res, err := ScanPorts(ctx, "127.0.0.1", []int{port}, time.Second, 8, nil)
+	require.Equal(t, "filtered", scanPort(ctx, "127.0.0.1", port, time.Second))
+}
+
+func TestScanPortsShortCircuitsOnCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	// A pre-cancelled scan launches nothing rather than flooding "filtered".
+	res, err := ScanPorts(ctx, "127.0.0.1", []int{80, 443, 8080}, time.Second, 2, nil)
 	require.NoError(t, err)
-	require.Equal(t, "filtered", res[0].State) // cancelled → filtered, not open/closed
+	require.Less(t, len(res), 3)
 }
 
 func TestScanPortsService(t *testing.T) {
