@@ -34,8 +34,10 @@ type ASNReport struct {
 	V4Prefixes  int    `json:"v4Prefixes"`
 	V6Prefixes  int    `json:"v6Prefixes"`
 	Neighbours  int    `json:"neighbours"`
-	RoutingSrc  Source `json:"routingSrc"`
-	RegistrySrc Source `json:"registrySrc"`
+	RoutingSrc  Source   `json:"routingSrc"`
+	RegistrySrc Source   `json:"registrySrc"`
+	Peering     *Peering `json:"peering,omitempty"`
+	PeeringSrc  Source   `json:"peeringSrc"`
 }
 
 func now() time.Time { return time.Now().UTC() }
@@ -122,6 +124,15 @@ func (c *Client) LookupASN(ctx context.Context, asn string) (ASNReport, error) {
 		if e.Registry != "" {
 			r.RegistrySrc.Label = "RDAP · " + e.Registry
 		}
+	}
+
+	// Peering (PeeringDB) — best-effort enrichment; absent when the ASN isn't
+	// in PeeringDB, which is not an error.
+	r.PeeringSrc = Source{Label: "PeeringDB", FetchedAt: now()}
+	if p, err := c.peeringDB(ctx, r.ASN); err != nil {
+		r.PeeringSrc.Err = err.Error()
+	} else {
+		r.Peering = p
 	}
 	return r, nil
 }
