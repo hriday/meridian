@@ -16,6 +16,8 @@ type serverOpts struct {
 	nsServfail bool // NS query returns SERVFAIL
 	dmarcNX    bool // _dmarc returns NXDOMAIN
 	ad         bool // set the AuthenticatedData (DNSSEC) flag
+	splitSPF   bool // apex SPF returned as a multi-string TXT split before -all
+	nullMX     bool // MX is a null MX (0 .)
 }
 
 // auditServer starts a DNS server answering a healthy example domain, tweaked
@@ -40,6 +42,10 @@ func auditServer(t *testing.T, opts serverOpts) string {
 				&mdns.NS{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeNS, Ttl: 3600}, Ns: "ns2.example.test."},
 			}
 		case q.Qtype == mdns.TypeMX:
+			if opts.nullMX {
+				m.Answer = []mdns.RR{&mdns.MX{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeMX, Ttl: 3600}, Preference: 0, Mx: "."}}
+				break
+			}
 			m.Answer = []mdns.RR{&mdns.MX{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeMX, Ttl: 3600}, Preference: 10, Mx: "mail.example.test."}}
 		case q.Qtype == mdns.TypeTXT && strings.HasPrefix(name, "_dmarc."):
 			if opts.dmarcNX {
@@ -48,6 +54,12 @@ func auditServer(t *testing.T, opts serverOpts) string {
 			}
 			m.Answer = []mdns.RR{&mdns.TXT{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeTXT, Ttl: 3600}, Txt: []string{"v=DMARC1; p=reject; rua=mailto:dmarc@example.test"}}}
 		case q.Qtype == mdns.TypeTXT:
+			if opts.splitSPF {
+				// A >255-byte SPF record is transmitted as multiple character-
+				// strings; here the split falls right before the terminal -all.
+				m.Answer = []mdns.RR{&mdns.TXT{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeTXT, Ttl: 3600}, Txt: []string{"v=spf1 include:_spf.example.com ", "-all"}}}
+				break
+			}
 			m.Answer = []mdns.RR{&mdns.TXT{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeTXT, Ttl: 3600}, Txt: []string{"v=spf1 -all"}}}
 		default:
 			m.Rcode = mdns.RcodeNameError
@@ -115,6 +127,40 @@ func TestAuditQuotedSPFParsed(t *testing.T) {
 	c, ok := checkByName(r, "SPF")
 	require.True(t, ok)
 	require.Equal(t, StatusOK, c.Status, "quoted v=spf1 must be parsed, not read as missing")
+}
+
+func TestAuditSplitSPFParsed(t *testing.T) {
+	// A multi-string SPF record split before -all must still be graded ok (the
+	// terminal mechanism is intact once chunks are joined), and the displayed
+	// record must not carry embedded quotes.
+	addr := auditServer(t, serverOpts{ad: true, splitSPF: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	c, ok := checkByName(r, "SPF")
+	require.True(t, ok)
+	require.Equal(t, StatusOK, c.Status, "split -all must read as strict, not warn: "+c.Note)
+	require.NotEmpty(t, c.Records)
+	require.NotContains(t, c.Records[0], `"`, "the record must be reconstructed without embedded quotes")
+}
+
+func TestAuditNullMX(t *testing.T) {
+	addr := auditServer(t, serverOpts{ad: true, nullMX: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	c, ok := checkByName(r, "Mail (MX)")
+	require.True(t, ok)
+	require.Equal(t, StatusWarn, c.Status)
+	require.Contains(t, strings.ToLower(c.Note), "no mail")
+}
+
+func TestAuditSummaryPrefersMissingOverWarn(t *testing.T) {
+	// Null MX (warn, by design) + missing DMARC: the "fix first" headline must
+	// name the genuinely-absent DMARC, not the deliberate null MX.
+	addr := auditServer(t, serverOpts{ad: true, nullMX: true, dmarcNX: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	require.Contains(t, r.Summary, "DMARC")
+	require.NotContains(t, r.Summary, "Mail (MX) needs attention")
 }
 
 func TestAuditRejectsEmpty(t *testing.T) {

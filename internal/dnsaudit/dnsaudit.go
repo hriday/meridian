@@ -231,14 +231,23 @@ func refused(rcode string) bool {
 	return rcode != "" && rcode != "NOERROR" && rcode != "NXDOMAIN"
 }
 
-// values returns the answer values of the given record type, with surrounding
-// quotes stripped (dnsx renders TXT values quoted).
+// values returns the answer values of the given record type. TXT values are
+// de-quoted: dnsx renders a multi-string TXT record as `"chunk1" "chunk2"`, but
+// the real value is the chunks concatenated with no separator (a >255-byte SPF
+// record is split this way), so the inter-chunk `" "` is removed before the
+// outer quotes — otherwise an embedded quote could glue onto the terminal SPF
+// mechanism and flip its grade.
 func values(res dnsx.Result, rtype string) []string {
 	var out []string
 	for _, a := range res.Answers {
-		if a.Type == rtype {
-			out = append(out, strings.Trim(a.Value, `"`))
+		if a.Type != rtype {
+			continue
 		}
+		v := a.Value
+		if rtype == "TXT" {
+			v = strings.Trim(strings.ReplaceAll(v, `" "`, ""), `"`)
+		}
+		out = append(out, v)
 	}
 	return out
 }
@@ -251,8 +260,10 @@ func isNullMX(records []string) bool {
 	return len(f) == 2 && f[0] == "0" && (f[1] == "." || f[1] == "")
 }
 
-// summarize counts the grades and names the first thing to fix, in severity-
-// ordered check order (NS, MX, SPF, DMARC, DNSSEC).
+// summarize counts the grades and names the thing to fix first — the most
+// severe non-ok check (a missing record or a failed lookup outranks a mere
+// warning, so a deliberate null MX never headlines over an absent DMARC), with
+// ties broken by check order (NS, MX, SPF, DMARC, DNSSEC).
 func summarize(r *Report) string {
 	for _, c := range r.Checks {
 		switch c.Status {
@@ -266,10 +277,27 @@ func summarize(r *Report) string {
 			r.Errors++
 		}
 	}
-	for _, c := range r.Checks {
-		if c.Status != StatusOK {
-			return c.Name + " needs attention — " + c.Note
+	best, bestRank := -1, 0
+	for i, c := range r.Checks {
+		if rk := severityRank(c.Status); rk > bestRank {
+			best, bestRank = i, rk
 		}
 	}
+	if best >= 0 {
+		return r.Checks[best].Name + " needs attention — " + r.Checks[best].Note
+	}
 	return "Posture looks healthy — nameservers, mail, SPF, DMARC and DNSSEC all check out."
+}
+
+// severityRank ranks grades for the "fix first" headline: a missing record or a
+// failed lookup (both "address this") outrank a soft warning; ok is 0.
+func severityRank(s Status) int {
+	switch s {
+	case StatusMissing, StatusError:
+		return 2
+	case StatusWarn:
+		return 1
+	default:
+		return 0
+	}
 }

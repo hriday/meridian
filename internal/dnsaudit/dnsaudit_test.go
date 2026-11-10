@@ -19,6 +19,7 @@ func TestSPFVerdict(t *testing.T) {
 		{"soft", []string{"v=spf1 include:_spf.example.com ~all"}, StatusOK, "soft", true},
 		{"neutral", []string{"v=spf1 ?all"}, StatusWarn, "neutral", true},
 		{"passall", []string{"v=spf1 +all"}, StatusWarn, "any", true},
+		{"bareall", []string{"v=spf1 include:x all"}, StatusWarn, "any", true},
 		{"noall", []string{"v=spf1 include:x"}, StatusWarn, "", true},
 		{"multiple", []string{"v=spf1 -all", "v=spf1 ~all"}, StatusWarn, "more than one", true},
 		{"notspf", []string{"not spf"}, StatusMissing, "", false},
