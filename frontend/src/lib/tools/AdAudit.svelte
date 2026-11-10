@@ -145,11 +145,12 @@
           {/if}
         {/each}
       </div>
+      <div class="sub">…or use your own list (rockyou, a custom one)</div>
       <div class="line">
+        <input class="field sm mono grow" bind:value={customWordlist} placeholder="/path/to/your/wordlist.txt" />
         <button class="go ghost" on:click={pickWordlist}>Browse…</button>
-        <span class="cap">or use your own list (rockyou, a custom one)</span>
+        {#if customWordlist}<button class="link" on:click={() => (customWordlist = "")}>clear</button>{/if}
       </div>
-      {#if customWordlist}<div class="cap">Using <span class="mono">{customWordlist}</span> <button class="link" on:click={() => (customWordlist = "")}>clear</button></div>{/if}
     </div>
   </div>
 
