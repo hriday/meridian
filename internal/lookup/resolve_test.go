@@ -148,6 +148,36 @@ func TestLookupASNIncludesPeering(t *testing.T) {
 	require.Empty(t, r.PeeringSrc.Err)
 }
 
+func TestLookupIPIncludesPeering(t *testing.T) {
+	c := lookupServer(t, map[string]srvResp{
+		"network-info": {body: `{"data":{"prefix":"104.16.0.0/13","asns":["13335"]}}`},
+		"as-overview":  {body: `{"data":{"holder":"CLOUDFLARENET, US"}}`},
+		"/ip/":         {body: arinIPBody},
+		"netixlan":     {body: `{"data":[{"name":"AMS-IX","speed":400000}]}`},
+		"netfac":       {body: `{"data":[{"name":"Equinix DC1","city":"Ashburn","country":"US"}]}`},
+		"net":          {body: `{"data":[{"id":4224,"name":"Cloudflare","info_type":"Content","policy_general":"Open","ix_count":1,"fac_count":1}]}`},
+	})
+	r, err := c.LookupIP(context.Background(), "104.16.123.45")
+	require.NoError(t, err)
+	require.NotNil(t, r.Peering)
+	require.Equal(t, "Open", r.Peering.Policy)
+	require.Len(t, r.Peering.IXPs, 1)
+	require.Equal(t, "PeeringDB", r.PeeringSrc.Label)
+}
+
+func TestLookupIPNoPeeringWhenUnannounced(t *testing.T) {
+	// No origin ASN → no PeeringDB fetch, and the "net" fixture must go untouched.
+	c := lookupServer(t, map[string]srvResp{
+		"network-info": {body: `{"data":{"prefix":"","asns":[]}}`},
+		"/ip/":         {body: arinIPBody},
+		"net":          {code: 500, body: ``}, // would error if fetched
+	})
+	r, err := c.LookupIP(context.Background(), "8.8.8.8")
+	require.NoError(t, err)
+	require.Nil(t, r.Peering)
+	require.Empty(t, r.PeeringSrc.Err)
+}
+
 func TestLookupIPSpecialUse(t *testing.T) {
 	c := NewClient(failDoer{t}, time.Minute) // any network call fails the test
 	// Documentation (TEST-NET-1/2/3), CGNAT, reserved, this-network, and

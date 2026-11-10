@@ -110,6 +110,13 @@
           <dl class="mono">
             {#if data.coveringPrefix}<dt>Covering prefix</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.coveringPrefix)}>{data.coveringPrefix}</button></dd>{/if}
             {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
+            {#if data.peering && (data.peering.ixps?.length || data.peering.facilities?.length || data.peering.policy)}
+              <dt>Peering</dt>
+              <dd>
+                {#if data.peering.ixps?.length}{data.peering.ixps.length} {data.peering.ixps.length === 1 ? "IXP" : "IXPs"}{/if}{#if data.peering.facilities?.length}{#if data.peering.ixps?.length} · {/if}{data.peering.facilities.length} {data.peering.facilities.length === 1 ? "facility" : "facilities"}{/if}{#if data.peering.policy} · policy <span class="pill">{data.peering.policy}</span>{/if}
+                <button class="piv" on:click={() => onpivot(data.originAsn)}>details ›</button>
+              </dd>
+            {/if}
             {#if data.registeredOrg}<dt>Registered org</dt><dd>{data.registeredOrg}{#if data.registry} <span class="pill">{data.registry}</span>{/if}</dd>{/if}
             {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}
             {#if data.routingNote}<dt>Note</dt><dd class="dim">{data.routingNote}</dd>{/if}
