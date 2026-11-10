@@ -190,6 +190,10 @@ export function WakeOnLAN(arg1, arg2, arg3) {
   return window['go']['app']['App']['WakeOnLAN'](arg1, arg2, arg3);
 }
 
+export function Whois(arg1) {
+  return window['go']['app']['App']['Whois'](arg1);
+}
+
 export function WordlistCatalog() {
   return window['go']['app']['App']['WordlistCatalog']();
 }
