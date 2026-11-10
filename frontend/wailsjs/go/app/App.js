@@ -22,12 +22,24 @@ export function ADAuditSave(arg1, arg2) {
   return window['go']['app']['App']['ADAuditSave'](arg1, arg2);
 }
 
+export function AtlasKeyStatus() {
+  return window['go']['app']['App']['AtlasKeyStatus']();
+}
+
+export function AtlasPing(arg1, arg2) {
+  return window['go']['app']['App']['AtlasPing'](arg1, arg2);
+}
+
 export function Blocklist(arg1, arg2) {
   return window['go']['app']['App']['Blocklist'](arg1, arg2);
 }
 
 export function Classify(arg1) {
   return window['go']['app']['App']['Classify'](arg1);
+}
+
+export function ClearAtlasKey() {
+  return window['go']['app']['App']['ClearAtlasKey']();
 }
 
 export function DNSAudit(arg1, arg2) {
@@ -164,6 +176,10 @@ export function ScanCommonPorts() {
 
 export function ScanStop() {
   return window['go']['app']['App']['ScanStop']();
+}
+
+export function SetAtlasKey(arg1) {
+  return window['go']['app']['App']['SetAtlasKey'](arg1);
 }
 
 export function StopTrace() {
