@@ -86,6 +86,22 @@ export function NTPSystem() {
   return window['go']['app']['App']['NTPSystem']();
 }
 
+export function PingSweep(arg1, arg2) {
+  return window['go']['app']['App']['PingSweep'](arg1, arg2);
+}
+
+export function PortScan(arg1, arg2) {
+  return window['go']['app']['App']['PortScan'](arg1, arg2);
+}
+
+export function ScanCommonPorts() {
+  return window['go']['app']['App']['ScanCommonPorts']();
+}
+
+export function ScanStop() {
+  return window['go']['app']['App']['ScanStop']();
+}
+
 export function StopTrace() {
   return window['go']['app']['App']['StopTrace']();
 }

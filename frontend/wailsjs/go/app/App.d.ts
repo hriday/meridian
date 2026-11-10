@@ -7,6 +7,7 @@ import {ipspace} from '../models';
 import {app} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
+import {scan} from '../models';
 import {subnet} from '../models';
 import {trace} from '../models';
 
@@ -51,6 +52,14 @@ export function LookupPrefix(arg1:string):Promise<lookup.PrefixReport>;
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
 export function NTPSystem():Promise<sysconf.Found>;
+
+export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
+
+export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;
+
+export function ScanCommonPorts():Promise<Array<number>>;
+
+export function ScanStop():Promise<void>;
 
 export function StopTrace():Promise<void>;
 

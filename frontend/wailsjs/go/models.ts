@@ -632,6 +632,47 @@ export namespace ntp {
 
 }
 
+export namespace scan {
+	
+	export class HostResult {
+	    ip: string;
+	    alive: boolean;
+	    rtt: number;
+	    method: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HostResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.alive = source["alive"];
+	        this.rtt = source["rtt"];
+	        this.method = source["method"];
+	        this.name = source["name"];
+	    }
+	}
+	export class PortResult {
+	    port: number;
+	    state: string;
+	    service: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PortResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.port = source["port"];
+	        this.state = source["state"];
+	        this.service = source["service"];
+	    }
+	}
+
+}
+
 export namespace subnet {
 	
 	export class Info {
