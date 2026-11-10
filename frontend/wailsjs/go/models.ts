@@ -894,6 +894,79 @@ export namespace ntp {
 
 }
 
+export namespace ping {
+	
+	export class Reply {
+	    seq: number;
+	    rttMillis: number;
+	    ok: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Reply(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.seq = source["seq"];
+	        this.rttMillis = source["rttMillis"];
+	        this.ok = source["ok"];
+	    }
+	}
+	export class Stats {
+	    host: string;
+	    ip: string;
+	    sent: number;
+	    received: number;
+	    lossPct: number;
+	    minMs: number;
+	    avgMs: number;
+	    maxMs: number;
+	    stddevMs: number;
+	    jitterMs: number;
+	    available: boolean;
+	    replies: Reply[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Stats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.ip = source["ip"];
+	        this.sent = source["sent"];
+	        this.received = source["received"];
+	        this.lossPct = source["lossPct"];
+	        this.minMs = source["minMs"];
+	        this.avgMs = source["avgMs"];
+	        this.maxMs = source["maxMs"];
+	        this.stddevMs = source["stddevMs"];
+	        this.jitterMs = source["jitterMs"];
+	        this.available = source["available"];
+	        this.replies = this.convertValues(source["replies"], Reply);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace pwaudit {
 	
 	export class Account {
