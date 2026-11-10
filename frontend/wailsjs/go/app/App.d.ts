@@ -9,6 +9,7 @@ import {app} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
+import {scan} from '../models';
 import {subnet} from '../models';
 import {trace} from '../models';
 import {wordlist} from '../models';
@@ -72,6 +73,14 @@ export function NetcatConnect(arg1:string,arg2:string,arg3:boolean,arg4:boolean)
 export function NetcatListen(arg1:string,arg2:string):Promise<string>;
 
 export function NetcatSend(arg1:string):Promise<void>;
+
+export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
+
+export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;
+
+export function ScanCommonPorts():Promise<Array<number>>;
+
+export function ScanStop():Promise<void>;
 
 export function StopTrace():Promise<void>;
 

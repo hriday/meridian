@@ -13,6 +13,7 @@ import (
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/pwaudit"
+	"github.com/hriday/meridian/internal/scan"
 )
 
 // App is the Wails-bound controller. Its public methods are exposed to the
@@ -39,6 +40,10 @@ type App struct {
 	adCracker   pwaudit.Cracker
 	adReport    *pwaudit.AuditReport // last run, held for an encrypted save
 	wordlistDir string
+
+	scanMu     sync.Mutex
+	scanCancel context.CancelFunc
+	newPinger  func() scan.Pinger
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -48,6 +53,7 @@ func New() *App {
 		ipPath:      ipspace.DefaultPath(),
 		adCracker:   pwaudit.NewHashcatCracker(),
 		wordlistDir: defaultWordlistDir(),
+		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 	}
 }
 
