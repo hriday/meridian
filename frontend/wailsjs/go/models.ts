@@ -33,6 +33,24 @@ export namespace app {
 
 export namespace atlas {
 	
+	export class Hop {
+	    number: number;
+	    from: string;
+	    rttMs: number;
+	    timeout: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Hop(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.number = source["number"];
+	        this.from = source["from"];
+	        this.rttMs = source["rttMs"];
+	        this.timeout = source["timeout"];
+	    }
+	}
 	export class Probe {
 	    id: number;
 	    from: string;
@@ -81,6 +99,84 @@ export namespace atlas {
 	        this.avgMs = source["avgMs"];
 	        this.maxMs = source["maxMs"];
 	        this.lossPct = source["lossPct"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TraceProbe {
+	    id: number;
+	    from: string;
+	    dest: string;
+	    hops: Hop[];
+	    reached: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new TraceProbe(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.from = source["from"];
+	        this.dest = source["dest"];
+	        this.hops = this.convertValues(source["hops"], Hop);
+	        this.reached = source["reached"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TraceReport {
+	    target: string;
+	    measurementId: number;
+	    requested: number;
+	    probes: TraceProbe[];
+	    responding: number;
+	    reached: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TraceReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.measurementId = source["measurementId"];
+	        this.requested = source["requested"];
+	        this.probes = this.convertValues(source["probes"], TraceProbe);
+	        this.responding = source["responding"];
+	        this.reached = source["reached"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
