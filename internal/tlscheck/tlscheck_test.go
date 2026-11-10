@@ -236,3 +236,27 @@ func TestCheckDialError(t *testing.T) {
 	_, err := Check(context.Background(), "127.0.0.1:1", 1*time.Second)
 	require.Error(t, err)
 }
+
+func TestTrustTime(t *testing.T) {
+	now := time.Now()
+	inDate := &x509.Certificate{NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour)}
+	require.True(t, trustTime(inDate, now).IsZero(), "in-date cert must verify at now (keeps the system verifier)")
+
+	expired := &x509.Certificate{NotBefore: now.Add(-48 * time.Hour), NotAfter: now.Add(-24 * time.Hour)}
+	require.Equal(t, expired.NotBefore, trustTime(expired, now), "expired cert backdates to NotBefore")
+
+	notYet := &x509.Certificate{NotBefore: now.Add(24 * time.Hour), NotAfter: now.Add(48 * time.Hour)}
+	require.Equal(t, notYet.NotBefore, trustTime(notYet, now), "not-yet-valid cert backdates to NotBefore")
+}
+
+// Network regression for the macOS system-verifier bug: a real, in-date public
+// cert must read as trusted/Valid. Skipped offline.
+func TestCheckTrustedPublicHost(t *testing.T) {
+	r, err := Check(context.Background(), "cloudflare.com", 8*time.Second)
+	if err != nil {
+		t.Skipf("no network: %v", err)
+	}
+	require.True(t, r.ChainTrusted, "a valid public cert must read as trusted")
+	require.True(t, r.HostnameMatch)
+	require.Equal(t, "Valid", r.Verdict)
+}
