@@ -11,6 +11,7 @@ import (
 
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
+	"github.com/hriday/meridian/internal/scan"
 )
 
 // App is the Wails-bound controller. Its public methods are exposed to the
@@ -28,13 +29,18 @@ type App struct {
 	ipPass     string
 	ipStore    *ipspace.Store
 	ipUnlocked bool
+
+	scanMu     sync.Mutex
+	scanCancel context.CancelFunc
+	newPinger  func() scan.Pinger
 }
 
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
 	return &App{
-		lookup: lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
-		ipPath: ipspace.DefaultPath(),
+		lookup:    lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
+		ipPath:    ipspace.DefaultPath(),
+		newPinger: func() scan.Pinger { return scan.NewICMPPinger() },
 	}
 }
 
