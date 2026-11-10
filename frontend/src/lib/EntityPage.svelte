@@ -23,6 +23,24 @@
   function rpkiClass(state: string): string {
     return state === "valid" ? "good" : state === "invalid" ? "bad" : "";
   }
+  // Port speed comes from PeeringDB in Mbps.
+  function gbps(mbps: number): string {
+    if (!mbps) return "";
+    return mbps >= 1000 ? `${+(mbps / 1000).toFixed(mbps % 1000 ? 1 : 0)} Gbps` : `${mbps} Mbps`;
+  }
+  // Plain-language gloss for a PeeringDB general peering policy.
+  function policyNote(policy: string): string {
+    switch ((policy || "").toLowerCase()) {
+      case "open":
+        return "Open — will peer with most networks, usually with no paperwork.";
+      case "selective":
+        return "Selective — peers case by case, often with requirements.";
+      case "restrictive":
+        return "Restrictive — rarely adds new peers.";
+      default:
+        return "";
+    }
+  }
   async function copyJSON() {
     try {
       await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
@@ -118,15 +136,60 @@
 
   {:else if type === "asn"}
     {#if tab === "overview"}
-      <div class="cards"><div class="card hero span">
-        <div class="chead"><h3>Autonomous System</h3><span class="src">{chip(data.routingSrc)}</span></div>
-        <dl class="mono">
-          <dt>Holder</dt><dd class="big">{data.holder || "—"}</dd>
-          <dt>Prefixes (v4)</dt><dd>{data.v4Prefixes} announced</dd>
-          <dt>Prefixes (v6)</dt><dd>{data.v6Prefixes} announced</dd>
-          <dt>Neighbours</dt><dd>{data.neighbours} observed</dd>
-        </dl>
-      </div></div>
+      <div class="cards">
+        <div class="card hero span">
+          <div class="chead"><h3>Autonomous System</h3><span class="src">{chip(data.routingSrc)}</span></div>
+          <dl class="mono">
+            <dt>Holder</dt><dd class="big">{data.holder || "—"}</dd>
+            <dt>Prefixes (v4)</dt><dd>{data.v4Prefixes} announced</dd>
+            <dt>Prefixes (v6)</dt><dd>{data.v6Prefixes} announced</dd>
+            <dt>Neighbours</dt><dd>{data.neighbours} observed</dd>
+          </dl>
+        </div>
+
+        {#if data.peering}
+          <div class="card span">
+            <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
+            <dl class="mono">
+              {#if data.peering.type}<dt>Type</dt><dd>{data.peering.type}</dd>{/if}
+              {#if data.peering.scope}<dt>Scope</dt><dd>{data.peering.scope}</dd>{/if}
+              {#if data.peering.ratio}<dt>Traffic</dt><dd>{data.peering.ratio}</dd>{/if}
+              {#if data.peering.policy}<dt>Policy</dt><dd><span class="pill">{data.peering.policy}</span></dd>{/if}
+              {#if data.peering.irrAsSet}<dt>IRR AS-SET</dt><dd>{data.peering.irrAsSet}</dd>{/if}
+            </dl>
+            {#if policyNote(data.peering.policy)}<p class="cap">{policyNote(data.peering.policy)}</p>{/if}
+
+            {#if data.peering.ixps?.length}
+              <div class="pblock">
+                <div class="phead"><span>Internet exchanges</span><span class="dim">{data.peering.ixCount} present</span></div>
+                <div class="chips">
+                  {#each data.peering.ixps.slice(0, 12) as ix}
+                    <span class="pchip">{ix.name}{#if ix.speed} <span class="dim">{gbps(ix.speed)}</span>{/if}</span>
+                  {/each}
+                  {#if data.peering.ixps.length > 12}<span class="pchip more">+{data.peering.ixps.length - 12} more</span>{/if}
+                </div>
+              </div>
+            {/if}
+
+            {#if data.peering.facilities?.length}
+              <div class="pblock">
+                <div class="phead"><span>Facilities</span><span class="dim">{data.peering.facCount} present</span></div>
+                <div class="chips">
+                  {#each data.peering.facilities.slice(0, 12) as f}
+                    <span class="pchip">{f.name}{#if f.city} <span class="dim">{f.city}{#if f.country}, {f.country}{/if}</span>{/if}</span>
+                  {/each}
+                  {#if data.peering.facilities.length > 12}<span class="pchip more">+{data.peering.facilities.length - 12} more</span>{/if}
+                </div>
+              </div>
+            {/if}
+          </div>
+        {:else if data.peeringSrc?.err}
+          <div class="card span">
+            <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
+            <p class="dim">PeeringDB was unavailable: {data.peeringSrc.err}</p>
+          </div>
+        {/if}
+      </div>
     {:else}
       <div class="cards"><div class="card span">
         <div class="chead"><h3>Registry (RDAP)</h3><span class="src">{chip(data.registrySrc)}</span></div>
@@ -238,5 +301,11 @@
   .rec .rt { color: var(--accent); width: 60px; }
   .rec .rv { word-break: break-all; }
   .err { color: var(--warn-text); font-size: 0.78rem; margin: 8px 0 0; }
+  .cap { color: var(--text-dim); font-size: 0.78rem; margin: 6px 0 0; }
+  .pblock { margin-top: 12px; }
+  .phead { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin-bottom: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pchip { display: inline-flex; gap: 5px; align-items: baseline; font-size: 0.76rem; padding: 2px 9px; border-radius: 7px; border: 1px solid var(--border-soft); background: var(--card); }
+  .pchip.more { color: var(--text-dim); border-style: dashed; }
   .mono { font-family: var(--font-mono); }
 </style>
