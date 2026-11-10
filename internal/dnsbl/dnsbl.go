@@ -10,10 +10,14 @@
 package dnsbl
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
+	"github.com/hriday/meridian/internal/dnsx"
 	mdns "github.com/miekg/dns"
 )
 
@@ -105,4 +109,122 @@ func classify(codes []string) (Status, string) {
 	default:
 		return StatusClean, ""
 	}
+}
+
+// queryFn is the DNS exchange, behind a package var so tests can point it at a
+// fake. The default reuses the dnsx dig-like client.
+var queryFn = dnsx.Query
+
+// Listing is one blocklist's result for the checked IP.
+type Listing struct {
+	Zone   string   `json:"zone"`
+	Name   string   `json:"name"`
+	Status Status   `json:"status"`
+	Codes  []string `json:"codes,omitempty"`
+	Reason string   `json:"reason,omitempty"`
+	Note   string   `json:"note,omitempty"`
+}
+
+// Report is the aggregate blocklist result for one IP.
+type Report struct {
+	IP          string    `json:"ip"`
+	Resolver    string    `json:"resolver"`
+	Checked     int       `json:"checked"`
+	Listed      int       `json:"listed"`
+	Unreachable int       `json:"unreachable"`
+	Verdict     string    `json:"verdict"`
+	Summary     string    `json:"summary"`
+	Listings    []Listing `json:"listings"`
+}
+
+// Check looks up ip against each zone via resolver and returns an aggregate
+// report. It errors if ip is not an IP address or resolver is empty. A per-zone
+// network failure is recorded as StatusError rather than failing the whole run,
+// so one dead list doesn't hide the others. A listed zone gets a best-effort
+// TXT reason lookup.
+func Check(ctx context.Context, ip, resolver string, zones []Zone, timeout time.Duration) (Report, error) {
+	if net.ParseIP(ip) == nil {
+		return Report{}, fmt.Errorf("not an IP address: %q (resolve a hostname first)", ip)
+	}
+	if strings.TrimSpace(resolver) == "" {
+		return Report{}, errors.New("no resolver specified")
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	rep := Report{IP: ip, Resolver: resolver}
+	for _, z := range zones {
+		l := Listing{Zone: z.Host, Name: z.Name, Note: z.Note}
+		name, err := reverseName(ip, z.Host)
+		if err != nil {
+			return Report{}, err
+		}
+		res, err := queryFn(ctx, name, "A", resolver)
+		if err != nil {
+			l.Status = StatusError
+			l.Note = err.Error()
+			rep.Listings = append(rep.Listings, l)
+			continue
+		}
+		var codes []string
+		for _, a := range res.Answers {
+			if a.Type == "A" {
+				codes = append(codes, a.Value)
+			}
+		}
+		l.Codes = codes
+		st, note := classify(codes)
+		l.Status = st
+		if note != "" {
+			l.Note = note
+		}
+		if st == StatusListed {
+			if txt, terr := queryFn(ctx, name, "TXT", resolver); terr == nil {
+				var reasons []string
+				for _, a := range txt.Answers {
+					if a.Type == "TXT" {
+						reasons = append(reasons, strings.Trim(a.Value, `"`))
+					}
+				}
+				l.Reason = strings.Join(reasons, " ")
+			}
+		}
+		rep.Listings = append(rep.Listings, l)
+	}
+
+	rep.Checked = len(rep.Listings)
+	for _, l := range rep.Listings {
+		switch l.Status {
+		case StatusListed:
+			rep.Listed++
+		case StatusBlocked, StatusError:
+			rep.Unreachable++
+		}
+	}
+	rep.Verdict, rep.Summary = summarize(rep)
+	return rep, nil
+}
+
+// summarize builds the plain-language verdict and summary. A partial check
+// (some zones unreachable) is marked incomplete so "not listed" on the lists
+// that answered is never read as a full all-clear.
+func summarize(r Report) (verdict, summary string) {
+	var listed []string
+	for _, l := range r.Listings {
+		if l.Status == StatusListed {
+			listed = append(listed, l.Name)
+		}
+	}
+	reachable := r.Checked - r.Unreachable
+	if r.Listed > 0 {
+		verdict = fmt.Sprintf("Listed on %d blocklist(s)", r.Listed)
+		summary = "Listed on " + strings.Join(listed, ", ") + "."
+	} else {
+		verdict = "Not listed"
+		summary = fmt.Sprintf("Not listed on any of the %d list(s) that answered.", reachable)
+	}
+	if r.Unreachable > 0 {
+		summary += fmt.Sprintf(" Incomplete: %d of %d list(s) could not be reached (query refused or timed out), so this is not a full all-clear.", r.Unreachable, r.Checked)
+	}
+	return verdict, summary
 }
