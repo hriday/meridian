@@ -674,7 +674,63 @@ func printASNReport(stdout io.Writer, r lookup.ASNReport) {
 	reportRow(stdout, "Holder", strings.TrimSpace(r.Holder+registrySuffix(r.Registry)))
 	reportRow(stdout, "Prefixes", fmt.Sprintf("%d IPv4, %d IPv6", r.V4Prefixes, r.V6Prefixes))
 	reportRow(stdout, "Neighbours", fmt.Sprintf("%d", r.Neighbours))
-	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc)
+	if p := r.Peering; p != nil {
+		summary := p.Type
+		if p.Policy != "" {
+			summary = strings.TrimSpace(summary + " · policy " + p.Policy)
+		}
+		reportRow(stdout, "Peering", summary)
+		reportRow(stdout, "Website", p.Website)
+		reportRow(stdout, "IXPs", peeringPresence(len(p.IXPs), "IXP", "IXPs", topIXNames(p.IXPs)))
+		reportRow(stdout, "Facilities", peeringPresence(len(p.Facilities), "facility", "facilities", topFacNames(p.Facilities)))
+	}
+	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc, r.PeeringSrc)
+}
+
+// peeringPresence renders "<count> <noun> — <sample>, +N more" for a PeeringDB
+// presence, choosing the singular/plural noun by count. The count is the length
+// of the fetched (deduped) list, so it and the "+N more" never disagree; an
+// empty presence returns "" so the row is suppressed.
+func peeringPresence(count int, singular, plural string, sample []string) string {
+	if count == 0 {
+		return ""
+	}
+	noun := plural
+	if count == 1 {
+		noun = singular
+	}
+	s := fmt.Sprintf("%d %s", count, noun)
+	if len(sample) > 0 {
+		s += " — " + strings.Join(sample, ", ")
+		if count > len(sample) {
+			s += fmt.Sprintf(", +%d more", count-len(sample))
+		}
+	}
+	return s
+}
+
+func topIXNames(ixps []lookup.PeerIX) []string {
+	n := len(ixps)
+	if n > 3 {
+		n = 3
+	}
+	out := make([]string, 0, n)
+	for _, ix := range ixps[:n] {
+		out = append(out, ix.Name)
+	}
+	return out
+}
+
+func topFacNames(facs []lookup.PeerFac) []string {
+	n := len(facs)
+	if n > 3 {
+		n = 3
+	}
+	out := make([]string, 0, n)
+	for _, f := range facs[:n] {
+		out = append(out, f.Name)
+	}
+	return out
 }
 
 func printPrefixReport(stdout io.Writer, r lookup.PrefixReport) {

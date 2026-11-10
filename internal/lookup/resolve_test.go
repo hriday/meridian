@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -16,12 +17,19 @@ type srvResp struct {
 	body string
 }
 
-// lookupServer serves fixtures chosen by path fragment and points both the
-// RIPEstat and RDAP bases at it.
+// lookupServer serves fixtures chosen by path fragment and points the RIPEstat,
+// RDAP, and PeeringDB bases at it. Fragments are matched longest-first so a
+// specific key ("network-info", "netixlan") wins over a shorter prefix ("net").
 func lookupServer(t *testing.T, fixtures map[string]srvResp) *Client {
+	frags := make([]string, 0, len(fixtures))
+	for frag := range fixtures {
+		frags = append(frags, frag)
+	}
+	sort.Slice(frags, func(i, j int) bool { return len(frags[i]) > len(frags[j]) })
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		for frag, f := range fixtures {
+		for _, frag := range frags {
 			if strings.Contains(r.URL.Path, frag) {
+				f := fixtures[frag]
 				if f.code != 0 {
 					w.WriteHeader(f.code)
 				}
@@ -32,9 +40,9 @@ func lookupServer(t *testing.T, fixtures map[string]srvResp) *Client {
 		http.Error(w, "no fixture: "+r.URL.Path, 404)
 	}))
 	t.Cleanup(srv.Close)
-	or, od := ripeBase, rdapBase
-	ripeBase, rdapBase = srv.URL+"/", srv.URL+"/"
-	t.Cleanup(func() { ripeBase, rdapBase = or, od })
+	or, od, op := ripeBase, rdapBase, peeringDBBase
+	ripeBase, rdapBase, peeringDBBase = srv.URL+"/", srv.URL+"/", srv.URL+"/"
+	t.Cleanup(func() { ripeBase, rdapBase, peeringDBBase = or, od, op })
 	return NewClient(http.DefaultClient, time.Minute)
 }
 
@@ -119,6 +127,25 @@ func TestLookupASNCombines(t *testing.T) {
 	require.Equal(t, 712, r.V6Prefixes)
 	require.Equal(t, 8400, r.Neighbours)
 	require.Equal(t, "ARIN", r.Registry)
+}
+
+func TestLookupASNIncludesPeering(t *testing.T) {
+	c := lookupServer(t, map[string]srvResp{
+		"routing-status": {body: `{"data":{"announced_space":{"v4":{"prefixes":1},"v6":{"prefixes":1}},"observed_neighbours":1}}`},
+		"as-overview":    {body: `{"data":{"holder":"CLOUDFLARENET, US"}}`},
+		"/autnum/":       {body: arinASNBody},
+		"netixlan":       {body: `{"data":[{"name":"AMS-IX","speed":400000}]}`},
+		"netfac":         {body: `{"data":[{"name":"Equinix DC1","city":"Ashburn","country":"US"}]}`},
+		"net":            {body: `{"data":[{"id":4224,"name":"Cloudflare","info_type":"Content","policy_general":"Open","ix_count":1,"fac_count":1}]}`},
+	})
+	r, err := c.LookupASN(context.Background(), "AS13335")
+	require.NoError(t, err)
+	require.NotNil(t, r.Peering)
+	require.Equal(t, "Open", r.Peering.Policy)
+	require.Equal(t, "Content", r.Peering.Type)
+	require.Equal(t, []PeerIX{{Name: "AMS-IX", Speed: 400000}}, r.Peering.IXPs)
+	require.Equal(t, "PeeringDB", r.PeeringSrc.Label)
+	require.Empty(t, r.PeeringSrc.Err)
 }
 
 func TestLookupIPSpecialUse(t *testing.T) {
