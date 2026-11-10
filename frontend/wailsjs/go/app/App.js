@@ -86,6 +86,22 @@ export function NTPSystem() {
   return window['go']['app']['App']['NTPSystem']();
 }
 
+export function NetcatClose() {
+  return window['go']['app']['App']['NetcatClose']();
+}
+
+export function NetcatConnect(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['NetcatConnect'](arg1, arg2, arg3, arg4);
+}
+
+export function NetcatListen(arg1, arg2) {
+  return window['go']['app']['App']['NetcatListen'](arg1, arg2);
+}
+
+export function NetcatSend(arg1) {
+  return window['go']['app']['App']['NetcatSend'](arg1);
+}
+
 export function StopTrace() {
   return window['go']['app']['App']['StopTrace']();
 }

@@ -7,6 +7,7 @@ import {ipspace} from '../models';
 import {app} from '../models';
 import {lookup} from '../models';
 import {ntp} from '../models';
+import {netcat} from '../models';
 import {subnet} from '../models';
 import {trace} from '../models';
 
@@ -51,6 +52,14 @@ export function LookupPrefix(arg1:string):Promise<lookup.PrefixReport>;
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
 export function NTPSystem():Promise<sysconf.Found>;
+
+export function NetcatClose():Promise<void>;
+
+export function NetcatConnect(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<netcat.CertInfo>;
+
+export function NetcatListen(arg1:string,arg2:string):Promise<string>;
+
+export function NetcatSend(arg1:string):Promise<void>;
 
 export function StopTrace():Promise<void>;
 
