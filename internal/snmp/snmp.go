@@ -11,10 +11,11 @@ import (
 	g "github.com/gosnmp/gosnmp"
 )
 
-// PDU is one variable binding: an OID and its decoded value (nil when the OID
-// is absent — noSuchObject/noSuchInstance/endOfMibView).
+// PDU is one variable binding: an OID, its ASN.1 type name, and its decoded
+// value (nil when the OID is absent — noSuchObject/noSuchInstance/endOfMibView).
 type PDU struct {
 	OID   string
+	Type  string
 	Value any
 }
 
@@ -78,7 +79,7 @@ func (c *gclient) Close() error {
 func conv(vars []g.SnmpPDU) []PDU {
 	out := make([]PDU, len(vars))
 	for i, v := range vars {
-		out[i] = PDU{OID: v.Name, Value: pduValue(v)}
+		out[i] = PDU{OID: v.Name, Type: typeName(v.Type), Value: pduValue(v)}
 	}
 	return out
 }

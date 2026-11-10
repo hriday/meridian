@@ -98,6 +98,8 @@ export function LookupPrefix(arg1:string):Promise<lookup.PrefixReport>;
 
 export function MACVendor(arg1:string):Promise<macvendor.Result>;
 
+export function MIBWalk(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.MIBRow>>;
+
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
 export function NTPSystem():Promise<sysconf.Found>;
