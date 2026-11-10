@@ -1887,6 +1887,210 @@ export namespace trace {
 
 }
 
+export namespace webconf {
+	
+	export class Counts {
+	    servers: number;
+	    listeners: number;
+	    upstreams: number;
+	    locations: number;
+	    errors: number;
+	    warnings: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Counts(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.servers = source["servers"];
+	        this.listeners = source["listeners"];
+	        this.upstreams = source["upstreams"];
+	        this.locations = source["locations"];
+	        this.errors = source["errors"];
+	        this.warnings = source["warnings"];
+	    }
+	}
+	export class Finding {
+	    severity: string;
+	    category: string;
+	    title: string;
+	    detail: string;
+	    file: string;
+	    line: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Finding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.severity = source["severity"];
+	        this.category = source["category"];
+	        this.title = source["title"];
+	        this.detail = source["detail"];
+	        this.file = source["file"];
+	        this.line = source["line"];
+	    }
+	}
+	export class Upstream {
+	    name: string;
+	    servers: string[];
+	    policy: string;
+	    usedBy: string[];
+	    file: string;
+	    line: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Upstream(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.servers = source["servers"];
+	        this.policy = source["policy"];
+	        this.usedBy = source["usedBy"];
+	        this.file = source["file"];
+	        this.line = source["line"];
+	    }
+	}
+	export class Location {
+	    path: string;
+	    kind: string;
+	    target: string;
+	    flags: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Location(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.kind = source["kind"];
+	        this.target = source["target"];
+	        this.flags = source["flags"];
+	    }
+	}
+	export class Listener {
+	    addr: string;
+	    port: number;
+	    ssl: boolean;
+	    http2: boolean;
+	    default: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Listener(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.addr = source["addr"];
+	        this.port = source["port"];
+	        this.ssl = source["ssl"];
+	        this.http2 = source["http2"];
+	        this.default = source["default"];
+	    }
+	}
+	export class Server {
+	    names: string[];
+	    listeners: Listener[];
+	    root: string;
+	    locations: Location[];
+	    tlsProtocols: string[];
+	    tlsCert: string;
+	    access: string[];
+	    serverTokens: string;
+	    headers: string[];
+	    file: string;
+	    line: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Server(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.names = source["names"];
+	        this.listeners = this.convertValues(source["listeners"], Listener);
+	        this.root = source["root"];
+	        this.locations = this.convertValues(source["locations"], Location);
+	        this.tlsProtocols = source["tlsProtocols"];
+	        this.tlsCert = source["tlsCert"];
+	        this.access = source["access"];
+	        this.serverTokens = source["serverTokens"];
+	        this.headers = source["headers"];
+	        this.file = source["file"];
+	        this.line = source["line"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Analysis {
+	    serverType: string;
+	    servers: Server[];
+	    upstreams: Upstream[];
+	    findings: Finding[];
+	    counts: Counts;
+	    notes: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Analysis(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serverType = source["serverType"];
+	        this.servers = this.convertValues(source["servers"], Server);
+	        this.upstreams = this.convertValues(source["upstreams"], Upstream);
+	        this.findings = this.convertValues(source["findings"], Finding);
+	        this.counts = this.convertValues(source["counts"], Counts);
+	        this.notes = source["notes"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+	
+	
+
+}
+
 export namespace whois {
 	
 	export class Result {
