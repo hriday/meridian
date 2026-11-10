@@ -46,6 +46,8 @@
     --warn-bg: #1b1a14;
     --warn-border: #4a401f;
     --warn-text: #f2c46d;
+    --good-bg: #102516;
+    --good: #5ad17a;
   }
 
   :global(:root[data-theme="light"]) {
@@ -78,6 +80,8 @@
     --warn-bg: #fff7e6;
     --warn-border: #f0d79a;
     --warn-text: #8a6a16;
+    --good-bg: #e7f6ec;
+    --good: #15803d;
   }
 
   /* Terminal: green phosphor on CRT black. Paired with monospace everywhere
@@ -112,6 +116,8 @@
     --warn-bg: #1a1400;
     --warn-border: #5a4a0f;
     --warn-text: #ffcf4d;
+    --good-bg: #04160a;
+    --good: #4dff88;
   }
 
   :global(body) {
