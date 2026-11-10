@@ -1709,6 +1709,26 @@ export namespace snmp {
 	        this.operStatus = source["operStatus"];
 	    }
 	}
+	export class SweepHost {
+	    ip: string;
+	    responded: boolean;
+	    name: string;
+	    descr: string;
+	    uptimeTicks: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SweepHost(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.responded = source["responded"];
+	        this.name = source["name"];
+	        this.descr = source["descr"];
+	        this.uptimeTicks = source["uptimeTicks"];
+	    }
+	}
 
 }
 
