@@ -54,6 +54,31 @@
   function toggleFlow(i: number) {
     openFlow = openFlow === i ? -1 : i;
   }
+
+  // Diagram: lay the flow nodes out on an ellipse; edges are chords.
+  $: diagram = buildDiagram(a);
+  function buildDiagram(an: any) {
+    const flows = (an?.flows ?? []).filter((f: any) => f.src !== f.dst);
+    if (!flows.length) return null;
+    const names: string[] = [...new Set(flows.flatMap((f: any) => [f.src, f.dst]))];
+    if (names.length > 12) return { tooMany: true, count: names.length };
+    const cx = 410, cy = 180, rx = 320, ry = 140;
+    const pos: Record<string, any> = {};
+    names.forEach((name, i) => {
+      const ang = -Math.PI / 2 + (2 * Math.PI * i) / names.length;
+      pos[name] = { name, x: cx + rx * Math.cos(ang), y: cy + ry * Math.sin(ang) };
+    });
+    const edges = flows.map((f: any) => {
+      const a0 = pos[f.src], b0 = pos[f.dst];
+      const dx = b0.x - a0.x, dy = b0.y - a0.y, len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len, uy = dy / len, pad = 48;
+      const x1 = a0.x + ux * pad, y1 = a0.y + uy * pad;
+      const x2 = b0.x - ux * pad, y2 = b0.y - uy * pad;
+      const label = (f.services ?? []).slice(0, 2).join(", ") || (f.action === "deny" ? "deny" : "any");
+      return { x1, y1, x2, y2, mx: (x1 + x2) / 2, my: (y1 + y2) / 2, action: f.action, label };
+    });
+    return { nodes: Object.values(pos), edges, tooMany: false };
+  }
 </script>
 
 <div class="tool">
@@ -160,6 +185,40 @@
         <div class="note">Click a flow to see the exact policies, address objects and IPs behind it.</div>
       {:else}<p class="empty">No permitted or denied flows derived (no enabled policies, or all use negation).</p>{/if}
     </div>
+
+    {#if diagram}
+      <div class="card span">
+        <div class="k">Flow diagram</div>
+        {#if diagram.tooMany}
+          <p class="empty">{diagram.count} nodes — too many to diagram clearly; use the flow table above.</p>
+        {:else}
+          <div class="diagram">
+            <svg viewBox="0 0 820 360" width="100%" role="img" aria-label="VLAN flow diagram">
+              <defs>
+                <marker id="fw-arrow-allow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="var(--good, #5ad17a)"/>
+                </marker>
+                <marker id="fw-arrow-deny" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="var(--bad, #ff6b6b)"/>
+                </marker>
+              </defs>
+              {#each diagram.edges as e}
+                <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+                  class="edge" class:allow={e.action === "allow"} class:deny={e.action === "deny"} />
+                <text class="elabel" x={e.mx} y={e.my - 3} text-anchor="middle">{e.label}</text>
+              {/each}
+              {#each diagram.nodes as n}
+                <g class="dnode">
+                  <rect x={n.x - 44} y={n.y - 17} width="88" height="34" rx="7" />
+                  <text x={n.x} y={n.y + 4} text-anchor="middle">{n.name}</text>
+                </g>
+              {/each}
+            </svg>
+          </div>
+          <div class="note">Green = permitted, red dashed = explicit deny. Arrow points at the destination; labels name the service.</div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -217,4 +276,12 @@
   .polid { color: var(--text-faint); font-family: var(--mono, monospace); }
   .polname { color: var(--text); font-weight: 600; }
   .note { font-size: 0.74rem; color: var(--text-faint); margin-top: 9px; }
+
+  .diagram { background: var(--well); border: 1px solid var(--border-soft); border-radius: 10px; padding: 6px; }
+  .edge { stroke-width: 1.6; fill: none; opacity: .85; }
+  .edge.allow { stroke: var(--good, #5ad17a); marker-end: url(#fw-arrow-allow); }
+  .edge.deny { stroke: var(--bad, #ff6b6b); stroke-dasharray: 4 3; marker-end: url(#fw-arrow-deny); }
+  .elabel { fill: var(--text-dim); font-size: 9.5px; font-family: var(--mono, monospace); }
+  .dnode rect { fill: var(--card); stroke: var(--border-soft); }
+  .dnode text { fill: var(--text); font-size: 11px; font-family: var(--mono, monospace); }
 </style>
