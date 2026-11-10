@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hriday/meridian/internal/dnsaudit"
 	"github.com/hriday/meridian/internal/dnsbl"
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ipspace"
@@ -72,6 +73,7 @@ usage:
   meridian-cli bgp <prefix|ip> [--json]
   meridian-cli tls <host[:port]> [--timeout 8s] [--json]
   meridian-cli blocklist <ip> [--resolver <ip>] [--timeout 8s] [--json]
+  meridian-cli dnsaudit <domain> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
 `
@@ -108,6 +110,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTLS(args[1:], stdout, stderr)
 	case "blocklist":
 		return runBlocklist(args[1:], stdout, stderr)
+	case "dnsaudit":
+		return runDNSAudit(args[1:], stdout, stderr)
 	case "adaudit":
 		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
@@ -933,6 +937,53 @@ func printBlocklistReport(stdout io.Writer, r dnsbl.Report) {
 		}
 		if l.Note != "" {
 			fmt.Fprintf(stdout, "           note: %s\n", l.Note)
+		}
+	}
+}
+
+func runDNSAudit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("dnsaudit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	resolver := fs.String("resolver", "", "resolver to query (default: system)")
+	timeout := fs.Duration("timeout", 8*time.Second, "overall timeout")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "dnsaudit needs exactly one domain\n%s", usage)
+		return 2
+	}
+	srv := *resolver
+	if srv == "" {
+		if f := sysconf.Resolvers(); len(f.Values) > 0 {
+			srv = f.Values[0]
+		} else {
+			srv = "1.1.1.1"
+		}
+	}
+	rep, err := dnsaudit.Audit(context.Background(), pos[0], srv, *timeout)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printDNSAuditReport(stdout, rep)
+	return 0
+}
+
+func printDNSAuditReport(stdout io.Writer, r dnsaudit.Report) {
+	reportRow(stdout, "Domain", r.Domain)
+	reportRow(stdout, "Resolver", r.Resolver)
+	reportRow(stdout, "Summary", r.Summary)
+	fmt.Fprintln(stdout)
+	for _, c := range r.Checks {
+		fmt.Fprintf(stdout, "%-8s %-13s %s\n", string(c.Status), c.Name, c.Note)
+		for _, rec := range c.Records {
+			fmt.Fprintf(stdout, "           %s\n", rec)
 		}
 	}
 }

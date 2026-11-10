@@ -55,7 +55,20 @@ func Query(ctx context.Context, name, rtype, server string) (Result, error) {
 		c.Timeout = time.Until(dl)
 	}
 
-	resp, rtt, err := c.ExchangeContext(ctx, m, withPort(server, "53"))
+	addr := withPort(server, "53")
+	resp, rtt, err := c.ExchangeContext(ctx, m, addr)
+	// Fall back to TCP when UDP fails or the answer is truncated. Real resolvers
+	// truncate large responses (e.g. a domain's apex TXT) and expect a TCP retry;
+	// an oversized UDP datagram also surfaces here as a parse error. TCP has no
+	// size limit, so the retry gets the full answer.
+	if err != nil || (resp != nil && resp.Truncated) {
+		tcp := &mdns.Client{Net: "tcp", Timeout: c.Timeout}
+		if r2, rtt2, err2 := tcp.ExchangeContext(ctx, m, addr); err2 == nil {
+			resp, rtt, err = r2, rtt2, nil
+		} else if err == nil {
+			err = err2
+		}
+	}
 	if err != nil {
 		return Result{}, err
 	}
