@@ -11,6 +11,7 @@ import {ntp} from '../models';
 import {netcat} from '../models';
 import {scan} from '../models';
 import {subnet} from '../models';
+import {tlscheck} from '../models';
 import {trace} from '../models';
 import {wordlist} from '../models';
 
@@ -89,6 +90,8 @@ export function StopTrace():Promise<void>;
 export function SubnetDescribe(arg1:string):Promise<subnet.Info>;
 
 export function SubnetSplit(arg1:string,arg2:number):Promise<Array<string>>;
+
+export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
