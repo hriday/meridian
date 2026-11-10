@@ -146,6 +146,10 @@ export function MACVendor(arg1) {
   return window['go']['app']['App']['MACVendor'](arg1);
 }
 
+export function MIBWalk(arg1, arg2, arg3) {
+  return window['go']['app']['App']['MIBWalk'](arg1, arg2, arg3);
+}
+
 export function NTPQuery(arg1) {
   return window['go']['app']['App']['NTPQuery'](arg1);
 }

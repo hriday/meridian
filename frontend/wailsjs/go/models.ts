@@ -1709,6 +1709,22 @@ export namespace snmp {
 	        this.operStatus = source["operStatus"];
 	    }
 	}
+	export class MIBRow {
+	    oid: string;
+	    type: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MIBRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.oid = source["oid"];
+	        this.type = source["type"];
+	        this.value = source["value"];
+	    }
+	}
 	export class SweepHost {
 	    ip: string;
 	    responded: boolean;
