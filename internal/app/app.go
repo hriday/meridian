@@ -15,6 +15,7 @@ import (
 	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
+	"github.com/hriday/meridian/internal/snmp"
 )
 
 // collectorBuffer is the rolling message cap for each collector (in-memory).
@@ -53,6 +54,7 @@ type App struct {
 	monitors map[string]*monitor
 
 	syslog *collector.Collector[collector.SyslogMsg]
+	traps  *collector.Collector[snmp.TrapMsg]
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -64,6 +66,7 @@ func New() *App {
 		wordlistDir: defaultWordlistDir(),
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 		syslog:      collector.New[collector.SyslogMsg](collectorBuffer, collector.ParseSyslog),
+		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
 	}
 }
 
@@ -81,7 +84,7 @@ func (a *App) startup(ctx context.Context) {
 // OnShutdown returns the Wails OnShutdown callback: stop every running monitor
 // so no polling goroutine outlives the app.
 func OnShutdown(a *App) func(context.Context) {
-	return func(context.Context) { a.stopAllMonitors(); a.syslog.Stop() }
+	return func(context.Context) { a.stopAllMonitors(); a.syslog.Stop(); a.traps.Stop() }
 }
 
 // lookupCtx is the context for outbound lookups: the Wails startup context
