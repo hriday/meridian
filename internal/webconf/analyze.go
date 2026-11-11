@@ -19,6 +19,8 @@ func Analyze(configText, server string) (Analysis, error) {
 	switch s {
 	case "apache":
 		return analyzeApache(configText)
+	case "caddy":
+		return analyzeCaddy(configText)
 	case "nginx":
 		// handled below
 	default:
