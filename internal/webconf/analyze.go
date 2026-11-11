@@ -16,8 +16,13 @@ func Analyze(configText, server string) (Analysis, error) {
 	if s == "" {
 		s = "nginx"
 	}
-	if s != "nginx" {
-		return Analysis{}, fmt.Errorf("server %q is not supported yet — nginx only in this version", server)
+	switch s {
+	case "apache":
+		return analyzeApache(configText)
+	case "nginx":
+		// handled below
+	default:
+		return Analysis{}, fmt.Errorf("server %q is not supported — use nginx, apache, or caddy", server)
 	}
 
 	dirs, err := parse(configText)
