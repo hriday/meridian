@@ -107,3 +107,48 @@ func TestAnalyzePfsenseFlows(t *testing.T) {
 		t.Errorf("disabled DMZ rule should not produce a flow")
 	}
 }
+
+// A <type>match</type> rule is a non-terminating classifier (shaper/queue), not
+// an allow or deny; it must not be drawn as a block flow.
+func TestAnalyzePfsenseMatchRuleNotDeny(t *testing.T) {
+	cfg := `<?xml version="1.0"?><pfsense>
+  <interfaces><lan><if>em1</if><descr>LAN</descr></lan></interfaces>
+  <filter>
+    <rule><type>match</type><interface>lan</interface>
+      <source><any></any></source><destination><any></any></destination>
+      <descr>shaper classifier</descr></rule>
+  </filter>
+</pfsense>`
+	as, err := analyzePfsense(cfg)
+	if err != nil {
+		t.Fatalf("analyzePfsense: %v", err)
+	}
+	if findFlow(as[0].Flows, "LAN", internetNode, "deny") != nil {
+		t.Errorf("a <type>match</type> classifier must not draw a deny flow")
+	}
+}
+
+// A <not/> negation inverts the match; the model turns a negated policy into a
+// Note rather than a misleading literal flow.
+func TestAnalyzePfsenseNegationNoted(t *testing.T) {
+	cfg := `<?xml version="1.0"?><pfsense>
+  <interfaces><lan><if>em1</if><descr>LAN</descr></lan></interfaces>
+  <filter>
+    <rule><type>pass</type><interface>lan</interface>
+      <source><any></any></source>
+      <destination><not></not><network>10.0.0.0/8</network></destination>
+      <descr>allow except internal</descr></rule>
+  </filter>
+</pfsense>`
+	as, err := analyzePfsense(cfg)
+	if err != nil {
+		t.Fatalf("analyzePfsense: %v", err)
+	}
+	a := as[0]
+	if findFlow(a.Flows, "LAN", internetNode, "allow") != nil {
+		t.Errorf("a negated (<not>) rule should become a Note, not a literal allow flow")
+	}
+	if len(a.Policies) != 1 || !a.Policies[0].Negated {
+		t.Errorf("policy should be marked Negated; got %+v", a.Policies)
+	}
+}

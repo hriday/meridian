@@ -59,9 +59,15 @@ func analyzePfsense(configText string) ([]Analysis, error) {
 	}
 
 	nextID := 0
+	matchRules := 0
 	for _, r := range cfg.Filter.Rules {
+		t := strings.ToLower(strings.TrimSpace(r.Type))
+		if t == "match" {
+			matchRules++
+			continue // a non-terminating classifier (shaper/queue), not allow/deny
+		}
 		action := "deny"
-		if strings.EqualFold(strings.TrimSpace(r.Type), "pass") {
+		if t == "pass" {
 			action = "accept"
 		}
 		var srcIntf []string
@@ -82,6 +88,7 @@ func analyzePfsense(configText string) ([]Analysis, error) {
 			Services: services,
 			Action:   action,
 			Disabled: r.Disabled != nil,
+			Negated:  r.Source.Not != nil || r.Dest.Not != nil,
 		}
 		if v := pfEndpoint(r.Source); v != "" {
 			p.SrcAddr = []string{v}
@@ -95,6 +102,9 @@ func analyzePfsense(configText string) ([]Analysis, error) {
 		a.Policies = append(a.Policies, p)
 	}
 
+	if matchRules > 0 {
+		a.Notes = append(a.Notes, fmt.Sprintf("%d match rule(s) (traffic shaping or tagging) take no allow or deny action and are not drawn as flows.", matchRules))
+	}
 	if len(a.Policies) > 0 {
 		a.Notes = append(a.Notes, "pf rules are bound to an interface and filtered by address; flows show the bound interface, with \"Internet (any)\" standing in for the destinations the rule permits — see each policy's source/destination addresses for specifics.")
 	}
@@ -136,6 +146,7 @@ type pfRule struct {
 
 type pfEnd struct {
 	Any     *string `xml:"any"`
+	Not     *string `xml:"not"` // present ⇒ the match is inverted ("except")
 	Network string  `xml:"network"`
 	Address string  `xml:"address"`
 	Port    string  `xml:"port"`
