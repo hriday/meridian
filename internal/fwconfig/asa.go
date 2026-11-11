@@ -160,20 +160,22 @@ func analyzeAsa(configText string) ([]Analysis, error) {
 				curAddr.Kind, curAddr.Value = "fqdn", toks[len(toks)-1]
 			}
 		case ctx == "objsvc" && curSvc != nil:
-			// service tcp|udp destination eq <port>
+			// service tcp|udp [source ...] destination eq|range|lt|gt <port>
 			if len(toks) >= 2 && toks[0] == "service" {
 				curSvc.Proto = strings.ToUpper(toks[1])
-				if port, ok := tokenAfter(toks, "eq"); ok {
-					curSvc.Ports = port
-				}
+				curSvc.Ports = asaPortFromTokens(toks)
 			}
 		case ctx == "oggrpnet" && curAddr != nil:
 			if toks[0] == "network-object" {
 				curAddr.Value = appendCSV(curAddr.Value, asaNetworkObject(toks[1:]))
+			} else if toks[0] == "group-object" && len(toks) >= 2 {
+				curAddr.Value = appendCSV(curAddr.Value, toks[1]) // nested object-group
 			}
 		case ctx == "oggrpsvc" && curSvc != nil:
 			if toks[0] == "service-object" || toks[0] == "port-object" {
 				curSvc.Ports = appendCSV(curSvc.Ports, strings.Join(toks[1:], " "))
+			} else if toks[0] == "group-object" && len(toks) >= 2 {
+				curSvc.Ports = appendCSV(curSvc.Ports, toks[1]) // nested object-group
 			}
 		}
 	}
@@ -228,6 +230,9 @@ func parseAsaAce(toks []string, nextID *int) (*Policy, string) {
 	if i+1 < len(toks) && toks[i] == "line" { // access-list X line N ...
 		i += 2
 	}
+	if i < len(toks) && toks[i] == "standard" {
+		return nil, "" // standard ACLs aren't interface traffic policies
+	}
 	if i < len(toks) && toks[i] == "extended" {
 		i++
 	}
@@ -236,30 +241,34 @@ func parseAsaAce(toks []string, nextID *int) (*Policy, string) {
 	}
 	action := normalizeAction(toks[i])
 	i++
-	proto := strings.ToLower(toks[i])
-	i++
+
+	// The protocol is a bare token (tcp/udp/ip/…) or a service object reference.
+	var proto, svcFromObj string
+	if toks[i] == "object" || toks[i] == "object-group" {
+		if i+1 < len(toks) {
+			svcFromObj = toks[i+1]
+			i += 2
+		}
+	} else {
+		proto = strings.ToLower(toks[i])
+		i++
+	}
+	if i >= len(toks) {
+		return nil, ""
+	}
+
 	src := readAsaSpec(toks, &i)
+	skipAsaSrcPort(toks, &i) // optional source-port operator before the dst spec
 	dst := readAsaSpec(toks, &i)
 
 	var services []string
-	if i < len(toks) {
-		switch toks[i] {
-		case "eq":
-			if i+1 < len(toks) {
-				services = []string{proto + "/" + toks[i+1]}
-			}
-		case "range":
-			if i+2 < len(toks) {
-				services = []string{proto + "/" + toks[i+1] + "-" + toks[i+2]}
-			}
-		case "object", "object-group":
-			if i+1 < len(toks) {
-				services = []string{toks[i+1]}
-			}
+	switch {
+	case svcFromObj != "":
+		services = []string{svcFromObj}
+	case proto != "" && proto != "ip":
+		if port := readAsaDstPort(toks, &i); port != "" {
+			services = []string{proto + "/" + port}
 		}
-	}
-	if proto == "ip" {
-		services = nil // ip = all protocols; no meaningful service label
 	}
 
 	*nextID++
@@ -271,6 +280,99 @@ func parseAsaAce(toks []string, nextID *int) (*Policy, string) {
 		Services: services,
 		Action:   action,
 	}, acl
+}
+
+// skipAsaSrcPort advances i past an optional source-port operator (eq/neq/lt/
+// gt <p>, or range <a> <b>) that can sit between the source and destination
+// address specs. It never consumes an address keyword like object/host.
+func skipAsaSrcPort(toks []string, i *int) {
+	if *i >= len(toks) {
+		return
+	}
+	switch toks[*i] {
+	case "eq", "neq", "lt", "gt":
+		if *i+1 < len(toks) {
+			*i += 2
+		}
+	case "range":
+		if *i+2 < len(toks) {
+			*i += 3
+		}
+	}
+}
+
+// readAsaDstPort reads an optional destination-port spec after the dst address,
+// returning a readable port string, advancing i past it.
+func readAsaDstPort(toks []string, i *int) string {
+	if *i >= len(toks) {
+		return ""
+	}
+	switch toks[*i] {
+	case "eq", "neq":
+		if *i+1 < len(toks) {
+			v := toks[*i+1]
+			*i += 2
+			return v
+		}
+	case "lt":
+		if *i+1 < len(toks) {
+			v := "<" + toks[*i+1]
+			*i += 2
+			return v
+		}
+	case "gt":
+		if *i+1 < len(toks) {
+			v := ">" + toks[*i+1]
+			*i += 2
+			return v
+		}
+	case "range":
+		if *i+2 < len(toks) {
+			v := toks[*i+1] + "-" + toks[*i+2]
+			*i += 3
+			return v
+		}
+	case "object", "object-group":
+		if *i+1 < len(toks) {
+			v := toks[*i+1]
+			*i += 2
+			return v
+		}
+	}
+	return ""
+}
+
+// asaPortFromTokens extracts the port of an `object service` body, preferring
+// the destination port spec when a `destination` keyword is present.
+func asaPortFromTokens(toks []string) string {
+	start := 0
+	for i, t := range toks {
+		if t == "destination" {
+			start = i
+			break
+		}
+	}
+	for i := start; i < len(toks); i++ {
+		switch toks[i] {
+		case "eq", "neq":
+			if i+1 < len(toks) {
+				return toks[i+1]
+			}
+		case "lt":
+			if i+1 < len(toks) {
+				return "<" + toks[i+1]
+			}
+		case "gt":
+			if i+1 < len(toks) {
+				return ">" + toks[i+1]
+			}
+		case "range":
+			if i+2 < len(toks) {
+				return toks[i+1] + "-" + toks[i+2]
+			}
+		}
+	}
+	return ""
 }
 
 // readAsaSpec reads one ASA address spec (any | host <ip> | <ip> <mask> |

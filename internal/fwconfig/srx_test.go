@@ -114,6 +114,43 @@ func TestSrxSecretNotSurfaced(t *testing.T) {
 	require.NotContains(t, string(blob), "SECRETPSKxyz")
 }
 
+// A real SRX `then` block emits permit/deny plus log/count lines; those must
+// not overwrite the action.
+func TestSrxThenLogDoesNotClobberAction(t *testing.T) {
+	cfg := `set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24
+set security zones security-zone trust interfaces ge-0/0/0.0
+set security policies from-zone trust to-zone untrust policy allow-web match source-address any
+set security policies from-zone trust to-zone untrust policy allow-web match destination-address any
+set security policies from-zone trust to-zone untrust policy allow-web then permit
+set security policies from-zone trust to-zone untrust policy allow-web then log session-init
+set security policies from-zone trust to-zone untrust policy allow-web then count`
+	a, err := analyzeSrx(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Policies, 1)
+	require.Equal(t, "accept", a[0].Policies[0].Action)
+}
+
+// Global (zone-less) policies must be kept, not silently dropped.
+func TestSrxGlobalPolicyKept(t *testing.T) {
+	cfg := `set security policies global policy deny-all match source-address any
+set security policies global policy deny-all match destination-address any
+set security policies global policy deny-all then deny`
+	a, err := analyzeSrx(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Policies, 1)
+	require.Equal(t, "deny-all", a[0].Policies[0].Name)
+	require.Equal(t, "deny", a[0].Policies[0].Action)
+}
+
+func TestSrxWildcardAddress(t *testing.T) {
+	cfg := `set security address-book global address odd wildcard-address 10.0.0.0/255.0.0.255`
+	a, err := analyzeSrx(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Addresses, 1)
+	require.Contains(t, a[0].Addresses[0].Value, "10.0.0.0")
+	require.NotEqual(t, "wildcard-address", a[0].Addresses[0].Value)
+}
+
 func TestSrxRejectsCurlyBrace(t *testing.T) {
 	_, err := analyzeSrx("security {\n    zones {\n        security-zone trust;\n    }\n}")
 	require.Error(t, err)

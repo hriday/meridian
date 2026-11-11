@@ -134,6 +134,66 @@ access-group REAL in interface inside`
 	// no panic on an access-group naming a nonexistent ACL
 }
 
+// Standard ACLs aren't interface traffic policies; they must not appear as a
+// policy with a bogus (inverted) action and garbage protocol.
+func TestAsaStandardAclSkipped(t *testing.T) {
+	cfg := `access-list SPLIT standard permit 10.0.0.0 255.0.0.0
+access-list OUT extended permit tcp any any eq 80
+access-group OUT in interface inside
+interface GigabitEthernet0/0
+ nameif inside
+ ip address 10.0.0.1 255.255.255.0`
+	a, err := analyzeAsa(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Policies, 1) // only the extended ACE
+	require.Equal(t, "accept", a[0].Policies[0].Action)
+	require.Equal(t, []string{"tcp/80"}, a[0].Policies[0].Services)
+}
+
+// An ACE with a source-port operator must not corrupt the destination or lose
+// the destination service.
+func TestAsaSourcePortAce(t *testing.T) {
+	cfg := `access-list OUT extended permit tcp host 1.1.1.1 eq 1024 any eq 443
+access-group OUT in interface outside
+interface GigabitEthernet0/0
+ nameif outside
+ ip address 203.0.113.1 255.255.255.0`
+	a, err := analyzeAsa(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Policies, 1)
+	p := a[0].Policies[0]
+	require.Equal(t, []string{"1.1.1.1/32"}, p.SrcAddr)
+	require.Equal(t, []string{"any"}, p.DstAddr)
+	require.Equal(t, []string{"tcp/443"}, p.Services)
+}
+
+// A nested group-object inside an object-group must be included as a member.
+func TestAsaNestedObjectGroup(t *testing.T) {
+	cfg := `object-group network inner
+ network-object host 10.0.0.5
+object-group network outer
+ group-object inner
+ network-object 10.0.1.0 255.255.255.0`
+	a, err := analyzeAsa(cfg)
+	require.NoError(t, err)
+	outer := map[string]Address{}
+	for _, x := range a[0].Addresses {
+		outer[x.Name] = x
+	}
+	require.Contains(t, outer["outer"].Value, "inner")
+	require.Contains(t, outer["outer"].Value, "10.0.1.0/24")
+}
+
+// An object service with a port range (not eq) must still capture the ports.
+func TestAsaServiceRange(t *testing.T) {
+	cfg := `object service bigports
+ service tcp destination range 1000 2000`
+	a, err := analyzeAsa(cfg)
+	require.NoError(t, err)
+	require.Len(t, a[0].Services, 1)
+	require.Equal(t, "1000-2000", a[0].Services[0].Ports)
+}
+
 func TestAsaSecretNotSurfaced(t *testing.T) {
 	a := asa(t, asaCfg)
 	blob, err := json.Marshal(a)

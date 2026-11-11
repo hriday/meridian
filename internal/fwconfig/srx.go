@@ -125,9 +125,14 @@ func analyzeSrx(configText string) ([]Analysis, error) {
 				}
 			case "policies":
 				// security policies from-zone <X> to-zone <Y> policy <P> match|then ...
-				if len(toks) >= 9 && toks[2] == "from-zone" && toks[4] == "to-zone" && toks[6] == "policy" {
+				// security policies global policy <P> match|then ...  (zone-less)
+				switch {
+				case len(toks) >= 9 && toks[2] == "from-zone" && toks[4] == "to-zone" && toks[6] == "policy":
 					p := getPol(toks[3], toks[5], toks[7])
 					applySrxPolicy(p, toks[8:])
+				case len(toks) >= 5 && toks[2] == "global" && toks[3] == "policy":
+					p := getPol("any", "any", toks[4])
+					applySrxPolicy(p, toks[5:])
 				}
 			}
 		case "applications":
@@ -198,6 +203,10 @@ func applySrxAddress(x *Address, vals []string) {
 		if len(vals) >= 3 {
 			x.Kind, x.Value = "iprange", vals[1]+"-"+vals[len(vals)-1]
 		}
+	case "wildcard-address":
+		if len(vals) >= 2 {
+			x.Kind, x.Value = "wildcard", vals[1]
+		}
 	default:
 		x.Kind, x.Value = "subnet", vals[0]
 	}
@@ -224,7 +233,12 @@ func applySrxPolicy(p *Policy, toks []string) {
 			}
 		}
 	case "then":
-		p.Action = normalizeAction(toks[1]) // permit→accept; deny/reject→deny
+		// Only the action verb sets the action; `then log`/`then count`/
+		// `then log session-init` etc. are not actions and must not clobber it.
+		switch toks[1] {
+		case "permit", "deny", "reject":
+			p.Action = normalizeAction(toks[1])
+		}
 	}
 }
 
