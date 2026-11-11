@@ -25,7 +25,7 @@ type Poll[T any] struct {
 // a bounded ring. One instance is a singleton per kind on the App.
 type Collector[T any] struct {
 	cap   int
-	parse func(datagram []byte, src netip.Addr) (T, bool)
+	parse func(datagram []byte, src netip.Addr) []T
 
 	opMu    sync.Mutex // serializes Start/Stop so their sections can't interleave
 	mu      sync.Mutex // guards the fields below (Poll reads them)
@@ -38,8 +38,19 @@ type Collector[T any] struct {
 }
 
 // New returns a collector that buffers up to capacity messages, parsing each
-// datagram with parse (which returns ok=false to drop it).
+// datagram into at most one message (parse returns ok=false to drop it).
 func New[T any](capacity int, parse func(datagram []byte, src netip.Addr) (T, bool)) *Collector[T] {
+	return NewMulti[T](capacity, func(b []byte, a netip.Addr) []T {
+		if m, ok := parse(b, a); ok {
+			return []T{m}
+		}
+		return nil
+	})
+}
+
+// NewMulti returns a collector whose parse yields zero or more messages per
+// datagram (e.g. a NetFlow packet carrying many flow records).
+func NewMulti[T any](capacity int, parse func(datagram []byte, src netip.Addr) []T) *Collector[T] {
 	return &Collector[T]{cap: capacity, parse: parse}
 }
 
@@ -73,9 +84,7 @@ func (c *Collector[T]) Start(port int) error {
 			if rerr != nil {
 				return // conn closed by Stop
 			}
-			if m, ok := parse(buf[:n], ap.Addr().Unmap()); ok { // unmap ::ffff:v4 → v4
-				ring.Add(m)
-			}
+			ring.AddAll(parse(buf[:n], ap.Addr().Unmap())) // unmap ::ffff:v4 → v4
 		}
 	}()
 	return nil
@@ -105,6 +114,18 @@ func (c *Collector[T]) stopLocked() {
 
 	conn.Close()
 	<-done
+}
+
+// Snapshot returns the buffered values matching keep (copied under the ring
+// lock), or nil when the collector isn't running. The caller processes them
+// outside the lock.
+func (c *Collector[T]) Snapshot(keep func(T) bool) []T {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ring == nil {
+		return nil
+	}
+	return c.ring.Values(keep)
 }
 
 // PollSince returns the current state plus the buffered messages with Seq >
