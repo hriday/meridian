@@ -36,6 +36,8 @@
   import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
   import { requestedTool } from "./nav";
+  import { AppVersion, CheckForUpdate } from "../../wailsjs/go/app/App.js";
+  import { BrowserOpenURL } from "../../wailsjs/runtime/runtime.js";
 
   type Tool = { id: string; name: string; group: string; ready: boolean };
   const tools: Tool[] = [
@@ -106,6 +108,29 @@
   let searchEl: HTMLInputElement;
   let filter = "";
 
+  // Version + an explicitly user-initiated update check (no background polling).
+  let appVersion = "";
+  AppVersion().then((v) => (appVersion = v)).catch(() => {});
+
+  let upState: "idle" | "checking" | "latest" | "available" | "error" = "idle";
+  let upLatest = "";
+  let upURL = "";
+  let upMsg = "";
+  async function checkUpdates() {
+    if (upState === "checking") return;
+    upState = "checking";
+    upMsg = "";
+    try {
+      const r = await CheckForUpdate();
+      upLatest = r.latest;
+      upURL = r.url;
+      upState = r.newer ? "available" : "latest";
+    } catch (e) {
+      upState = "error";
+      upMsg = String(e);
+    }
+  }
+
   function onKey(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
@@ -163,26 +188,44 @@
   <div class="body">
     {#if !sideCollapsed}
       <nav class="side">
-        {#each groups as g}
-          {#if visible(g).length}
-            <button class="grp" on:click={() => toggleGroup(g)}>
-              <span class="caret">{closed[g] && !filter ? "▸" : "▾"}</span>{g}
-            </button>
-            {#if !(closed[g] && !filter)}
-              {#each visible(g) as t}
-                <button
-                  class="item"
-                  class:on={active === t.id}
-                  class:disabled={!t.ready}
-                  on:click={() => t.ready && (active = t.id)}
-                  title={t.ready ? t.name : `${t.name} — coming soon`}
-                >
-                  {t.name}{#if !t.ready}<span class="soon">soon</span>{/if}
-                </button>
-              {/each}
+        <div class="navscroll">
+          {#each groups as g}
+            {#if visible(g).length}
+              <button class="grp" on:click={() => toggleGroup(g)}>
+                <span class="caret">{closed[g] && !filter ? "▸" : "▾"}</span>{g}
+              </button>
+              {#if !(closed[g] && !filter)}
+                {#each visible(g) as t}
+                  <button
+                    class="item"
+                    class:on={active === t.id}
+                    class:disabled={!t.ready}
+                    on:click={() => t.ready && (active = t.id)}
+                    title={t.ready ? t.name : `${t.name} — coming soon`}
+                  >
+                    {t.name}{#if !t.ready}<span class="soon">soon</span>{/if}
+                  </button>
+                {/each}
+              {/if}
             {/if}
+          {/each}
+        </div>
+        <div class="sidefoot">
+          <span class="ver mono">Meridian {appVersion || "…"}</span>
+          {#if upState === "available"}
+            <button class="upd avail" on:click={() => BrowserOpenURL(upURL)} title="Open the release page">
+              {upLatest} available ↗
+            </button>
+          {:else if upState === "latest"}
+            <span class="upd ok">✓ Up to date</span>
+          {:else if upState === "error"}
+            <button class="upd link" on:click={checkUpdates} title={upMsg}>Check failed — retry</button>
+          {:else}
+            <button class="upd link" on:click={checkUpdates} disabled={upState === "checking"}>
+              {upState === "checking" ? "Checking…" : "Check for updates"}
+            </button>
           {/if}
-        {/each}
+        </div>
       </nav>
     {/if}
 
@@ -226,8 +269,24 @@
   .body { flex: 1; display: flex; min-height: 0; }
   .side {
     width: 190px; flex: none; background: var(--panel); border-right: 1px solid var(--border);
-    padding: 8px; overflow-y: auto;
+    display: flex; flex-direction: column; overflow: hidden;
   }
+  .navscroll { flex: 1; overflow-y: auto; padding: 8px; }
+  .sidefoot {
+    flex: none; border-top: 1px solid var(--border); padding: 9px 10px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .ver { font-size: 0.68rem; color: var(--text-faint); }
+  .upd {
+    font-size: 0.72rem; text-align: left; background: none; border: none; padding: 0;
+    cursor: pointer; line-height: 1.3;
+  }
+  .upd.link { color: var(--accent); }
+  .upd.link:hover { text-decoration: underline; }
+  .upd.avail { color: var(--accent); font-weight: 600; }
+  .upd.avail:hover { text-decoration: underline; }
+  .upd.ok { color: var(--good, #3fb950); cursor: default; }
+  .upd:disabled { color: var(--text-faint); cursor: default; }
   .grp {
     display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
     background: none; border: none; cursor: pointer;

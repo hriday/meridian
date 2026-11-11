@@ -34,6 +34,10 @@ export function AnalyzeWebServer(arg1, arg2) {
   return window['go']['app']['App']['AnalyzeWebServer'](arg1, arg2);
 }
 
+export function AppVersion() {
+  return window['go']['app']['App']['AppVersion']();
+}
+
 export function AtlasKeyStatus() {
   return window['go']['app']['App']['AtlasKeyStatus']();
 }
@@ -48,6 +52,10 @@ export function AtlasTrace(arg1, arg2) {
 
 export function Blocklist(arg1, arg2) {
   return window['go']['app']['App']['Blocklist'](arg1, arg2);
+}
+
+export function CheckForUpdate() {
+  return window['go']['app']['App']['CheckForUpdate']();
 }
 
 export function Classify(arg1) {
