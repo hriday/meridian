@@ -22,19 +22,25 @@
   let sevFloor = 7;
   let err = "";
   let timer: any = null;
+  let polling = false; // single-flight: a slow poll can't overlap the next tick
 
   function applyItems(p: any) {
     running = p.running;
     total = p.total;
     dropped = p.dropped;
     if (p.port) port = p.port;
-    if (p.items && p.items.length) {
-      rows = [...rows, ...p.items.map((it: any) => ({ seq: it.seq, ...it.val }))].slice(-CAP);
-      lastSeq = p.items[p.items.length - 1].seq;
+    // Only take items strictly newer than our cursor — idempotent even if two
+    // responses overlap, so rows can never hold duplicate seqs (keyed-each).
+    const fresh = (p.items || []).filter((it: any) => it.seq > lastSeq);
+    if (fresh.length) {
+      rows = [...rows, ...fresh.map((it: any) => ({ seq: it.seq, ...it.val }))].slice(-CAP);
+      lastSeq = fresh[fresh.length - 1].seq;
     }
   }
 
   async function poll() {
+    if (polling) return;
+    polling = true;
     try {
       const p = await SyslogPoll(lastSeq);
       if (epoch !== 0 && p.epoch !== epoch) {
@@ -48,6 +54,8 @@
       applyItems(p);
     } catch {
       /* transient; next tick retries */
+    } finally {
+      polling = false;
     }
   }
 

@@ -3,6 +3,8 @@ package collector
 import (
 	"net"
 	"net/netip"
+	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -71,6 +73,24 @@ func TestCollectorRestartBumpsEpoch(t *testing.T) {
 	require.NoError(t, c.Start(0)) // restart
 	e2 := c.PollSince(0).Epoch
 	require.Greater(t, e2, e1)
+}
+
+func TestCollectorConcurrentStartNoLeak(t *testing.T) {
+	base := runtime.NumGoroutine()
+	for round := 0; round < 20; round++ {
+		c := New[string](10, echoParse)
+		var wg sync.WaitGroup
+		for i := 0; i < 4; i++ {
+			wg.Add(1)
+			go func() { defer wg.Done(); _ = c.Start(0) }()
+		}
+		wg.Wait()
+		c.Stop()
+	}
+	// read-loop goroutines of leaked binds would never exit; allow settle.
+	require.Eventually(t, func() bool {
+		return runtime.NumGoroutine() <= base+3
+	}, 2*time.Second, 50*time.Millisecond)
 }
 
 func TestCollectorBindInUse(t *testing.T) {

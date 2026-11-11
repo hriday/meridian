@@ -1,9 +1,11 @@
 package collector
 
 import (
+	"bytes"
 	"net/netip"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +51,20 @@ func TestParseSyslogTruncatesAndHex(t *testing.T) {
 	m2, ok := ParseSyslog(bin, src)
 	require.True(t, ok)
 	require.NotContains(t, m2.Message, "\x00")
+}
+
+func TestParseSyslogValidUTF8(t *testing.T) {
+	// a 2-byte rune straddling the 2048-byte truncation must not leave invalid UTF-8.
+	m, ok := ParseSyslog([]byte("<13>"+strings.Repeat("a", 2047)+"é"), src)
+	require.True(t, ok)
+	require.True(t, utf8.ValidString(m.Message))
+}
+
+func TestParseSyslogBigBinaryBounded(t *testing.T) {
+	payload := append([]byte("<13>"), bytes.Repeat([]byte{0x00, 0xff}, 40000)...) // 80 KB binary
+	m, ok := ParseSyslog(payload, src)
+	require.True(t, ok)
+	require.LessOrEqual(t, len(m.Message), maxSyslogMsg)
 }
 
 func TestParseSyslogEmpty(t *testing.T) {

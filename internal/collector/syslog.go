@@ -75,13 +75,23 @@ func ParseSyslog(datagram []byte, src netip.Addr) (SyslogMsg, bool) {
 	return m, true
 }
 
-// clip renders text printable-as-is or hex, then bounds the length.
+// clip bounds and renders a message: it first caps the raw bytes (so a huge
+// binary datagram isn't hex-expanded in full), then renders printable text
+// as-is or non-text as hex, bounding the result and trimming any partial
+// trailing UTF-8 rune left by the byte truncation.
 func clip(s string) string {
-	if !printable(s) {
-		s = hex.EncodeToString([]byte(s))
-	}
 	if len(s) > maxSyslogMsg {
 		s = s[:maxSyslogMsg]
+	}
+	if !printable(s) {
+		s = hex.EncodeToString([]byte(s))
+		if len(s) > maxSyslogMsg {
+			s = s[:maxSyslogMsg]
+		}
+		return s // hex is pure ASCII
+	}
+	for len(s) > 0 && !utf8.ValidString(s) {
+		s = s[:len(s)-1]
 	}
 	return s
 }

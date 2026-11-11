@@ -27,7 +27,8 @@ type Collector[T any] struct {
 	cap   int
 	parse func(datagram []byte, src netip.Addr) (T, bool)
 
-	mu      sync.Mutex
+	opMu    sync.Mutex // serializes Start/Stop so their sections can't interleave
+	mu      sync.Mutex // guards the fields below (Poll reads them)
 	running bool
 	port    int
 	epoch   int
@@ -47,7 +48,9 @@ func New[T any](capacity int, parse func(datagram []byte, src netip.Addr) (T, bo
 // bumping the epoch. A bind failure (port taken/privileged) is returned and the
 // collector stays stopped.
 func (c *Collector[T]) Start(port int) error {
-	c.Stop() // restart semantics; no-op when not running
+	c.opMu.Lock() // whole Start is atomic against another Start/Stop
+	defer c.opMu.Unlock()
+	c.stopLocked() // restart semantics; no-op when not running
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: port})
 	if err != nil {
 		return err
@@ -79,8 +82,15 @@ func (c *Collector[T]) Start(port int) error {
 }
 
 // Stop closes the socket, blocks until the read loop exits, and discards the
-// buffer. It holds no lock while waiting, so it can't deadlock OnShutdown.
+// buffer. It holds no field lock while waiting, so it can't deadlock OnShutdown.
 func (c *Collector[T]) Stop() {
+	c.opMu.Lock()
+	defer c.opMu.Unlock()
+	c.stopLocked()
+}
+
+// stopLocked stops the collector; the caller must hold opMu.
+func (c *Collector[T]) stopLocked() {
 	c.mu.Lock()
 	if !c.running {
 		c.mu.Unlock()
