@@ -108,6 +108,65 @@ func TestApacheDeprecatedTLS(t *testing.T) {
 	require.NotEmpty(t, with(a, "TLSv1")) // TLSv1 explicitly enabled
 }
 
+// The one-arg `ProxyPass <url>` inside <Location> takes its path from the
+// enclosing <Location> — the backend must be captured, not dropped.
+func TestApacheProxyPassOneArgInLocation(t *testing.T) {
+	cfg := `<VirtualHost *:443>
+    ServerName x
+    SSLEngine on
+    SSLCertificateFile /c
+    <Location /api>
+        ProxyPass http://backend:8080/
+    </Location>
+</VirtualHost>`
+	a, err := analyzeApache(cfg)
+	require.NoError(t, err)
+	var prox *Location
+	for i := range a.Servers[0].Locations {
+		if a.Servers[0].Locations[i].Kind == "proxy" {
+			prox = &a.Servers[0].Locations[i]
+		}
+	}
+	require.NotNil(t, prox)
+	require.Equal(t, "/api", prox.Path)
+	require.Equal(t, "http://backend:8080/", prox.Target)
+}
+
+// Security headers declared at Apache main-config scope apply to every vhost.
+func TestApacheGlobalHeadersApplied(t *testing.T) {
+	cfg := `Header always set Strict-Transport-Security "max-age=1"
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options SAMEORIGIN
+<VirtualHost *:443>
+    ServerName x
+    SSLEngine on
+    SSLCertificateFile /c
+</VirtualHost>`
+	a, err := analyzeApache(cfg)
+	require.NoError(t, err)
+	require.Empty(t, with(a, "HSTS"))
+	require.Empty(t, with(a, "X-Frame"))
+	require.Empty(t, with(a, "X-Content-Type"))
+}
+
+func TestApacheSSLEngineSkipsPort80(t *testing.T) {
+	cfg := `<VirtualHost *:80 *:443>
+    ServerName x
+    SSLEngine on
+    SSLCertificateFile /c
+</VirtualHost>`
+	a, err := analyzeApache(cfg)
+	require.NoError(t, err)
+	for _, l := range a.Servers[0].Listeners {
+		if l.Port == 80 {
+			require.False(t, l.SSL)
+		}
+		if l.Port == 443 {
+			require.True(t, l.SSL)
+		}
+	}
+}
+
 func TestApacheSecretNotSurfaced(t *testing.T) {
 	a, _, _ := apacheServers(t, apacheCfg)
 	blob, err := json.Marshal(a)

@@ -20,9 +20,10 @@ func analyzeCaddy(configText string) (Analysis, error) {
 	a := newAnalysis()
 	a.ServerType = "caddy"
 
-	var stack []string // block kinds, innermost last: global | snippet | site | header | other
+	var stack []string // block kinds, innermost last: global | snippet | site | header | revproxy | other
 	var cur *Server
 	hasImport := false
+	revproxyIdx := -1 // index of the Location whose reverse_proxy block is open
 
 	for _, ln := range caddyLogicalLines(configText) {
 		if ln == "}" {
@@ -73,7 +74,8 @@ func analyzeCaddy(configText string) (Analysis, error) {
 					stack = append(stack, "header")
 				case "reverse_proxy":
 					caddyReverseProxy(cur, toks[1:])
-					stack = append(stack, "other")
+					revproxyIdx = len(cur.Locations) - 1
+					stack = append(stack, "revproxy")
 				case "tls":
 					caddyTLS(cur, toks[1:])
 					stack = append(stack, "other")
@@ -86,8 +88,15 @@ func analyzeCaddy(configText string) (Analysis, error) {
 		case "header":
 			if opens {
 				stack = append(stack, "other")
-			} else if n := strings.TrimLeft(first(toks), "+-?"); n != "" {
-				cur.Headers = append(cur.Headers, n)
+			} else {
+				caddyAddHeader(cur, first(toks))
+			}
+		case "revproxy":
+			if opens {
+				stack = append(stack, "other")
+			} else if strings.EqualFold(first(toks), "to") && len(toks) >= 2 &&
+				revproxyIdx >= 0 && revproxyIdx < len(cur.Locations) && cur.Locations[revproxyIdx].Target == "" {
+				cur.Locations[revproxyIdx].Target = toks[1]
 			}
 		default: // global, snippet, other
 			if opens {
@@ -97,6 +106,11 @@ func analyzeCaddy(configText string) (Analysis, error) {
 				hasImport = true
 			}
 		}
+	}
+
+	if cur != nil { // flush an unclosed final site
+		a.Servers = append(a.Servers, *cur)
+		cur = nil
 	}
 
 	if hasImport {
@@ -128,9 +142,7 @@ func caddySiteDirective(cur *Server, toks []string, hasImport *bool) {
 		caddyTLS(cur, args)
 	case "header":
 		if len(args) >= 1 {
-			if n := strings.TrimLeft(args[0], "+-?"); n != "" {
-				cur.Headers = append(cur.Headers, n)
-			}
+			caddyAddHeader(cur, args[0])
 		}
 	case "redir":
 		loc := Location{Kind: "redirect"}
@@ -228,12 +240,23 @@ func caddyListener(addr string) Listener {
 		ln.Port, ln.SSL = orDefault(port, 443), true
 	case port == 80:
 		ln.Port = 80
-	case port != 0:
-		ln.Port, ln.SSL = port, port == 443
+	case port != 0: // bare host with a non-80 port → Caddy serves it over TLS
+		ln.Port, ln.SSL = port, true
 	default: // bare hostname → auto-HTTPS
 		ln.Port, ln.SSL = 443, true
 	}
 	return ln
+}
+
+// caddyAddHeader records a header name set by a `header` directive, skipping the
+// `-Name` (remove) form and stripping a leading `+`/`?`.
+func caddyAddHeader(cur *Server, tok string) {
+	if cur == nil || tok == "" || strings.HasPrefix(tok, "-") {
+		return
+	}
+	if n := strings.TrimLeft(tok, "+?"); n != "" {
+		cur.Headers = append(cur.Headers, n)
+	}
 }
 
 // caddyRoot returns the filesystem path of a `root [matcher] <path>` directive.

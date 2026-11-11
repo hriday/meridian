@@ -90,6 +90,55 @@ func TestCaddyBrowseAutoindex(t *testing.T) {
 	require.NotEmpty(t, with(a, "autoindex")) // file_server browse
 }
 
+// The block-body reverse_proxy (load-balancer form) must capture a backend.
+func TestCaddyReverseProxyBlockBody(t *testing.T) {
+	cfg := `example.com {
+    reverse_proxy {
+        to backend1:80
+        to backend2:80
+    }
+}`
+	a, err := analyzeCaddy(cfg)
+	require.NoError(t, err)
+	require.Len(t, a.Servers, 1)
+	var prox *Location
+	for i := range a.Servers[0].Locations {
+		if a.Servers[0].Locations[i].Kind == "proxy" {
+			prox = &a.Servers[0].Locations[i]
+		}
+	}
+	require.NotNil(t, prox)
+	require.Equal(t, "backend1:80", prox.Target)
+}
+
+// `header -Name` removes a header; it must not be recorded as present.
+func TestCaddyHeaderUnsetNotRecorded(t *testing.T) {
+	cfg := `secure.example.com {
+    tls /c /k
+    header -Strict-Transport-Security
+}`
+	a, err := analyzeCaddy(cfg)
+	require.NoError(t, err)
+	require.NotEmpty(t, with(a, "HSTS")) // header removed → still missing
+}
+
+func TestCaddyUnclosedFinalSite(t *testing.T) {
+	cfg := `example.com {
+    reverse_proxy localhost:3000`
+	a, err := analyzeCaddy(cfg)
+	require.NoError(t, err)
+	require.Len(t, a.Servers, 1)
+}
+
+func TestCaddyNonStandardPortTLS(t *testing.T) {
+	cfg := `example.com:8443 {
+    reverse_proxy localhost:3000
+}`
+	a, err := analyzeCaddy(cfg)
+	require.NoError(t, err)
+	require.True(t, a.Servers[0].Listeners[0].SSL)
+}
+
 func TestCaddySecretNotSurfaced(t *testing.T) {
 	a, _ := caddyByName(t, caddyCfg)
 	blob, err := json.Marshal(a)

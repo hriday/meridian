@@ -20,18 +20,21 @@ func analyzeApache(configText string) (Analysis, error) {
 	a.ServerType = "apache"
 
 	globalTokens := ""
+	var globalHeaders []string
 	hasInclude := false
 	var cur *Server // current <VirtualHost>
 	// current inner <Directory>/<Location> block
 	var innerActive bool
-	var innerKind, innerPath string
+	var innerKind, innerPath, innerProxyTarget string
 	var innerIndexes bool
 
 	flushInner := func() {
 		if innerActive && cur != nil {
 			if innerKind == "location" {
 				loc := Location{Path: innerPath, Kind: "static"}
-				if innerIndexes {
+				if innerProxyTarget != "" { // one-arg ProxyPass inside <Location>
+					loc.Kind, loc.Target = "proxy", innerProxyTarget
+				} else if innerIndexes {
 					loc.Flags = append(loc.Flags, "autoindex on")
 				}
 				cur.Locations = append(cur.Locations, loc)
@@ -39,7 +42,7 @@ func analyzeApache(configText string) (Analysis, error) {
 				cur.Locations = append(cur.Locations, Location{Path: innerPath, Kind: "static", Flags: []string{"autoindex on"}})
 			}
 		}
-		innerActive, innerKind, innerPath, innerIndexes = false, "", "", false
+		innerActive, innerKind, innerPath, innerIndexes, innerProxyTarget = false, "", "", false, ""
 	}
 	closeVHost := func() {
 		flushInner()
@@ -98,6 +101,12 @@ func analyzeApache(configText string) (Analysis, error) {
 				if innerActive && apacheHasIndexes(args) {
 					innerIndexes = true
 				}
+			case "header":
+				if cur == nil { // main-config scope: applies to every vhost
+					if h := apacheHeaderName(args); h != "" {
+						globalHeaders = append(globalHeaders, h)
+					}
+				}
 			}
 			if cur == nil {
 				continue
@@ -110,7 +119,9 @@ func analyzeApache(configText string) (Analysis, error) {
 			case "sslengine":
 				if strings.EqualFold(first(args), "on") {
 					for i := range cur.Listeners {
-						cur.Listeners[i].SSL = true
+						if cur.Listeners[i].Port != 80 {
+							cur.Listeners[i].SSL = true
+						}
 					}
 				}
 			case "sslprotocol":
@@ -122,9 +133,13 @@ func analyzeApache(configText string) (Analysis, error) {
 					cur.Headers = append(cur.Headers, h)
 				}
 			case "proxypass":
-				// ProxyPass <path> <url> [opts]; skip the "!" exclusion form
-				if len(args) >= 2 && args[1] != "!" {
+				// ProxyPass <path> <url> [opts]; or one-arg ProxyPass <url> inside
+				// a <Location> (path from the enclosing block). Skip the "!" form.
+				switch {
+				case len(args) >= 2 && args[1] != "!":
 					cur.Locations = append(cur.Locations, Location{Path: args[0], Kind: "proxy", Target: args[1]})
+				case len(args) == 1 && args[0] != "!" && innerActive && innerKind == "location":
+					innerProxyTarget = args[0]
 				}
 			case "redirect", "redirectmatch":
 				cur.Locations = append(cur.Locations, apacheRedirect(args))
@@ -132,6 +147,11 @@ func analyzeApache(configText string) (Analysis, error) {
 		}
 	}
 	closeVHost() // flush an unclosed final vhost
+
+	// Apache main-config headers apply to every vhost.
+	for i := range a.Servers {
+		a.Servers[i].Headers = append(a.Servers[i].Headers, globalHeaders...)
+	}
 
 	if hasInclude {
 		a.Findings = append(a.Findings, Finding{
