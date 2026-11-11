@@ -6,9 +6,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hriday/meridian/internal/ipspace"
 )
+
+// syncTimeout bounds a single sync network round-trip so a slow or unreachable
+// backend can't hang the UI indefinitely.
+const syncTimeout = 30 * time.Second
 
 // Sync lets several people share one IP-space inventory by hosting a single
 // encrypted blob on a backend of their choice. Each person's changes stay local
@@ -18,11 +23,18 @@ import (
 // uses the same passphrase as the local store, so a team agrees on one inventory
 // passphrase. Backend config and the base live in sidecars next to the store.
 
-// syncConfig is the (non-secret) backend configuration persisted beside the store.
+// syncConfig is the backend configuration persisted (encrypted) beside the store.
+// It may hold backend credentials (S3), so it is sealed with the store passphrase
+// rather than written in the clear.
 type syncConfig struct {
-	Kind string `json:"kind"` // "local" today
-	Path string `json:"path"`
+	Kind string             `json:"kind"`           // "local" | "s3"
+	Path string             `json:"path,omitempty"` // local/mounted path
+	S3   *ipspace.S3Config  `json:"s3,omitempty"`   // S3-compatible connection + credentials
 }
+
+// errNoBackend means no sync backend is configured (distinct from a configured
+// backend that failed to build).
+var errNoBackend = fmt.Errorf("set up a sync location first")
 
 // SyncInfo reports the configured backend to the UI.
 type SyncInfo struct {
@@ -40,54 +52,135 @@ type SyncResult struct {
 	Applied           bool                      `json:"applied"`           // true when apply wrote the merge
 }
 
-func (a *App) syncConfigPath() string { return sidecarPath(a.ipPath, ".sync.json") }
-func (a *App) syncBasePath() string   { return sidecarPath(a.ipPath, ".base.enc") }
+func (a *App) syncConfigEncPath() string    { return sidecarPath(a.ipPath, ".sync.enc") }
+func (a *App) syncConfigLegacyPath() string { return sidecarPath(a.ipPath, ".sync.json") }
+func (a *App) syncBasePath() string         { return sidecarPath(a.ipPath, ".base.enc") }
 
 // sidecarPath turns ".../ipspace.enc" into ".../ipspace<suffix>".
 func sidecarPath(storePath, suffix string) string {
 	return strings.TrimSuffix(storePath, ".enc") + suffix
 }
 
+// loadSyncConfig returns the backend config, cached after the first decrypt so a
+// refresh doesn't re-run the KDF. The cache is invalidated on unlock/create.
 func (a *App) loadSyncConfig() (syncConfig, bool) {
-	raw, err := os.ReadFile(a.syncConfigPath())
-	if err != nil {
-		return syncConfig{}, false
+	if a.ipSyncCfgLoaded {
+		if a.ipSyncCfg == nil {
+			return syncConfig{}, false
+		}
+		return *a.ipSyncCfg, true
 	}
-	var cfg syncConfig
-	if err := json.Unmarshal(raw, &cfg); err != nil || cfg.Path == "" {
-		return syncConfig{}, false
+	cfg, ok := a.readSyncConfig()
+	a.ipSyncCfgLoaded = true
+	if ok {
+		c := cfg
+		a.ipSyncCfg = &c
+	} else {
+		a.ipSyncCfg = nil
 	}
-	return cfg, true
+	return cfg, ok
 }
 
-func (a *App) backend() (ipspace.Backend, bool) {
+// readSyncConfig decrypts the sealed sidecar with the store passphrase. It also
+// reads a pre-encryption plaintext sidecar (local path only) so a config written
+// by an earlier build keeps working.
+func (a *App) readSyncConfig() (syncConfig, bool) {
+	if raw, err := os.ReadFile(a.syncConfigEncPath()); err == nil {
+		if !a.ipUnlocked {
+			return syncConfig{}, false
+		}
+		plain, err := ipspace.Open(a.ipPass, raw)
+		if err != nil {
+			return syncConfig{}, false
+		}
+		var cfg syncConfig
+		if json.Unmarshal(plain, &cfg) != nil || cfg.Kind == "" {
+			return syncConfig{}, false
+		}
+		return cfg, true
+	}
+	// Legacy plaintext local-path config from before the config was encrypted.
+	if raw, err := os.ReadFile(a.syncConfigLegacyPath()); err == nil {
+		var cfg syncConfig
+		if json.Unmarshal(raw, &cfg) == nil && cfg.Path != "" {
+			cfg.Kind = "local"
+			return cfg, true
+		}
+	}
+	return syncConfig{}, false
+}
+
+func (a *App) saveSyncConfig(cfg syncConfig) error {
+	raw, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	blob, err := ipspace.Seal(a.ipPass, raw)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(a.syncConfigEncPath(), blob, 0o600); err != nil {
+		return err
+	}
+	os.Remove(a.syncConfigLegacyPath()) // drop any superseded plaintext config
+	c := cfg                            // refresh the cache
+	a.ipSyncCfg = &c
+	a.ipSyncCfgLoaded = true
+	return nil
+}
+
+// backend builds the configured backend, or errNoBackend if none is set.
+func (a *App) backend() (ipspace.Backend, error) {
 	cfg, ok := a.loadSyncConfig()
 	if !ok {
-		return nil, false
+		return nil, errNoBackend
 	}
+	return a.buildBackend(cfg)
+}
+
+// buildBackend constructs a backend from a config, honoring the test seam.
+func (a *App) buildBackend(cfg syncConfig) (ipspace.Backend, error) {
 	if a.ipMakeBackend != nil {
-		return a.ipMakeBackend(cfg.Kind, cfg.Path)
+		b, ok := a.ipMakeBackend(cfg)
+		if !ok {
+			return nil, errNoBackend
+		}
+		return b, nil
 	}
 	switch cfg.Kind {
 	case "local":
-		return ipspace.LocalBackend{Path: cfg.Path}, true
+		return ipspace.LocalBackend{Path: cfg.Path}, nil
+	case "s3":
+		if cfg.S3 == nil {
+			return nil, errNoBackend
+		}
+		return ipspace.NewS3Backend(context.Background(), *cfg.S3)
 	default:
-		return nil, false
+		return nil, errNoBackend
 	}
 }
 
-// IPSpaceSyncInfo reports whether a sync backend is configured and where.
+// IPSpaceSyncInfo reports whether a sync backend is configured and where. It
+// never includes credentials, and builds no network client (just a label).
 func (a *App) IPSpaceSyncInfo() SyncInfo {
 	cfg, ok := a.loadSyncConfig()
 	if !ok {
 		return SyncInfo{}
 	}
-	b, ok := a.backend()
-	loc := cfg.Path
-	if ok {
-		loc = b.Describe()
+	return SyncInfo{Configured: true, Kind: cfg.Kind, Location: describeConfig(cfg)}
+}
+
+// describeConfig is a credential-free location label computed without any IO.
+func describeConfig(cfg syncConfig) string {
+	switch cfg.Kind {
+	case "local":
+		return ipspace.LocalBackend{Path: cfg.Path}.Describe()
+	case "s3":
+		if cfg.S3 != nil {
+			return cfg.S3.Describe()
+		}
 	}
-	return SyncInfo{Configured: true, Kind: cfg.Kind, Location: loc}
+	return ""
 }
 
 // IPSpaceSyncConfigureLocal points sync at a shared file path (a mounted share,
@@ -100,12 +193,44 @@ func (a *App) IPSpaceSyncConfigureLocal(path string) error {
 	if path == "" {
 		return fmt.Errorf("enter the shared file path to sync through")
 	}
-	cfg := syncConfig{Kind: "local", Path: path}
-	raw, err := json.MarshalIndent(cfg, "", "  ")
+	return a.saveSyncConfig(syncConfig{Kind: "local", Path: path})
+}
+
+// IPSpaceSyncConfigureS3 points sync at an object in an S3-compatible bucket
+// (AWS S3, Cloudflare R2, Backblaze B2, MinIO). Credentials are sealed with the
+// store passphrase, never written in the clear.
+func (a *App) IPSpaceSyncConfigureS3(endpoint, region, bucket, key, accessKey, secret string) error {
+	if err := a.requireUnlocked(); err != nil {
+		return err
+	}
+	cfg := ipspace.S3Config{
+		Endpoint:  strings.TrimSpace(endpoint),
+		Region:    strings.TrimSpace(region),
+		Bucket:    strings.TrimSpace(bucket),
+		Key:       strings.TrimSpace(key),
+		AccessKey: strings.TrimSpace(accessKey),
+		Secret:    secret,
+	}
+	if cfg.Bucket == "" || cfg.Key == "" {
+		return fmt.Errorf("enter the bucket and object key")
+	}
+	if cfg.AccessKey == "" || cfg.Secret == "" {
+		return fmt.Errorf("enter the access key ID and secret access key")
+	}
+	sc := syncConfig{Kind: "s3", S3: &cfg}
+	b, err := a.buildBackend(sc)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(a.syncConfigPath(), raw, 0o600)
+	// Reach the bucket and confirm it honors conditional writes before trusting
+	// it — this validates the endpoint/credentials AND refuses a provider that
+	// would let two people silently overwrite each other.
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+	if err := b.Verify(ctx); err != nil {
+		return err
+	}
+	return a.saveSyncConfig(sc)
 }
 
 // loadBase returns the event log as of the last successful sync, or nil for a
@@ -129,17 +254,17 @@ func (a *App) merge() (res ipspace.MergeResult, b ipspace.Backend, version strin
 	if err = a.requireUnlocked(); err != nil {
 		return
 	}
-	var ok bool
-	b, ok = a.backend()
-	if !ok {
-		err = fmt.Errorf("set up a sync location first")
+	b, err = a.backend()
+	if err != nil {
 		return
 	}
 	base, err := a.loadBase()
 	if err != nil {
 		return
 	}
-	remote, version, err := ipspace.Pull(context.Background(), b, a.ipPass)
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+	remote, version, err := ipspace.Pull(ctx, b, a.ipPass)
 	if err != nil {
 		return
 	}
@@ -170,7 +295,9 @@ func (a *App) IPSpaceSyncApply() (SyncResult, error) {
 	if len(res.Conflicts) > 0 {
 		return toSyncResult(res, false), nil
 	}
-	if err := ipspace.Push(context.Background(), b, a.ipPass, res.Merged, version); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+	if err := ipspace.Push(ctx, b, a.ipPass, res.Merged, version); err != nil {
 		return SyncResult{}, err
 	}
 	// Adopt the merged log locally and record it as the base for next time.

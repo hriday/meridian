@@ -3,7 +3,7 @@
   import {
     IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
-    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncPreview, IPSpaceSyncApply,
+    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
 
@@ -18,6 +18,8 @@
 
   // Sync state.
   let showSync = false, syncInfo: any = { configured: false }, syncPath = "";
+  let backendKind: "local" | "s3" = "local";
+  let s3f = { endpoint: "", region: "", bucket: "", key: "meridian/ipspace.enc", accessKey: "", secret: "" };
   let syncResult: any = null, syncErr = "", syncMsg = "", syncBusy = false;
   $: syncChanges = syncResult ? (syncResult.incoming?.length || 0) + (syncResult.outgoing?.length || 0) : 0;
 
@@ -55,10 +57,21 @@
   }
 
   async function configureSync() {
-    syncErr = ""; syncMsg = "";
-    try { await IPSpaceSyncConfigureLocal(syncPath.trim()); syncInfo = await IPSpaceSyncInfo(); syncResult = null; }
-    catch (e) { syncErr = String(e); }
+    syncErr = ""; syncMsg = ""; syncBusy = true;
+    try {
+      if (backendKind === "local") {
+        await IPSpaceSyncConfigureLocal(syncPath.trim());
+      } else {
+        await IPSpaceSyncConfigureS3(s3f.endpoint.trim(), s3f.region.trim(), s3f.bucket.trim(), s3f.key.trim(), s3f.accessKey.trim(), s3f.secret);
+      }
+      syncInfo = await IPSpaceSyncInfo();
+      syncResult = null;
+    } catch (e) { syncErr = String(e); }
+    finally { syncBusy = false; }
   }
+  $: canConfigure = backendKind === "local"
+    ? !!syncPath.trim()
+    : !!(s3f.bucket.trim() && s3f.key.trim() && s3f.accessKey.trim() && s3f.secret);
   async function previewSync() {
     syncErr = ""; syncMsg = ""; syncBusy = true; syncResult = null;
     try { syncResult = await IPSpaceSyncPreview(); }
@@ -170,17 +183,37 @@
         <div class="chead"><h3>Sync — shared IP space</h3><button class="x" on:click={() => (showSync = false)}>✕</button></div>
         <p class="hint" style="margin:0 0 10px">
           Host one encrypted copy of this inventory somewhere your team can reach — a mounted
-          share, a synced folder (Drive/Dropbox/iCloud), or a USB drive — and everyone pulls and
-          pushes to it. Changes stay on your machine until you sync. Everyone uses the same store
-          passphrase for the shared copy.
+          share or synced folder, or an S3-compatible bucket (AWS S3, Cloudflare R2, and
+          compatibles) — and everyone pulls and pushes to it. Changes stay on your machine until
+          you sync. Everyone uses the same store passphrase for the shared copy.
         </p>
 
-        <div class="form" style="grid-template-columns:1fr auto;align-items:end;gap:8px">
-          <label>Shared file path
-            <input class="field mono" bind:value={syncPath} placeholder="/Volumes/share/meridian-ipspace.enc" />
-          </label>
-          <button class="btn" on:click={configureSync} disabled={!syncPath.trim()}>Use this location</button>
+        <div class="segs">
+          <button class="seg" class:on={backendKind === "local"} on:click={() => (backendKind = "local")}>Local / mounted path</button>
+          <button class="seg" class:on={backendKind === "s3"} on:click={() => (backendKind = "s3")}>S3-compatible</button>
         </div>
+
+        {#if backendKind === "local"}
+          <div class="form" style="grid-template-columns:1fr auto;align-items:end;gap:8px">
+            <label>Shared file path
+              <input class="field mono" bind:value={syncPath} placeholder="/Volumes/share/meridian-ipspace.enc" />
+            </label>
+            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>Use this location</button>
+          </div>
+        {:else}
+          <div class="form">
+            <label>Bucket<input class="field mono" bind:value={s3f.bucket} placeholder="inventory" /></label>
+            <label>Object key<input class="field mono" bind:value={s3f.key} placeholder="meridian/ipspace.enc" /></label>
+            <label>Endpoint (blank for AWS S3)<input class="field mono" bind:value={s3f.endpoint} placeholder="https://&lt;acct&gt;.r2.cloudflarestorage.com" /></label>
+            <label>Region<input class="field mono" bind:value={s3f.region} placeholder="auto (R2) · us-east-1 (AWS/MinIO)" /></label>
+            <label>Access key ID<input class="field mono" bind:value={s3f.accessKey} autocomplete="off" /></label>
+            <label>Secret access key<input class="field mono" type="password" bind:value={s3f.secret} autocomplete="off" /></label>
+          </div>
+          <div class="formbtns">
+            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Checking…" : "Use this bucket"}</button>
+            <span class="hint">AWS S3, Cloudflare R2, and S3-compatible storage that supports conditional writes — Meridian checks when you connect and won't sync somewhere two people could overwrite each other. Credentials are encrypted with your store passphrase, never written in the clear.</span>
+          </div>
+        {/if}
         {#if syncInfo.configured}
           <div class="synced mono">Syncing through {syncInfo.location}</div>
           <div class="formbtns">
@@ -372,6 +405,10 @@
   .btn.on { border-color: var(--accent); color: var(--accent); }
   .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good, #5ad17a); margin-left: 6px; vertical-align: middle; }
   .synccard { margin-bottom: 14px; }
+  .segs { display: inline-flex; border: 1px solid var(--field-border); border-radius: 7px; overflow: hidden; margin-bottom: 12px; }
+  .seg { background: var(--card); border: none; border-right: 1px solid var(--field-border); color: var(--text-dim); padding: 6px 13px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .seg:last-child { border-right: none; }
+  .seg.on { background: var(--active); color: var(--text-strong); }
   .synced { font-size: 0.78rem; color: var(--text-dim); margin: 10px 0; padding: 6px 10px; background: var(--well); border-radius: 6px; }
   .conflict { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); border-radius: 7px; padding: 9px 12px; font-size: 0.82rem; margin-top: 10px; }
   .conflict ul, .diffcols ul { margin: 6px 0 0; padding-left: 18px; }

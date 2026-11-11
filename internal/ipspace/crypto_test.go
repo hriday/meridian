@@ -54,6 +54,25 @@ func TestLoadMissingFile(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSealOpenBytesRoundTrip(t *testing.T) {
+	plain := []byte(`{"endpoint":"https://r2.example.com","secret":"shh"}`)
+	blob, err := Seal("team", plain)
+	require.NoError(t, err)
+	require.NotEmpty(t, blob)
+	require.NotContains(t, string(blob), "shh", "the secret must not appear in the sealed blob")
+
+	got, err := Open("team", blob)
+	require.NoError(t, err)
+	require.Equal(t, plain, got)
+}
+
+func TestOpenBytesWrongPassphrase(t *testing.T) {
+	blob, err := Seal("right", []byte("hello"))
+	require.NoError(t, err)
+	_, err = Open("wrong", blob)
+	require.Error(t, err)
+}
+
 func TestSealOpenRoundTrip(t *testing.T) {
 	ev := sampleEvents()
 	blob, err := SealEvents("correct horse", ev)

@@ -30,14 +30,11 @@ func deriveKey(passphrase string, salt []byte) [keyLen]byte {
 	return key
 }
 
-// SealEvents encrypts the event log into a self-contained blob
+// Seal encrypts arbitrary plaintext into a self-contained blob
 // (salt | nonce | secretbox) with a key derived from the passphrase. This is the
-// exact on-disk format Save writes and the wire format the sync backends carry.
-func SealEvents(passphrase string, events []Event) ([]byte, error) {
-	plain, err := json.Marshal(events)
-	if err != nil {
-		return nil, err
-	}
+// format Save writes on disk and the sync backends carry, and it also seals the
+// sync config (which may hold backend credentials).
+func Seal(passphrase string, plain []byte) ([]byte, error) {
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return nil, err
@@ -56,9 +53,9 @@ func SealEvents(passphrase string, events []Event) ([]byte, error) {
 	return blob, nil
 }
 
-// OpenEvents decrypts and parses a blob produced by SealEvents. A wrong
-// passphrase or any tamper yields a clear error rather than garbage data.
-func OpenEvents(passphrase string, blob []byte) ([]Event, error) {
+// Open decrypts a blob produced by Seal. A wrong passphrase or any tamper yields
+// a clear error rather than garbage data.
+func Open(passphrase string, blob []byte) ([]byte, error) {
 	if len(blob) < saltLen+nonceLen+secretbox.Overhead {
 		return nil, errors.New("ipspace: store blob is truncated or not a Meridian store")
 	}
@@ -71,6 +68,24 @@ func OpenEvents(passphrase string, blob []byte) ([]Event, error) {
 	plain, ok := secretbox.Open(nil, sealed, &nonce, &key)
 	if !ok {
 		return nil, errors.New("couldn't unlock the IP-space store (wrong passphrase, or the file is corrupt)")
+	}
+	return plain, nil
+}
+
+// SealEvents encrypts the event log into the on-disk / wire blob format.
+func SealEvents(passphrase string, events []Event) ([]byte, error) {
+	plain, err := json.Marshal(events)
+	if err != nil {
+		return nil, err
+	}
+	return Seal(passphrase, plain)
+}
+
+// OpenEvents decrypts and parses a blob produced by SealEvents.
+func OpenEvents(passphrase string, blob []byte) ([]Event, error) {
+	plain, err := Open(passphrase, blob)
+	if err != nil {
+		return nil, err
 	}
 	var events []Event
 	if err := json.Unmarshal(plain, &events); err != nil {

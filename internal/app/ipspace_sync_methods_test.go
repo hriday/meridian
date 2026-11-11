@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -140,6 +141,53 @@ func TestSyncConflictBlocksApply(t *testing.T) {
 	require.Equal(t, "Corp-B", treeNames(bob.IPSpaceTree())[0])
 }
 
+func TestSyncConfigureS3SealsCredentials(t *testing.T) {
+	dir := t.TempDir()
+	store := filepath.Join(dir, "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	// Route the configure-time probe through an in-memory backend so the test
+	// doesn't reach the network; we're verifying the config is sealed, not S3.
+	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true }
+
+	const secret = "super-secret-key-material"
+	require.NoError(t, a.IPSpaceSyncConfigureS3(
+		"https://acct.r2.cloudflarestorage.com", "auto", "inventory", "meridian/ipspace.enc", "AKID", secret))
+
+	info := a.IPSpaceSyncInfo()
+	require.True(t, info.Configured)
+	require.Equal(t, "s3", info.Kind)
+	require.Contains(t, info.Location, "inventory")
+	require.NotContains(t, info.Location, secret, "the secret must not show in the UI location")
+
+	// The config is sealed: an encrypted sidecar exists, no plaintext one, and the
+	// secret does not appear in the bytes on disk.
+	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	require.NoError(t, err)
+	require.NotContains(t, string(encRaw), secret)
+	require.NotContains(t, string(encRaw), "AKID")
+	require.NoFileExists(t, sidecarPath(store, ".sync.json"))
+
+	// A fresh controller unlocks and sees the S3 backend configured.
+	b := New()
+	b.ipPath = store
+	require.NoError(t, b.IPSpaceUnlock("team"))
+	require.True(t, b.IPSpaceSyncInfo().Configured)
+	require.Equal(t, "s3", b.IPSpaceSyncInfo().Kind)
+}
+
+// A bucket that fails the conditional-write check is rejected at configure, and
+// no config is saved — so an unsafe backend never becomes the sync target.
+func TestSyncConfigureS3RejectsUnsafeProvider(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) {
+		return &raceBackend{verifyErr: ipspace.ErrRemoteChanged}, true // stand-in for "ignores conditional writes"
+	}
+	err := a.IPSpaceSyncConfigureS3("https://x", "auto", "bkt", "k", "AK", "SK")
+	require.Error(t, err)
+	require.False(t, a.IPSpaceSyncInfo().Configured, "an unsafe bucket must not be saved as the sync target")
+}
+
 // raceBackend is an in-memory CAS backend whose beforePut hook fires once, just
 // before the CAS check, to simulate another person pushing between this client's
 // pull and push — the exact window the Critical lost-update race lives in.
@@ -147,6 +195,7 @@ type raceBackend struct {
 	blob      []byte
 	version   string
 	beforePut func(*raceBackend)
+	verifyErr error
 }
 
 func (b *raceBackend) set(blob []byte) {
@@ -172,7 +221,8 @@ func (b *raceBackend) Put(ctx context.Context, blob []byte, expected string) err
 	b.set(blob)
 	return nil
 }
-func (b *raceBackend) Describe() string { return "race backend" }
+func (b *raceBackend) Verify(ctx context.Context) error { return b.verifyErr }
+func (b *raceBackend) Describe() string                 { return "race backend" }
 
 // A write that lands between this client's pull and push is caught by the CAS
 // guard: Apply refuses, writes nothing locally, and surfaces ErrRemoteChanged —
@@ -182,7 +232,7 @@ func TestSyncApplyRefusesLostUpdate(t *testing.T) {
 	remote := &raceBackend{}
 
 	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
-	bob.ipMakeBackend = func(kind, path string) (ipspace.Backend, bool) { return remote, true }
+	bob.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return remote, true }
 	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote.Describe()))
 
 	// Seed the remote with a block Bob already has (shared base).

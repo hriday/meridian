@@ -29,6 +29,7 @@ func (a *App) IPSpaceCreate(passphrase string) error {
 	a.ipStore = ipspace.NewStore(ipspace.Actor())
 	a.ipPass = passphrase
 	a.ipUnlocked = true
+	a.ipSyncCfgLoaded = false
 	return nil
 }
 
@@ -41,6 +42,7 @@ func (a *App) IPSpaceUnlock(passphrase string) error {
 	a.ipStore = ipspace.FromEvents(ipspace.Actor(), events)
 	a.ipPass = passphrase
 	a.ipUnlocked = true
+	a.ipSyncCfgLoaded = false
 	return nil
 }
 

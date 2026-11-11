@@ -95,6 +95,8 @@ export function IPSpaceSyncApply():Promise<app.SyncResult>;
 
 export function IPSpaceSyncConfigureLocal(arg1:string):Promise<void>;
 
+export function IPSpaceSyncConfigureS3(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<void>;
+
 export function IPSpaceSyncInfo():Promise<app.SyncInfo>;
 
 export function IPSpaceSyncPreview():Promise<app.SyncResult>;
