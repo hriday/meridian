@@ -113,3 +113,125 @@ func TestAnalyzeCheckpointFlows(t *testing.T) {
 		t.Errorf("missing Internet -> Internet deny (cleanup) flow")
 	}
 }
+
+// An inline/ordered-layer rule is an access-rule that gates traffic into a
+// nested layer; its own source/dest rule must still be emitted, and the inner
+// rules descended into — not swallowed.
+func TestAnalyzeCheckpointInlineLayer(t *testing.T) {
+	cfg := `{
+  "rulebase": [
+    { "type": "access-rule", "name": "To-Inner-Layer", "rule-number": 5,
+      "action": { "name": "Inner Layer", "type": "RulebaseAction" },
+      "inline-layer": "uid-inner",
+      "source": [ {"name":"Any","type":"CpmiAnyObject"} ],
+      "destination": [ {"name":"dmz-net","type":"network"} ],
+      "rulebase": [
+        { "type": "access-rule", "name": "Inner-Allow", "rule-number": 1,
+          "action": {"name":"Accept"},
+          "source": [ {"name":"Any"} ],
+          "destination": [ {"name":"web-srv","type":"host"} ],
+          "service": [ {"name":"https"} ] }
+      ]
+    }
+  ],
+  "objects-dictionary": [
+    { "uid":"a2","name":"dmz-net","type":"network","subnet4":"10.1.10.0","mask-length4":24 },
+    { "uid":"a1","name":"web-srv","type":"host","ipv4-address":"203.0.113.10" },
+    { "uid":"s1","name":"https","type":"service-tcp","port":"443" }
+  ]
+}`
+	as, err := analyzeCheckpoint(cfg)
+	if err != nil {
+		t.Fatalf("analyzeCheckpoint: %v", err)
+	}
+	a := as[0]
+	var hasParent, hasInner bool
+	for _, p := range a.Policies {
+		if p.Name == "To-Inner-Layer" {
+			hasParent = true
+		}
+		if p.Name == "Inner-Allow" {
+			hasInner = true
+		}
+	}
+	if !hasParent {
+		t.Error("inline-layer parent rule 'To-Inner-Layer' was dropped")
+	}
+	if !hasInner {
+		t.Error("inner-layer rule 'Inner-Allow' missing")
+	}
+	// The gating rule (Any → dmz-net) is not a drop, so it draws as allow.
+	if findFlow(a.Flows, internetNode, "dmz-net", "allow") == nil {
+		t.Errorf("missing Internet -> dmz-net flow from the inline-layer parent; flows=%+v", a.Flows)
+	}
+}
+
+// A non-full export gives action/source/destination as bare UID strings; the
+// action UID must be resolved through the dictionary, or an Accept reads as deny.
+func TestAnalyzeCheckpointActionUidResolved(t *testing.T) {
+	cfg := `{
+  "rulebase": [
+    { "type": "access-rule", "name": "Permit", "rule-number": 1,
+      "source": [ "uid-src" ], "destination": [ "uid-dst" ],
+      "service": [ {"name":"https"} ], "action": "uid-accept" }
+  ],
+  "objects-dictionary": [
+    { "uid":"uid-src","name":"lan","type":"network","subnet4":"10.0.0.0","mask-length4":8 },
+    { "uid":"uid-dst","name":"web-srv","type":"host","ipv4-address":"203.0.113.10" },
+    { "uid":"uid-accept","name":"Accept","type":"RulebaseAction" },
+    { "uid":"s1","name":"https","type":"service-tcp","port":"443" }
+  ]
+}`
+	as, err := analyzeCheckpoint(cfg)
+	if err != nil {
+		t.Fatalf("analyzeCheckpoint: %v", err)
+	}
+	a := as[0]
+	if findFlow(a.Flows, "lan", "web-srv", "allow") == nil {
+		t.Errorf("bare-UID Accept action not resolved to allow; flows=%+v", a.Flows)
+	}
+	if findFlow(a.Flows, "lan", "web-srv", "deny") != nil {
+		t.Errorf("Accept rule mislabeled as deny")
+	}
+}
+
+// Only objects the rulebase actually references count; management/global objects
+// in the dictionary (install targets, All_Internet) must not inflate the lists.
+func TestAnalyzeCheckpointCountsReferencedOnly(t *testing.T) {
+	cfg := `{
+  "rulebase": [
+    { "type":"access-rule","name":"r1","rule-number":1,
+      "source":[{"name":"lan","type":"network"}],
+      "destination":[{"name":"web-srv","type":"host"}],
+      "service":[{"name":"https","type":"service-tcp"}],
+      "action":{"name":"Accept"} }
+  ],
+  "objects-dictionary": [
+    {"uid":"a1","name":"lan","type":"network","subnet4":"10.0.0.0","mask-length4":8},
+    {"uid":"a2","name":"web-srv","type":"host","ipv4-address":"203.0.113.10"},
+    {"uid":"s1","name":"https","type":"service-tcp","port":"443"},
+    {"uid":"g1","name":"Policy Targets","type":"simple-gateway","ipv4-address":"192.0.2.1"},
+    {"uid":"g2","name":"All_Internet","type":"network","subnet4":"0.0.0.0","mask-length4":0}
+  ]
+}`
+	as, _ := analyzeCheckpoint(cfg)
+	a := as[0]
+	if a.Counts.Addresses != 2 {
+		t.Errorf("addresses: want 2 (lan, web-srv — not the install gateway or All_Internet), got %d (%+v)", a.Counts.Addresses, a.Addresses)
+	}
+}
+
+// An export that is just the rules array (no wrapper object) is still valid JSON.
+func TestAnalyzeCheckpointBareArray(t *testing.T) {
+	cfg := `[ { "type":"access-rule","name":"r1","rule-number":1,
+      "source":[{"name":"dmz-net","type":"network"}],
+      "destination":[{"name":"Any"}],
+      "service":[{"name":"https"}], "action":{"name":"Accept"} } ]`
+	as, err := analyzeCheckpoint(cfg)
+	if err != nil {
+		t.Fatalf("bare rules array should parse: %v", err)
+	}
+	if as[0].Counts.Policies != 1 {
+		t.Errorf("policies: want 1, got %d", as[0].Counts.Policies)
+	}
+}

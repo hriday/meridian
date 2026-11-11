@@ -12,30 +12,52 @@ import (
 // object-to-object rather than interface-bound, so each rule's source and
 // destination objects are the flow nodes — a "what talks to what" reading at the
 // object/zone level — with "Any" standing in for the Internet node. Access
-// sections nest a rulebase, which is flattened. The objects-dictionary supplies
-// host/network/service details for the address and service lists; secrets are
-// not part of a rulebase export and are never surfaced.
+// sections and inline (ordered) layers nest a rulebase, which is walked. The
+// objects-dictionary supplies host/network/service details for the address and
+// service lists; secrets are not part of a rulebase export and are never
+// surfaced.
 func analyzeCheckpoint(configText string) ([]Analysis, error) {
 	s := strings.TrimSpace(configText)
 	if s == "" {
 		return nil, fmt.Errorf("checkpoint: no config provided")
 	}
-	var root cpRoot
-	if err := json.Unmarshal([]byte(s), &root); err != nil {
-		return nil, fmt.Errorf("checkpoint: not valid JSON — export with `mgmt_cli show access-rulebase --format json --details-level full`: %w", err)
-	}
-	if len(root.Rulebase) == 0 {
-		return nil, fmt.Errorf("checkpoint: no \"rulebase\" array found — is this a show-access-rulebase export?")
-	}
-	a := newAnalysis("")
 
+	var rules []json.RawMessage
+	var objs []cpObject
+	if strings.HasPrefix(s, "[") {
+		// Some tools emit just the rules array, with no wrapper object.
+		if err := json.Unmarshal([]byte(s), &rules); err != nil {
+			return nil, fmt.Errorf("checkpoint: not valid JSON: %w", err)
+		}
+	} else {
+		var root struct {
+			Rulebase *[]json.RawMessage `json:"rulebase"`
+			Objects  []cpObject         `json:"objects-dictionary"`
+		}
+		if err := json.Unmarshal([]byte(s), &root); err != nil {
+			return nil, fmt.Errorf("checkpoint: not valid JSON — export with `mgmt_cli show access-rulebase --format json --details-level full`: %w", err)
+		}
+		if root.Rulebase == nil {
+			return nil, fmt.Errorf("checkpoint: no \"rulebase\" key — is this a show-access-rulebase export?")
+		}
+		rules = *root.Rulebase // a present-but-empty rulebase is a valid empty policy
+		objs = root.Objects
+	}
+
+	a := newAnalysis("")
 	dict := map[string]cpObject{}
-	for _, o := range root.Objects {
+	for _, o := range objs {
 		if o.UID != "" {
 			dict[o.UID] = o
 		}
-		if o.Name != "" {
-			dict["name:"+o.Name] = o
+	}
+
+	referenced := map[string]bool{}
+	note := func(names []string) {
+		for _, n := range names {
+			if n != "" && !cpIsAny(n) {
+				referenced[n] = true
+			}
 		}
 	}
 
@@ -47,43 +69,56 @@ func analyzeCheckpoint(configText string) ([]Analysis, error) {
 			if err := json.Unmarshal(raw, &e); err != nil {
 				continue
 			}
-			if e.Type == "access-section" || len(e.Rulebase) > 0 {
-				walk(e.Rulebase) // flatten sections
-				continue
+			switch e.Type {
+			case "access-section":
+				walk(e.Rulebase)
+			case "access-rule":
+				src := cpRefNames(e.Source, dict)
+				dst := cpRefNames(e.Destination, dict)
+				svc := cpServiceNames(e.Service, dict)
+				note(src)
+				note(dst)
+				note(svc)
+				action := "deny"
+				if cpActionAllows(cpActionName(e.Action, dict)) {
+					action = "accept"
+				}
+				nextID++
+				name := e.Name
+				if name == "" {
+					name = fmt.Sprintf("Rule %d", nextID)
+				}
+				a.Policies = append(a.Policies, Policy{
+					ID:       nextID,
+					Name:     name,
+					SrcIntf:  src, // object / zone names are the flow nodes
+					DstIntf:  dst,
+					SrcAddr:  src,
+					DstAddr:  dst,
+					Services: svc,
+					Action:   action,
+					Negated:  e.SourceNegate || e.DestinationNegate,
+				})
+				if len(e.Rulebase) > 0 {
+					walk(e.Rulebase) // descend into an inline (ordered) layer
+				}
+			default:
+				// place-holder and other non-rule entries carry no policy, but
+				// may still nest rules.
+				if len(e.Rulebase) > 0 {
+					walk(e.Rulebase)
+				}
 			}
-			if e.Type != "access-rule" {
-				continue
-			}
-			src := cpRefNames(e.Source, dict)
-			dst := cpRefNames(e.Destination, dict)
-			action := "deny"
-			if strings.EqualFold(cpActionName(e.Action), "accept") {
-				action = "accept"
-			}
-			nextID++
-			name := e.Name
-			if name == "" {
-				name = fmt.Sprintf("Rule %d", e.RuleNumber)
-			}
-			a.Policies = append(a.Policies, Policy{
-				ID:       nextID,
-				Name:     name,
-				SrcIntf:  src, // object / zone names are the flow nodes
-				DstIntf:  dst,
-				SrcAddr:  src,
-				DstAddr:  dst,
-				Services: cpServiceNames(e.Service, dict),
-				Action:   action,
-				Negated:  e.SourceNegate || e.DestinationNegate,
-			})
 		}
 	}
-	walk(root.Rulebase)
+	walk(rules)
 
-	// Address, service and zone lists from the dictionary (skipping "Any").
-	seenAddr, seenSvc := map[string]bool{}, map[string]bool{}
-	for _, o := range root.Objects {
-		if cpIsAny(o.Name) {
+	// Address, service and zone lists — only objects the rulebase references, so
+	// management/global dictionary entries (install targets, All_Internet, …)
+	// don't inflate the counts.
+	seenAddr, seenSvc, seenZone := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	for _, o := range objs {
+		if !referenced[o.Name] {
 			continue
 		}
 		switch o.Type {
@@ -99,17 +134,15 @@ func analyzeCheckpoint(configText string) ([]Analysis, error) {
 				a.Services = append(a.Services, Service{Name: o.Name, Proto: cpSvcProto(o.Type), Ports: o.Port})
 			}
 		case "security-zone":
-			a.Zones = append(a.Zones, Zone{Name: o.Name, Interfaces: []string{o.Name}})
+			if !seenZone[o.Name] {
+				seenZone[o.Name] = true
+				a.Zones = append(a.Zones, Zone{Name: o.Name, Interfaces: []string{o.Name}})
+			}
 		}
 	}
 
 	derive(&a)
 	return []Analysis{a}, nil
-}
-
-type cpRoot struct {
-	Rulebase []json.RawMessage `json:"rulebase"`
-	Objects  []cpObject        `json:"objects-dictionary"`
 }
 
 type cpObject struct {
@@ -137,7 +170,7 @@ type cpRuleEnvelope struct {
 	DestinationNegate bool              `json:"destination-negate"`
 }
 
-// cpRefName resolves one source/destination element — either an inline object
+// cpRefName resolves one source/destination element — an inline object
 // {"name":…} (details-level full) or a bare UID string (resolved via the
 // dictionary) — to its object name.
 func cpRefName(raw json.RawMessage, dict map[string]cpObject) string {
@@ -181,8 +214,9 @@ func cpServiceNames(items []json.RawMessage, dict map[string]cpObject) []string 
 	return out
 }
 
-// cpActionName reads a rule's action, an object {"name":"Accept"} or a bare string.
-func cpActionName(raw json.RawMessage) string {
+// cpActionName reads a rule's action — an object {"name":"Accept"}, a bare
+// string "Accept", or a bare UID string resolved through the dictionary.
+func cpActionName(raw json.RawMessage, dict map[string]cpObject) string {
 	if len(raw) == 0 {
 		return ""
 	}
@@ -194,9 +228,25 @@ func cpActionName(raw json.RawMessage) string {
 	}
 	var s string
 	if err := json.Unmarshal(raw, &s); err == nil {
+		if o, ok := dict[s]; ok && o.Name != "" {
+			return o.Name
+		}
 		return s
 	}
 	return ""
+}
+
+// cpActionAllows reports whether an action lets traffic through. Only Drop and
+// Reject block; Accept, inline-layer delegation, and the interactive actions
+// (Ask, Inform, the auth/UserCheck family) all permit traffic. An empty/unknown
+// action is treated as blocking, to stay conservative.
+func cpActionAllows(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "", "drop", "reject", "block":
+		return false
+	default:
+		return true
+	}
 }
 
 func cpIsAny(name string) bool { return strings.EqualFold(name, "Any") }
