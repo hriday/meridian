@@ -161,6 +161,12 @@ export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
+export function TrapPoll(arg1:number):Promise<collector.Poll_github_com_hriday_meridian_internal_snmp_TrapMsg_>;
+
+export function TrapStart(arg1:number):Promise<void>;
+
+export function TrapStop():Promise<void>;
+
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
 
 export function Whois(arg1:string):Promise<whois.Result>;
