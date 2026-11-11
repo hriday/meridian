@@ -276,6 +276,35 @@ export namespace atlas {
 
 }
 
+export namespace ciscopw {
+	
+	export class Secret {
+	    context: string;
+	    keyword: string;
+	    type: string;
+	    encoded: string;
+	    plaintext: string;
+	    decoded: boolean;
+	    verdict: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Secret(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.context = source["context"];
+	        this.keyword = source["keyword"];
+	        this.type = source["type"];
+	        this.encoded = source["encoded"];
+	        this.plaintext = source["plaintext"];
+	        this.decoded = source["decoded"];
+	        this.verdict = source["verdict"];
+	    }
+	}
+
+}
+
 export namespace collector {
 	
 	export class SyslogMsg {
