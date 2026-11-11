@@ -1,7 +1,21 @@
 <script lang="ts">
   import { AnalyzeFirewall } from "../../../wailsjs/go/app/App.js";
 
+  const VENDORS = [
+    { id: "fortigate", label: "FortiGate" },
+    { id: "panos", label: "Palo Alto (PAN-OS)" },
+    { id: "asa", label: "Cisco ASA" },
+    { id: "srx", label: "Juniper SRX" },
+  ];
+  const FORMAT_HINT: Record<string, string> = {
+    fortigate: "a FortiGate config export",
+    panos: "a PAN-OS config in set-format (set cli config-output-format set)",
+    asa: "a Cisco ASA running-config",
+    srx: "a Juniper SRX config in set-format (show configuration | display set)",
+  };
+
   let configText = "";
+  let vendor = "fortigate";
   let busy = false;
   let error = "";
   let analyses: any[] = [];
@@ -10,6 +24,9 @@
   let fileInput: HTMLInputElement;
 
   $: a = analyses.length ? analyses[vIdx] : null;
+  // FortiGate segments carry a VLAN id; the other vendors' segments don't, so
+  // the id column is hidden when every segment in view is untagged.
+  $: showSegId = (a?.vlans ?? []).some((v: any) => v.id > 0);
 
   async function analyze() {
     const v = configText.trim();
@@ -22,13 +39,17 @@
     openFlow = -1;
     busy = true;
     try {
-      analyses = (await AnalyzeFirewall(v, "fortigate")) ?? [];
+      analyses = (await AnalyzeFirewall(v, vendor)) ?? [];
       vIdx = 0;
     } catch (e) {
       error = String(e);
     } finally {
       busy = false;
     }
+  }
+
+  function onVendorChange() {
+    if (configText.trim()) analyze();
   }
 
   function loadFile(e: Event) {
@@ -83,16 +104,25 @@
 
 <div class="tool">
   <p class="lede">
-    Drop or paste an exported <strong>FortiGate</strong> config. Meridian parses it
-    locally — nothing leaves your machine — and shows the VLANs, what talks to what,
-    and the counts. It's a reading of the ruleset at the VLAN level, not a live device.
+    Drop or paste an exported firewall config. Meridian parses it locally — nothing
+    leaves your machine — and shows the network segments, what talks to what, and the
+    counts. It's a reading of the ruleset at the segment level, not a live device.
   </p>
 
   <div class="card span">
+    <div class="row vendorrow">
+      <span class="k0">Vendor</span>
+      <select class="vendorsel" bind:value={vendor} on:change={onVendorChange}>
+        {#each VENDORS as vn}
+          <option value={vn.id}>{vn.label}</option>
+        {/each}
+      </select>
+      <span class="vnote">Expecting {FORMAT_HINT[vendor]}.</span>
+    </div>
     <textarea
       class="mono input"
       bind:value={configText}
-      placeholder="Paste a FortiGate config export here, or use Load file…"
+      placeholder="Paste {FORMAT_HINT[vendor]} here, or use Load file…"
       spellcheck="false"
     ></textarea>
     <div class="row">
@@ -112,18 +142,18 @@
   {#if a}
     {#if analyses.length > 1}
       <div class="vdombar">
-        <span class="k0">VDOM</span>
+        <span class="k0">Context</span>
         <select bind:value={vIdx} on:change={() => (openFlow = -1)}>
           {#each analyses as an, i}
             <option value={i}>{an.vdom || "(root)"}</option>
           {/each}
         </select>
-        <span class="vnote">{analyses.length} virtual domains in this config</span>
+        <span class="vnote">{analyses.length} contexts in this config</span>
       </div>
     {/if}
 
     <div class="tiles">
-      <div class="tile"><div class="n">{a.counts.vlans}</div><div class="l">VLANs</div></div>
+      <div class="tile"><div class="n">{a.counts.vlans}</div><div class="l">Segments</div></div>
       <div class="tile"><div class="n">{a.counts.policies}</div><div class="l">Policies</div></div>
       <div class="tile"><div class="n">{a.counts.addresses}</div><div class="l">Addr objects</div></div>
       <div class="tile"><div class="n">{a.counts.subnetsIps}</div><div class="l">Subnets / IPs</div></div>
@@ -139,16 +169,16 @@
     {/if}
 
     <div class="card span">
-      <div class="k">VLANs <span class="count">· {(a.vlans ?? []).length}</span></div>
+      <div class="k">Segments <span class="count">· {(a.vlans ?? []).length}</span></div>
       {#if (a.vlans ?? []).length}
         <table class="mono"><thead>
-          <tr><th>VLAN</th><th>Name</th><th>Interface</th><th>Subnet</th><th>Zone</th></tr>
+          <tr>{#if showSegId}<th>VLAN</th>{/if}<th>Name</th><th>Interface</th><th>Subnet</th><th>Zone</th></tr>
         </thead><tbody>
           {#each a.vlans as v}
-            <tr><td>{v.id}</td><td class="strong">{v.name}</td><td class="dim">{v.interface || "—"}</td><td class="dim">{v.subnet || "—"}</td><td class="dim">{v.zone || "—"}</td></tr>
+            <tr>{#if showSegId}<td>{v.id || "—"}</td>{/if}<td class="strong">{v.name}</td><td class="dim">{v.interface || "—"}</td><td class="dim">{v.subnet || "—"}</td><td class="dim">{v.zone || "—"}</td></tr>
           {/each}
         </tbody></table>
-      {:else}<p class="empty">No VLAN interfaces found in this config.</p>{/if}
+      {:else}<p class="empty">No network segments found in this config.</p>{/if}
     </div>
 
     <div class="card span">
@@ -229,6 +259,9 @@
   .input { width: 100%; min-height: 150px; resize: vertical; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 10px 12px; color: var(--text); font-size: 0.8rem; outline: none; line-height: 1.45; }
   .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .vendorrow { margin-top: 0; margin-bottom: 10px; flex-wrap: wrap; }
+  .vendorsel { background: var(--well); border: 1px solid var(--field-border); color: var(--text); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 0.82rem; }
+  .vendorsel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 8px 16px; font: inherit; font-size: 0.9rem; cursor: pointer; }
   .go:disabled { opacity: .6; cursor: default; }
   .ghost { background: transparent; border: 1px solid var(--border-soft); color: var(--text-dim); border-radius: 7px; padding: 7px 13px; font: inherit; font-size: 0.82rem; cursor: pointer; }
