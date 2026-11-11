@@ -34,7 +34,7 @@ func TestAnalyzeWebServerNginx(t *testing.T) {
 }
 
 func TestAnalyzeWebServerUnknownServer(t *testing.T) {
-	_, err := New().AnalyzeWebServer("http {}", "apache")
+	_, err := New().AnalyzeWebServer("http {}", "lighttpd")
 	require.Error(t, err)
 	require.Contains(t, strings.ToLower(err.Error()), "support")
 }
