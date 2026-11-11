@@ -115,6 +115,56 @@ func TestRoutingUsedBy(t *testing.T) {
 	require.Contains(t, a.Upstreams[0].UsedBy[0], "/api")
 }
 
+// --- server-type gate tests (build Analysis directly, no parser) ---
+
+func TestFindingsCaddyNoMissingCert(t *testing.T) {
+	a := Analysis{
+		ServerType: "caddy",
+		Servers: []Server{{
+			Names:     []string{"site.com"},
+			Listeners: []Listener{{Port: 443, SSL: true}}, // auto-HTTPS, no cert
+		}},
+	}
+	analyzeFindings(&a)
+	require.Empty(t, with(a, "certificate")) // Caddy provisions its own cert
+	require.NotEmpty(t, with(a, "HSTS"))     // still a TLS server
+}
+
+func TestFindingsApacheProxyNotFlagged(t *testing.T) {
+	a := Analysis{
+		ServerType: "apache",
+		Servers: []Server{{
+			Names:     []string{"site.com"},
+			Listeners: []Listener{{Port: 80}},
+			Locations: []Location{{Path: "/api", Kind: "proxy", Target: "http://10.0.0.5:8080/"}},
+		}},
+	}
+	analyzeFindings(&a)
+	require.Empty(t, with(a, "upstream")) // Apache has no upstream pools
+}
+
+func TestFindingsApacheVersionDisclosure(t *testing.T) {
+	leaky := Analysis{ServerType: "apache", Servers: []Server{{Names: []string{"s"}, ServerTokens: ""}}}
+	analyzeFindings(&leaky)
+	require.NotEmpty(t, with(leaky, "Apache version"))
+
+	prod := Analysis{ServerType: "apache", Servers: []Server{{Names: []string{"s"}, ServerTokens: "Prod"}}}
+	analyzeFindings(&prod)
+	require.Empty(t, with(prod, "Apache version"))
+}
+
+func TestFindingsApacheEmptyNoLeak(t *testing.T) {
+	a := Analysis{ServerType: "apache", Servers: []Server{}}
+	analyzeFindings(&a)
+	require.Empty(t, with(a, "version")) // no servers → no spurious leak finding
+}
+
+func TestFindingsNginxMissingCertStillErrors(t *testing.T) {
+	a := Analysis{ServerType: "nginx", Servers: []Server{{Names: []string{"s"}, Listeners: []Listener{{Port: 8443, SSL: true}}}}}
+	analyzeFindings(&a)
+	require.NotEmpty(t, with(a, "certificate")) // nginx path unchanged
+}
+
 func TestCounts(t *testing.T) {
 	a := extractCfg(t, `http {
     upstream api { server 1.1.1.1:80; }
