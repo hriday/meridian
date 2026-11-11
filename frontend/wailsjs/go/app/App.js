@@ -26,6 +26,10 @@ export function AnalyzeFirewall(arg1, arg2) {
   return window['go']['app']['App']['AnalyzeFirewall'](arg1, arg2);
 }
 
+export function AnalyzeTerraform(arg1, arg2) {
+  return window['go']['app']['App']['AnalyzeTerraform'](arg1, arg2);
+}
+
 export function AnalyzeWebServer(arg1, arg2) {
   return window['go']['app']['App']['AnalyzeWebServer'](arg1, arg2);
 }
