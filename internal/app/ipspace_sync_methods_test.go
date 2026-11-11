@@ -234,6 +234,33 @@ func TestSyncConfigureSFTPSurfacesProbeError(t *testing.T) {
 	require.False(t, a.IPSpaceSyncInfo().Configured, "a failed connect must not save a config")
 }
 
+func TestSyncConfigureGitSealsToken(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true } // Verify offline
+
+	const token = "ghp_secrettoken12345"
+	require.NoError(t, a.IPSpaceSyncConfigureGit("https://github.com/acme/ipam.git", "main", "ipspace.enc", "acme-bot", token, "", ""))
+
+	info := a.IPSpaceSyncInfo()
+	require.True(t, info.Configured)
+	require.Equal(t, "git", info.Kind)
+	require.Contains(t, info.Location, "acme/ipam")
+	require.NotContains(t, info.Location, token)
+
+	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	require.NoError(t, err)
+	require.NotContains(t, string(encRaw), token, "the git token must not be on disk in the clear")
+}
+
+func TestSyncConfigureGitRequiresAuth(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	err := a.IPSpaceSyncConfigureGit("https://x/y.git", "main", "ipspace.enc", "", "", "", "")
+	require.Error(t, err)
+	require.False(t, a.IPSpaceSyncInfo().Configured)
+}
+
 // A bucket that fails the conditional-write check is rejected at configure, and
 // no config is saved — so an unsafe backend never becomes the sync target.
 func TestSyncConfigureS3RejectsUnsafeProvider(t *testing.T) {

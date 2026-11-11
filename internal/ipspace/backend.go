@@ -127,7 +127,10 @@ func Pull(ctx context.Context, b Backend, passphrase string) ([]Event, string, e
 		return nil, "", err
 	}
 	if blob == nil {
-		return nil, "", nil
+		// No inventory yet, but the backend may still report a version (e.g. a git
+		// repo that has commits but not the blob file) that a following push must
+		// compare-and-swap against — so preserve it.
+		return nil, ver, nil
 	}
 	evs, err := OpenEvents(passphrase, blob)
 	if err != nil {
