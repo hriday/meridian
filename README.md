@@ -80,6 +80,17 @@ open-source app without a paid signing certificate.
 
 ```bash
 brew tap hriday/meridian https://github.com/hriday/meridian
+brew install --cask hriday/meridian/meridian
+```
+
+Homebrew requires casks from a third-party tap to be trusted before they install.
+Installing by the fully-qualified name above (`hriday/meridian/meridian`) trusts
+and installs in one step. If you prefer the short name, trust it first — or trust
+the whole tap:
+
+```bash
+brew trust --cask hriday/meridian/meridian   # trust just this cask
+# or: brew trust hriday/meridian             # trust the whole tap
 brew install --cask meridian
 ```
 
