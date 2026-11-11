@@ -45,6 +45,7 @@ type SFTPConfig struct {
 type sftpConn interface {
 	read(path string) ([]byte, error) // os.ErrNotExist when the file is absent
 	writeAtomic(path string, data []byte) error
+	remove(path string) error
 	close() error
 }
 
@@ -112,14 +113,22 @@ func (b SFTPBackend) Put(ctx context.Context, blob []byte, expectedVersion strin
 	return c.writeAtomic(b.Cfg.Path, blob)
 }
 
-// Verify connects (validating auth and the pinned host key); SFTP has no
-// conditional-write capability to probe beyond that.
+// Verify connects (validating auth and the pinned host key) and confirms the
+// remote path is writable and supports the atomic rename the CAS depends on, by
+// writing and removing a throwaway probe file — so a bad path or a server that
+// can't do the write is rejected at setup, not on the first real sync.
 func (b SFTPBackend) Verify(ctx context.Context) error {
 	c, err := b.conn(ctx)
 	if err != nil {
 		return err
 	}
-	return c.close()
+	defer c.close()
+	probePath := b.Cfg.Path + ".meridian-probe"
+	if err := c.writeAtomic(probePath, []byte("probe")); err != nil {
+		return fmt.Errorf("couldn't write to the remote path (check it exists and is writable): %w", err)
+	}
+	_ = c.remove(probePath)
+	return nil
 }
 
 // Describe returns the user@host:path label.
@@ -156,7 +165,24 @@ func makeHostKeyCallback(pinned string, captured *string) ssh.HostKeyCallback {
 	}
 }
 
-// realSFTPDial opens a real SSH+SFTP connection.
+// hostKeyAlgos pins the key algorithm to the one already trusted, so a server
+// legitimately offering a different key type isn't mistaken for an impersonator.
+// Empty (first connect) accepts the server's default so TOFU can capture it.
+func hostKeyAlgos(pinned string) []string {
+	if pinned == "" {
+		return nil
+	}
+	pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(pinned))
+	if err != nil {
+		return nil
+	}
+	return []string{pub.Type()}
+}
+
+// realSFTPDial opens a real SSH+SFTP connection. The caller's context bounds the
+// whole thing — handshake and I/O — via a watcher that closes the socket on
+// cancellation (ClientConfig.Timeout only covers ssh.Dial, which this path does
+// not use, so it is not relied on here).
 func realSFTPDial(ctx context.Context, cfg SFTPConfig) (sftpConn, string, error) {
 	auths, err := sftpAuthMethods(cfg)
 	if err != nil {
@@ -168,10 +194,11 @@ func realSFTPDial(ctx context.Context, cfg SFTPConfig) (sftpConn, string, error)
 		port = "22"
 	}
 	clientCfg := &ssh.ClientConfig{
-		User:            cfg.User,
-		Auth:            auths,
-		HostKeyCallback: makeHostKeyCallback(cfg.HostKey, &captured),
-		Timeout:         20 * time.Second,
+		User:              cfg.User,
+		Auth:              auths,
+		HostKeyCallback:   makeHostKeyCallback(cfg.HostKey, &captured),
+		HostKeyAlgorithms: hostKeyAlgos(cfg.HostKey),
+		Timeout:           20 * time.Second,
 	}
 	addr := net.JoinHostPort(cfg.Host, port)
 	d := net.Dialer{}
@@ -179,14 +206,29 @@ func realSFTPDial(ctx context.Context, cfg SFTPConfig) (sftpConn, string, error)
 	if err != nil {
 		return nil, "", err
 	}
+	// Close the socket if the context is cancelled, so a stalled handshake or a
+	// stalled read/write can't hang forever. Stopped on close().
+	watchDone := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			netConn.Close()
+		case <-watchDone:
+		}
+	}()
+	fail := func(e error) (sftpConn, string, error) {
+		close(watchDone)
+		netConn.Close()
+		return nil, "", e
+	}
 	sshConn, chans, reqs, err := ssh.NewClientConn(netConn, addr, clientCfg)
 	if err != nil {
-		netConn.Close()
-		return nil, "", err
+		return fail(err)
 	}
 	sshClient := ssh.NewClient(sshConn, chans, reqs)
 	sc, err := sftp.NewClient(sshClient)
 	if err != nil {
+		close(watchDone)
 		sshClient.Close()
 		return nil, "", err
 	}
@@ -194,7 +236,7 @@ func realSFTPDial(ctx context.Context, cfg SFTPConfig) (sftpConn, string, error)
 	if hostKey == "" {
 		hostKey = captured
 	}
-	return &realSFTPConn{sc: sc, ssh: sshClient}, hostKey, nil
+	return &realSFTPConn{sc: sc, ssh: sshClient, watchDone: watchDone}, hostKey, nil
 }
 
 func sftpAuthMethods(cfg SFTPConfig) ([]ssh.AuthMethod, error) {
@@ -223,8 +265,9 @@ func sftpAuthMethods(cfg SFTPConfig) ([]ssh.AuthMethod, error) {
 
 // realSFTPConn adapts *sftp.Client to sftpConn.
 type realSFTPConn struct {
-	sc  *sftp.Client
-	ssh *ssh.Client
+	sc        *sftp.Client
+	ssh       *ssh.Client
+	watchDone chan struct{}
 }
 
 func (c *realSFTPConn) read(p string) ([]byte, error) {
@@ -246,7 +289,10 @@ func (c *realSFTPConn) writeAtomic(p string, data []byte) error {
 			return err
 		}
 	}
-	tmp := p + ".meridian-tmp"
+	// A unique temp name per writer — two concurrent syncs must never share one
+	// temp file (that would interleave their bytes and corrupt the blob for
+	// everyone), matching the local backend's os.CreateTemp behaviour.
+	tmp := fmt.Sprintf("%s.meridian-%s.tmp", p, newID())
 	f, err := c.sc.Create(tmp)
 	if err != nil {
 		return err
@@ -260,17 +306,24 @@ func (c *realSFTPConn) writeAtomic(p string, data []byte) error {
 		c.sc.Remove(tmp)
 		return err
 	}
-	// PosixRename atomically replaces; fall back to a plain rename if unsupported.
+	// PosixRename atomically replaces an existing file. If the server lacks that
+	// OpenSSH extension, plain SSH_FXP_RENAME won't overwrite, so remove the
+	// destination first and rename — not atomic, but the only way to update on
+	// such servers (a brief window where the file is absent).
 	if err := c.sc.PosixRename(tmp, p); err != nil {
-		if rmErr := c.sc.Rename(tmp, p); rmErr != nil {
+		_ = c.sc.Remove(p)
+		if err2 := c.sc.Rename(tmp, p); err2 != nil {
 			c.sc.Remove(tmp)
-			return err
+			return err2
 		}
 	}
 	return nil
 }
 
+func (c *realSFTPConn) remove(p string) error { return c.sc.Remove(p) }
+
 func (c *realSFTPConn) close() error {
+	close(c.watchDone) // stop the context watcher
 	err := c.sc.Close()
 	c.ssh.Close()
 	return err

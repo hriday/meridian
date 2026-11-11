@@ -276,8 +276,21 @@ func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, k
 	if err != nil {
 		return err
 	}
+	if strings.TrimSpace(hostKey) == "" {
+		return fmt.Errorf("couldn't read the server's SSH host key")
+	}
 	cfg.HostKey = hostKey
-	return a.saveSyncConfig(syncConfig{Kind: "sftp", SFTP: &cfg})
+	// Connect again with the key now pinned, and confirm the remote path is
+	// writable with an atomic rename (the CAS depends on it) before saving.
+	sc := syncConfig{Kind: "sftp", SFTP: &cfg}
+	b, err := a.buildBackend(sc)
+	if err != nil {
+		return err
+	}
+	if err := b.Verify(ctx); err != nil {
+		return err
+	}
+	return a.saveSyncConfig(sc)
 }
 
 // loadBase returns the event log as of the last successful sync, or nil for a

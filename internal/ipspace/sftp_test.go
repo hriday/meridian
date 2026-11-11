@@ -30,7 +30,8 @@ func (m *memSFTP) writeAtomic(path string, data []byte) error {
 	m.files[path] = append([]byte(nil), data...)
 	return nil
 }
-func (m *memSFTP) close() error { m.closed = true; return nil }
+func (m *memSFTP) remove(path string) error { delete(m.files, path); return nil }
+func (m *memSFTP) close() error             { m.closed = true; return nil }
 
 // withFakeDial swaps sftpDial for the duration of a test.
 func withFakeDial(t *testing.T, conn sftpConn, hostKey string, dialErr error) {
@@ -77,12 +78,30 @@ func TestSFTPPutStaleIsRemoteChanged(t *testing.T) {
 	require.ErrorIs(t, err, ErrRemoteChanged)
 }
 
-func TestSFTPVerifyConnects(t *testing.T) {
+func TestSFTPVerifyWritesAndCleansUp(t *testing.T) {
 	m := newMemSFTP()
 	withFakeDial(t, m, "hk", nil)
 	require.NoError(t, sftpB().Verify(context.Background()))
 	require.True(t, m.closed, "Verify closes the connection it opened")
+	require.Empty(t, m.files, "Verify removes its probe file, leaving the path clean")
 }
+
+func TestSFTPVerifyFailsOnUnwritablePath(t *testing.T) {
+	withFakeDial(t, &writeFailSFTP{}, "hk", nil)
+	require.Error(t, sftpB().Verify(context.Background()))
+}
+
+func TestHostKeyAlgosPinsToKeyType(t *testing.T) {
+	key := testPubKey(t)
+	line := string(ssh.MarshalAuthorizedKey(key))
+	require.Equal(t, []string{key.Type()}, hostKeyAlgos(line))
+	require.Nil(t, hostKeyAlgos(""), "no pin on first connect, so TOFU can capture any type")
+}
+
+// writeFailSFTP is a conn whose writes fail, to test Verify's writability check.
+type writeFailSFTP struct{ memSFTP }
+
+func (w *writeFailSFTP) writeAtomic(path string, data []byte) error { return os.ErrPermission }
 
 func TestProbeSFTPReturnsHostKey(t *testing.T) {
 	withFakeDial(t, newMemSFTP(), "ssh-ed25519 AAAAhostkey", nil)

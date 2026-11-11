@@ -182,6 +182,7 @@ func TestSyncConfigureSFTPSealsAndPinsHostKey(t *testing.T) {
 	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
 		return "ssh-ed25519 AAAApinnedkey", nil
 	}
+	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true } // Verify offline
 
 	const password = "sftp-password-secret"
 	require.NoError(t, a.IPSpaceSyncConfigureSFTP("sftp.example.com", "22", "svc", password, "", "", "/srv/meridian/ipspace.enc"))
@@ -208,6 +209,17 @@ func TestSyncConfigureSFTPRequiresAuth(t *testing.T) {
 	a := newUnlockedStore(t, store, "team")
 	err := a.IPSpaceSyncConfigureSFTP("h", "22", "u", "", "", "", "/p")
 	require.Error(t, err, "no password and no key must be rejected")
+	require.False(t, a.IPSpaceSyncInfo().Configured)
+}
+
+func TestSyncConfigureSFTPRejectsEmptyHostKey(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
+		return "", nil // no host key captured — must not be saved as a blank pin
+	}
+	err := a.IPSpaceSyncConfigureSFTP("h", "22", "u", "pw", "", "", "/p")
+	require.Error(t, err)
 	require.False(t, a.IPSpaceSyncInfo().Configured)
 }
 
