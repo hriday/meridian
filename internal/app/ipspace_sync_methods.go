@@ -27,9 +27,10 @@ const syncTimeout = 30 * time.Second
 // It may hold backend credentials (S3), so it is sealed with the store passphrase
 // rather than written in the clear.
 type syncConfig struct {
-	Kind string             `json:"kind"`           // "local" | "s3"
-	Path string             `json:"path,omitempty"` // local/mounted path
-	S3   *ipspace.S3Config  `json:"s3,omitempty"`   // S3-compatible connection + credentials
+	Kind string              `json:"kind"`           // "local" | "s3" | "sftp"
+	Path string              `json:"path,omitempty"` // local/mounted path
+	S3   *ipspace.S3Config   `json:"s3,omitempty"`   // S3-compatible connection + credentials
+	SFTP *ipspace.SFTPConfig `json:"sftp,omitempty"` // SFTP connection + credentials
 }
 
 // errNoBackend means no sync backend is configured (distinct from a configured
@@ -155,6 +156,11 @@ func (a *App) buildBackend(cfg syncConfig) (ipspace.Backend, error) {
 			return nil, errNoBackend
 		}
 		return ipspace.NewS3Backend(context.Background(), *cfg.S3)
+	case "sftp":
+		if cfg.SFTP == nil {
+			return nil, errNoBackend
+		}
+		return ipspace.NewSFTPBackend(*cfg.SFTP)
 	default:
 		return nil, errNoBackend
 	}
@@ -178,6 +184,10 @@ func describeConfig(cfg syncConfig) string {
 	case "s3":
 		if cfg.S3 != nil {
 			return cfg.S3.Describe()
+		}
+	case "sftp":
+		if cfg.SFTP != nil {
+			return cfg.SFTP.Describe()
 		}
 	}
 	return ""
@@ -227,6 +237,56 @@ func (a *App) IPSpaceSyncConfigureS3(endpoint, region, bucket, key, accessKey, s
 	// would let two people silently overwrite each other.
 	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
 	defer cancel()
+	if err := b.Verify(ctx); err != nil {
+		return err
+	}
+	return a.saveSyncConfig(sc)
+}
+
+// IPSpaceSyncConfigureSFTP points sync at a file on an SSH/SFTP server. On the
+// first connect the server's host key is pinned (trust-on-first-use); a later
+// change is refused. Credentials are sealed with the store passphrase.
+func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, keyPassphrase, path string) error {
+	if err := a.requireUnlocked(); err != nil {
+		return err
+	}
+	cfg := ipspace.SFTPConfig{
+		Host:          strings.TrimSpace(host),
+		Port:          strings.TrimSpace(port),
+		User:          strings.TrimSpace(user),
+		Password:      password,
+		PrivateKey:    privateKey,
+		KeyPassphrase: keyPassphrase,
+		Path:          strings.TrimSpace(path),
+	}
+	if cfg.Host == "" || cfg.User == "" || cfg.Path == "" {
+		return fmt.Errorf("enter the server host, username, and remote file path")
+	}
+	if strings.TrimSpace(cfg.Password) == "" && strings.TrimSpace(cfg.PrivateKey) == "" {
+		return fmt.Errorf("enter a password or a private key for the SFTP server")
+	}
+	// Connect once: validates auth and pins the server's host key (TOFU).
+	probe := a.ipProbeSFTP
+	if probe == nil {
+		probe = ipspace.ProbeSFTP
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
+	hostKey, err := probe(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(hostKey) == "" {
+		return fmt.Errorf("couldn't read the server's SSH host key")
+	}
+	cfg.HostKey = hostKey
+	// Connect again with the key now pinned, and confirm the remote path is
+	// writable with an atomic rename (the CAS depends on it) before saving.
+	sc := syncConfig{Kind: "sftp", SFTP: &cfg}
+	b, err := a.buildBackend(sc)
+	if err != nil {
+		return err
+	}
 	if err := b.Verify(ctx); err != nil {
 		return err
 	}

@@ -45,6 +45,8 @@ type App struct {
 	ipUnlocked bool
 	// test seam: build a sync backend from config; nil uses the real backends.
 	ipMakeBackend func(cfg syncConfig) (ipspace.Backend, bool)
+	// test seam: probe an SFTP server for its host key; nil uses the real dialer.
+	ipProbeSFTP func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error)
 	// decrypted sync config, cached so IPSpaceSyncInfo doesn't re-run the KDF on
 	// every refresh; nil+loaded means "not configured".
 	ipSyncCfg       *syncConfig
