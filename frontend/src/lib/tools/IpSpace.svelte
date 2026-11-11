@@ -3,7 +3,7 @@
   import {
     IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
-    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncPreview, IPSpaceSyncApply,
+    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
 
@@ -18,8 +18,9 @@
 
   // Sync state.
   let showSync = false, syncInfo: any = { configured: false }, syncPath = "";
-  let backendKind: "local" | "s3" = "local";
+  let backendKind: "local" | "s3" | "sftp" = "local";
   let s3f = { endpoint: "", region: "", bucket: "", key: "meridian/ipspace.enc", accessKey: "", secret: "" };
+  let sf = { host: "", port: "22", user: "", password: "", privateKey: "", keyPassphrase: "", path: "" };
   let syncResult: any = null, syncErr = "", syncMsg = "", syncBusy = false;
   $: syncChanges = syncResult ? (syncResult.incoming?.length || 0) + (syncResult.outgoing?.length || 0) : 0;
 
@@ -61,17 +62,20 @@
     try {
       if (backendKind === "local") {
         await IPSpaceSyncConfigureLocal(syncPath.trim());
-      } else {
+      } else if (backendKind === "s3") {
         await IPSpaceSyncConfigureS3(s3f.endpoint.trim(), s3f.region.trim(), s3f.bucket.trim(), s3f.key.trim(), s3f.accessKey.trim(), s3f.secret);
+      } else {
+        await IPSpaceSyncConfigureSFTP(sf.host.trim(), sf.port.trim(), sf.user.trim(), sf.password, sf.privateKey, sf.keyPassphrase, sf.path.trim());
       }
       syncInfo = await IPSpaceSyncInfo();
       syncResult = null;
     } catch (e) { syncErr = String(e); }
     finally { syncBusy = false; }
   }
-  $: canConfigure = backendKind === "local"
-    ? !!syncPath.trim()
-    : !!(s3f.bucket.trim() && s3f.key.trim() && s3f.accessKey.trim() && s3f.secret);
+  $: canConfigure =
+    backendKind === "local" ? !!syncPath.trim() :
+    backendKind === "s3" ? !!(s3f.bucket.trim() && s3f.key.trim() && s3f.accessKey.trim() && s3f.secret) :
+    !!(sf.host.trim() && sf.user.trim() && sf.path.trim() && (sf.password || sf.privateKey.trim()));
   async function previewSync() {
     syncErr = ""; syncMsg = ""; syncBusy = true; syncResult = null;
     try { syncResult = await IPSpaceSyncPreview(); }
@@ -191,6 +195,7 @@
         <div class="segs">
           <button class="seg" class:on={backendKind === "local"} on:click={() => (backendKind = "local")}>Local / mounted path</button>
           <button class="seg" class:on={backendKind === "s3"} on:click={() => (backendKind = "s3")}>S3-compatible</button>
+          <button class="seg" class:on={backendKind === "sftp"} on:click={() => (backendKind = "sftp")}>SFTP</button>
         </div>
 
         {#if backendKind === "local"}
@@ -200,7 +205,7 @@
             </label>
             <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>Use this location</button>
           </div>
-        {:else}
+        {:else if backendKind === "s3"}
           <div class="form">
             <label>Bucket<input class="field mono" bind:value={s3f.bucket} placeholder="inventory" /></label>
             <label>Object key<input class="field mono" bind:value={s3f.key} placeholder="meridian/ipspace.enc" /></label>
@@ -212,6 +217,20 @@
           <div class="formbtns">
             <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Checking…" : "Use this bucket"}</button>
             <span class="hint">AWS S3, Cloudflare R2, and S3-compatible storage that supports conditional writes — Meridian checks when you connect and won't sync somewhere two people could overwrite each other. Credentials are encrypted with your store passphrase, never written in the clear.</span>
+          </div>
+        {:else}
+          <div class="form">
+            <label>Host<input class="field mono" bind:value={sf.host} placeholder="sftp.example.com" /></label>
+            <label>Port<input class="field mono" bind:value={sf.port} placeholder="22" /></label>
+            <label>Username<input class="field mono" bind:value={sf.user} autocomplete="off" /></label>
+            <label>Remote file path<input class="field mono" bind:value={sf.path} placeholder="/srv/meridian/ipspace.enc" /></label>
+            <label>Password<input class="field mono" type="password" bind:value={sf.password} autocomplete="off" placeholder="(or use a private key)" /></label>
+            <label>Key passphrase (if key is encrypted)<input class="field mono" type="password" bind:value={sf.keyPassphrase} autocomplete="off" /></label>
+            <label class="wide">Private key (PEM, optional)<textarea class="field mono small" bind:value={sf.privateKey} spellcheck="false" autocomplete="off" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label>
+          </div>
+          <div class="formbtns">
+            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Connecting…" : "Use this server"}</button>
+            <span class="hint">The server's host key is pinned the first time you connect; a later change is refused (to catch impersonation). Credentials are encrypted with your store passphrase, never written in the clear.</span>
           </div>
         {/if}
         {#if syncInfo.configured}
@@ -409,6 +428,7 @@
   .seg { background: var(--card); border: none; border-right: 1px solid var(--field-border); color: var(--text-dim); padding: 6px 13px; font: inherit; font-size: 0.8rem; cursor: pointer; }
   .seg:last-child { border-right: none; }
   .seg.on { background: var(--active); color: var(--text-strong); }
+  .form textarea.field.small { min-height: 72px; font-size: 0.74rem; line-height: 1.4; resize: vertical; }
   .synced { font-size: 0.78rem; color: var(--text-dim); margin: 10px 0; padding: 6px 10px; background: var(--well); border-radius: 6px; }
   .conflict { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); border-radius: 7px; padding: 9px 12px; font-size: 0.82rem; margin-top: 10px; }
   .conflict ul, .diffcols ul { margin: 6px 0 0; padding-left: 18px; }

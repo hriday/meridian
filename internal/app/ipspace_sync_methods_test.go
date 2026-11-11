@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -173,6 +174,52 @@ func TestSyncConfigureS3SealsCredentials(t *testing.T) {
 	require.NoError(t, b.IPSpaceUnlock("team"))
 	require.True(t, b.IPSpaceSyncInfo().Configured)
 	require.Equal(t, "s3", b.IPSpaceSyncInfo().Kind)
+}
+
+func TestSyncConfigureSFTPSealsAndPinsHostKey(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
+		return "ssh-ed25519 AAAApinnedkey", nil
+	}
+
+	const password = "sftp-password-secret"
+	require.NoError(t, a.IPSpaceSyncConfigureSFTP("sftp.example.com", "22", "svc", password, "", "", "/srv/meridian/ipspace.enc"))
+
+	info := a.IPSpaceSyncInfo()
+	require.True(t, info.Configured)
+	require.Equal(t, "sftp", info.Kind)
+	require.Contains(t, info.Location, "sftp.example.com")
+	require.NotContains(t, info.Location, password)
+
+	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	require.NoError(t, err)
+	require.NotContains(t, string(encRaw), password, "the SFTP password must not be on disk in the clear")
+
+	// The host key captured at configure is pinned in the sealed config.
+	b := New()
+	b.ipPath = store
+	require.NoError(t, b.IPSpaceUnlock("team"))
+	require.Equal(t, "sftp", b.IPSpaceSyncInfo().Kind)
+}
+
+func TestSyncConfigureSFTPRequiresAuth(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	err := a.IPSpaceSyncConfigureSFTP("h", "22", "u", "", "", "", "/p")
+	require.Error(t, err, "no password and no key must be rejected")
+	require.False(t, a.IPSpaceSyncInfo().Configured)
+}
+
+func TestSyncConfigureSFTPSurfacesProbeError(t *testing.T) {
+	store := filepath.Join(t.TempDir(), "store.enc")
+	a := newUnlockedStore(t, store, "team")
+	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
+		return "", fmt.Errorf("auth failed")
+	}
+	err := a.IPSpaceSyncConfigureSFTP("h", "22", "u", "pw", "", "", "/p")
+	require.Error(t, err)
+	require.False(t, a.IPSpaceSyncInfo().Configured, "a failed connect must not save a config")
 }
 
 // A bucket that fails the conditional-write check is rejected at configure, and
