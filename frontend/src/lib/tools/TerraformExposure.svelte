@@ -45,10 +45,14 @@
     const edges = an?.exposure ?? [];
     if (!edges.length) return null;
     if (edges.length > 10) return { tooMany: true, count: edges.length };
-    const h = Math.max(140, edges.length * 58 + 20);
-    const rowY = (i: number) => 30 + i * ((h - 60) / Math.max(1, edges.length - 1 || 1)) + (edges.length === 1 ? (h - 60) / 2 : 0);
+    const boxH = 48, pad = 16, gap = 14;
+    const n = edges.length;
+    // leave boxH of headroom below the last box so nothing clips the viewBox
+    const h = Math.max(140, n * (boxH + gap) + pad * 2 - gap);
+    const avail = h - pad * 2 - boxH; // range the box tops span
+    const top = (i: number) => (n === 1 ? (h - boxH) / 2 : pad + i * (avail / (n - 1)));
     const nodes = edges.map((e: any, i: number) => ({
-      target: e.target, label: e.label, severity: e.severity, y: rowY(i),
+      target: e.target, label: e.label, severity: e.severity, y: top(i),
     }));
     return { tooMany: false, nodes, h, cy: h / 2 };
   }
@@ -101,7 +105,7 @@
       <div class="card span">
         <div class="k">Internet exposure <span class="count">· what's reachable from 0.0.0.0/0</span></div>
         {#if diagram.tooMany}
-          <p class="empty">{diagram.count} exposed resources — too many to diagram clearly; see the findings below.</p>
+          <p class="empty">{diagram.count} exposure paths — too many to diagram clearly; see the findings below.</p>
         {:else}
           <div class="diagram">
             <svg viewBox="0 0 820 {diagram.h}" width="100%" role="img" aria-label="Internet exposure diagram">

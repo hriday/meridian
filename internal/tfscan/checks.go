@@ -49,7 +49,6 @@ func check(resources []rawResource) Analysis {
 				}
 			}
 		case "aws_security_group_rule":
-			sgCount++
 			if t, _ := r.body.str("type"); strings.EqualFold(t, "egress") {
 				break
 			}
@@ -65,9 +64,13 @@ func check(resources []rawResource) Analysis {
 				add("critical", "exposure", "Database is publicly accessible",
 					key+" has publicly_accessible = true — it gets a public endpoint reachable from the internet", r)
 			}
-			if enc, ok := r.body.str("storage_encrypted"); ok && enc == "false" {
-				add("warning", "encryption", "Database storage is not encrypted",
-					key+" has storage_encrypted = false — data at rest is unencrypted", r)
+			// RDS defaults to unencrypted, so an absent storage_encrypted is also a
+			// risk. Cluster *instances* inherit encryption from the cluster — skip them.
+			if r.typ == "aws_db_instance" || r.typ == "aws_rds_cluster" {
+				if enc, ok := r.body.str("storage_encrypted"); !ok || enc != "true" {
+					add("warning", "encryption", "Database storage encryption not confirmed",
+						key+" does not set storage_encrypted = true — RDS defaults to unencrypted storage at rest", r)
+				}
 			}
 		case "aws_s3_bucket_acl", "aws_s3_bucket":
 			if acl, ok := r.body.str("acl"); ok && strings.HasPrefix(acl, "public-") {
@@ -135,11 +138,12 @@ func ingressExposure(rule rawBody) (sev, label string, dynamic, open bool) {
 	dynamic = !v4res && len(v4) > 0 // literals present but list didn't fully resolve
 
 	proto, _ := rule.str("protocol")
-	from := atoi(firstOK(rule.str("from_port")))
-	to := atoi(firstOK(rule.str("to_port")))
+	fromS, fromOK := rule.str("from_port")
+	toS, toOK := rule.str("to_port")
+	from, to := atoi(fromS), atoi(toS)
 
 	switch {
-	case proto == "-1" || proto == "all" || (from == 0 && (to == 0 || to >= 65535)):
+	case proto == "-1" || proto == "all" || (fromOK && toOK && from == 0 && to >= 65535):
 		return "critical", "all ports", dynamic, true
 	default:
 		if svc, p := sensitiveInRange(from, to); p != 0 {
@@ -201,8 +205,6 @@ func containsStr(xs []string, want string) bool {
 	}
 	return false
 }
-
-func firstOK(s string, _ bool) string { return s }
 
 func atoi(s string) int {
 	n, _ := strconv.Atoi(strings.TrimSpace(s))

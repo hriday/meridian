@@ -81,7 +81,7 @@ func TestCheckEgressAndSgRefSkipped(t *testing.T) {
 }
 
 func TestCheckPublicRDSAndBucket(t *testing.T) {
-	db := rawResource{typ: "aws_db_instance", name: "main", body: mapBody{"publicly_accessible": true}}
+	db := rawResource{typ: "aws_db_instance", name: "main", body: mapBody{"publicly_accessible": true, "storage_encrypted": true}}
 	bucket := rawResource{typ: "aws_s3_bucket_acl", name: "assets", body: mapBody{"acl": "public-read"}}
 	a := check([]rawResource{db, bucket})
 	require.Len(t, a.Exposure, 2)
@@ -165,6 +165,43 @@ func TestCheckCountsAndSort(t *testing.T) {
 	require.GreaterOrEqual(t, a.Counts.Critical, 1)
 	// sorted: critical before warning
 	require.Equal(t, "critical", a.Findings[0].Severity)
+}
+
+func TestCheckRDSEncryptionAbsentFlagged(t *testing.T) {
+	db := rawResource{typ: "aws_db_instance", name: "m", body: mapBody{"publicly_accessible": false}}
+	a := check([]rawResource{db})
+	require.NotEmpty(t, findingsWith(a, "encrypt")) // absent → unencrypted by default
+}
+
+func TestCheckRDSEncryptedTrueNotFlagged(t *testing.T) {
+	db := rawResource{typ: "aws_db_instance", name: "m", body: mapBody{"storage_encrypted": true}}
+	a := check([]rawResource{db})
+	require.Empty(t, findingsWith(a, "encrypt"))
+}
+
+func TestCheckClusterInstanceNotEncryptionFlagged(t *testing.T) {
+	// a cluster instance inherits encryption from the cluster — don't flag it.
+	ci := rawResource{typ: "aws_rds_cluster_instance", name: "i", body: mapBody{}}
+	a := check([]rawResource{ci})
+	require.Empty(t, findingsWith(a, "encrypt"))
+}
+
+func TestCheckSGCountExcludesRules(t *testing.T) {
+	a := check([]rawResource{
+		sg("web", ingress(22, 22, "tcp", "0.0.0.0/0")),
+		{typ: "aws_security_group_rule", name: "r1", body: mapBody{"type": "egress", "cidr_blocks": []any{"0.0.0.0/0"}}},
+	})
+	require.Equal(t, 1, a.Counts.SecurityGroups)
+}
+
+func TestCheckFromPortAbsentNotAllPorts(t *testing.T) {
+	r := rawResource{typ: "aws_security_group", name: "x", body: mapBody{"ingress": []any{
+		map[string]any{"to_port": float64(65535), "protocol": "tcp", "cidr_blocks": []any{"0.0.0.0/0"}},
+	}}}
+	a := check([]rawResource{r})
+	for _, e := range a.Exposure {
+		require.NotEqual(t, "all ports", e.Label) // missing from_port must not read as all-ports
+	}
 }
 
 func TestCheckNoSecretsSurfaced(t *testing.T) {
