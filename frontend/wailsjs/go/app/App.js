@@ -278,6 +278,26 @@ export function TLSCheck(arg1) {
   return window['go']['app']['App']['TLSCheck'](arg1);
 }
 
+export function TftpList() {
+  return window['go']['app']['App']['TftpList']();
+}
+
+export function TftpPreview(arg1) {
+  return window['go']['app']['App']['TftpPreview'](arg1);
+}
+
+export function TftpSave(arg1) {
+  return window['go']['app']['App']['TftpSave'](arg1);
+}
+
+export function TftpStart(arg1) {
+  return window['go']['app']['App']['TftpStart'](arg1);
+}
+
+export function TftpStop() {
+  return window['go']['app']['App']['TftpStop']();
+}
+
 export function Traceroute(arg1, arg2) {
   return window['go']['app']['App']['Traceroute'](arg1, arg2);
 }

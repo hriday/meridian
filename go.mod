@@ -8,6 +8,7 @@ require (
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/miekg/dns v1.1.62
 	github.com/netsampler/goflow2/v2 v2.2.7
+	github.com/pin/tftp/v3 v3.2.0
 	github.com/stretchr/testify v1.11.1
 	github.com/wailsapp/wails/v2 v2.10.1
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
