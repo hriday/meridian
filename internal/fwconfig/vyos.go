@@ -19,6 +19,9 @@ func analyzeVyos(configText string) ([]Analysis, error) {
 	if strings.TrimSpace(configText) == "" {
 		return nil, fmt.Errorf("vyos: no config provided")
 	}
+	if !startsWithSet(configText) {
+		return nil, fmt.Errorf("vyos: this looks like curly-brace format — paste `show configuration commands` (set-format) output")
+	}
 
 	rulesets := map[string]map[int]*vyRule{}
 	var rsOrder []string
@@ -98,6 +101,9 @@ func analyzeVyos(configText string) ([]Analysis, error) {
 			}
 			if fi >= 2 && fi+3 < len(toks) && toks[fi+2] == "name" {
 				intf, dir, rsn := toks[2], toks[fi+1], toks[fi+3]
+				if len(toks) > 4 && toks[3] == "vif" {
+					intf = toks[2] + "." + toks[4] // sub-interface, e.g. eth0.10
+				}
 				switch dir {
 				case "in":
 					binds = append(binds, vyBind{ruleset: rsn, src: intf})
@@ -156,9 +162,9 @@ func analyzeVyos(configText string) ([]Analysis, error) {
 	for _, b := range binds {
 		emit(b.ruleset, b.src, b.dst)
 	}
-	for _, rs := range rsOrder { // rule-sets bound to nothing still get listed
-		if !boundRS[rs] {
-			emit(rs, "", "")
+	for _, rs := range rsOrder { // rule-sets bound to nothing still get listed,
+		if !boundRS[rs] { // shown as "<ruleset> → Internet" rather than Internet→Internet
+			emit(rs, rs, "")
 		}
 	}
 
@@ -191,14 +197,25 @@ func vyParseRulesetLine(rs string, rest []string, getRule func(string, int) *vyR
 	case "disable":
 		r.disabled = true
 	case "source":
-		if len(f) >= 3 && f[1] == "address" {
+		switch {
+		case len(f) >= 3 && f[1] == "address":
 			r.srcAddr = f[2]
+		case len(f) >= 4 && f[1] == "group" && f[2] != "port-group":
+			// network-group / address-group — multi-value match object
+			r.srcAddr = "group:" + f[3]
 		}
 	case "destination":
-		if len(f) >= 3 && f[1] == "address" {
+		switch {
+		case len(f) >= 3 && f[1] == "address":
 			r.dstAddr = f[2]
-		} else if len(f) >= 3 && f[1] == "port" {
+		case len(f) >= 3 && f[1] == "port":
 			r.dstPort = f[2]
+		case len(f) >= 4 && f[1] == "group" && f[2] == "port-group":
+			// a port-group restricts the ports — keep it in the service, don't
+			// collapse the rule to "allow all <proto>".
+			r.dstPort = f[3]
+		case len(f) >= 4 && f[1] == "group":
+			r.dstAddr = "group:" + f[3]
 		}
 	}
 }

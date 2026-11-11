@@ -1,6 +1,9 @@
 package fwconfig
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // A realistic VyOS 1.3 (equuleus) set-format export: two named rule-sets whose
 // rules match protocol/port/addresses, wired to zone pairs via zone-policy, with
@@ -107,5 +110,56 @@ set interfaces ethernet eth0 firewall in name R1
 	}
 	if as[0].Counts.Policies != 1 {
 		t.Errorf("policies: want 1, got %d", as[0].Counts.Policies)
+	}
+}
+
+// Multi-value matches use `group {network-group|address-group|port-group}`; those
+// must survive so a port-restricted rule isn't read as "allow all tcp".
+func TestAnalyzeVyosGroupReferences(t *testing.T) {
+	cfg := `set firewall name WAN-LOCAL rule 20 action accept
+set firewall name WAN-LOCAL rule 20 protocol tcp
+set firewall name WAN-LOCAL rule 20 source group network-group INTERNAL
+set firewall name WAN-LOCAL rule 20 destination group port-group MGMT-PORTS
+set interfaces ethernet eth0 firewall in name WAN-LOCAL
+`
+	as, err := analyzeVyos(cfg)
+	if err != nil {
+		t.Fatalf("analyzeVyos: %v", err)
+	}
+	var p *Policy
+	for i := range as[0].Policies {
+		if as[0].Policies[i].Name == "WAN-LOCAL/20" {
+			p = &as[0].Policies[i]
+		}
+	}
+	if p == nil {
+		t.Fatalf("policy WAN-LOCAL/20 not found")
+	}
+	if !hasService(p.Services, "tcp/MGMT-PORTS") {
+		t.Errorf("destination port-group dropped; services=%v (want tcp/MGMT-PORTS)", p.Services)
+	}
+	var foundSrc bool
+	for _, s := range p.SrcAddr {
+		if strings.Contains(s, "INTERNAL") {
+			foundSrc = true
+		}
+	}
+	if !foundSrc {
+		t.Errorf("source network-group dropped; srcAddr=%v", p.SrcAddr)
+	}
+}
+
+// Pasting curly-brace `show configuration` (not `show configuration commands`)
+// must be rejected, not silently return an empty analysis.
+func TestAnalyzeVyosCurlyBraceRejected(t *testing.T) {
+	curly := `firewall {
+    name WAN-LOCAL {
+        rule 20 {
+            action accept
+        }
+    }
+}`
+	if _, err := analyzeVyos(curly); err == nil {
+		t.Fatal("expected an error for curly-brace format (not set-format)")
 	}
 }
