@@ -65,6 +65,9 @@ func (a *App) backend() (ipspace.Backend, bool) {
 	if !ok {
 		return nil, false
 	}
+	if a.ipMakeBackend != nil {
+		return a.ipMakeBackend(cfg.Kind, cfg.Path)
+	}
 	switch cfg.Kind {
 	case "local":
 		return ipspace.LocalBackend{Path: cfg.Path}, true
@@ -120,28 +123,33 @@ func (a *App) saveBase(events []ipspace.Event) error {
 }
 
 // merge pulls the remote and reconciles it against the local log and the base.
-func (a *App) merge() (ipspace.MergeResult, error) {
-	if err := a.requireUnlocked(); err != nil {
-		return ipspace.MergeResult{}, err
+// It returns the backend and the version it pulled so a following push can
+// compare-and-swap against exactly what was merged.
+func (a *App) merge() (res ipspace.MergeResult, b ipspace.Backend, version string, err error) {
+	if err = a.requireUnlocked(); err != nil {
+		return
 	}
-	b, ok := a.backend()
+	var ok bool
+	b, ok = a.backend()
 	if !ok {
-		return ipspace.MergeResult{}, fmt.Errorf("set up a sync location first")
+		err = fmt.Errorf("set up a sync location first")
+		return
 	}
 	base, err := a.loadBase()
 	if err != nil {
-		return ipspace.MergeResult{}, err
+		return
 	}
-	remote, err := ipspace.Pull(context.Background(), b, a.ipPass)
+	remote, version, err := ipspace.Pull(context.Background(), b, a.ipPass)
 	if err != nil {
-		return ipspace.MergeResult{}, err
+		return
 	}
-	return ipspace.Merge(base, a.ipStore.Events(), remote), nil
+	res = ipspace.Merge(base, a.ipStore.Events(), remote)
+	return
 }
 
 // IPSpaceSyncPreview pulls the remote and shows the diff without writing anything.
 func (a *App) IPSpaceSyncPreview() (SyncResult, error) {
-	res, err := a.merge()
+	res, _, _, err := a.merge()
 	if err != nil {
 		return SyncResult{}, err
 	}
@@ -152,16 +160,17 @@ func (a *App) IPSpaceSyncPreview() (SyncResult, error) {
 // merged log locally, pushes it to the remote, and records it as the new base.
 // When records were changed on both sides, it writes nothing and returns the
 // conflicts so the user can resolve them first (never auto-clobbering a change).
+// If someone else pushed between this pull and push, the backend refuses the
+// write (ErrRemoteChanged) and nothing local is touched — the user reviews again.
 func (a *App) IPSpaceSyncApply() (SyncResult, error) {
-	res, err := a.merge()
+	res, b, version, err := a.merge()
 	if err != nil {
 		return SyncResult{}, err
 	}
 	if len(res.Conflicts) > 0 {
 		return toSyncResult(res, false), nil
 	}
-	b, _ := a.backend()
-	if err := ipspace.Push(context.Background(), b, a.ipPass, res.Merged); err != nil {
+	if err := ipspace.Push(context.Background(), b, a.ipPass, res.Merged, version); err != nil {
 		return SyncResult{}, err
 	}
 	// Adopt the merged log locally and record it as the base for next time.

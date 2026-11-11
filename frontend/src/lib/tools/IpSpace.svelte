@@ -69,13 +69,19 @@
     syncErr = ""; syncMsg = ""; syncBusy = true;
     try {
       const r = await IPSpaceSyncApply();
-      syncResult = r;
       if (r.applied) {
         const inc = r.incoming?.length || 0, out = r.outgoing?.length || 0;
         syncMsg = `Synced — pulled ${inc} change${inc === 1 ? "" : "s"}, pushed ${out} of your own.`;
+        syncResult = null; // the diff is applied; clear it so the columns don't linger
         await refresh();
+      } else {
+        syncResult = r; // conflicts — keep them on screen to resolve
       }
-    } catch (e) { syncErr = String(e); }
+    } catch (e) {
+      // ErrRemoteChanged lands here: someone pushed while we were syncing.
+      syncErr = String(e);
+      syncResult = null;
+    }
     finally { syncBusy = false; }
   }
   function changeLabel(c: any): string {

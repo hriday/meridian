@@ -1,6 +1,9 @@
 package app
 
 import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"path/filepath"
 	"testing"
 
@@ -135,6 +138,84 @@ func TestSyncConflictBlocksApply(t *testing.T) {
 	require.Len(t, bres.Conflicts, 1)
 	// Bob's local store is untouched — still his version.
 	require.Equal(t, "Corp-B", treeNames(bob.IPSpaceTree())[0])
+}
+
+// raceBackend is an in-memory CAS backend whose beforePut hook fires once, just
+// before the CAS check, to simulate another person pushing between this client's
+// pull and push — the exact window the Critical lost-update race lives in.
+type raceBackend struct {
+	blob      []byte
+	version   string
+	beforePut func(*raceBackend)
+}
+
+func (b *raceBackend) set(blob []byte) {
+	b.blob = append([]byte(nil), blob...)
+	sum := sha256.Sum256(blob)
+	b.version = hex.EncodeToString(sum[:])
+}
+func (b *raceBackend) Get(ctx context.Context) ([]byte, string, error) {
+	if b.blob == nil {
+		return nil, "", nil
+	}
+	return append([]byte(nil), b.blob...), b.version, nil
+}
+func (b *raceBackend) Put(ctx context.Context, blob []byte, expected string) error {
+	if b.beforePut != nil {
+		hook := b.beforePut
+		b.beforePut = nil
+		hook(b)
+	}
+	if b.version != expected {
+		return ipspace.ErrRemoteChanged
+	}
+	b.set(blob)
+	return nil
+}
+func (b *raceBackend) Describe() string { return "race backend" }
+
+// A write that lands between this client's pull and push is caught by the CAS
+// guard: Apply refuses, writes nothing locally, and surfaces ErrRemoteChanged —
+// instead of silently clobbering the other person's push.
+func TestSyncApplyRefusesLostUpdate(t *testing.T) {
+	dir := t.TempDir()
+	remote := &raceBackend{}
+
+	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
+	bob.ipMakeBackend = func(kind, path string) (ipspace.Backend, bool) { return remote, true }
+	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote.Describe()))
+
+	// Seed the remote with a block Bob already has (shared base).
+	seedRec, err := bob.IPSpaceAdd("10.0.0.0/8", "Corp", "active", nil, "")
+	require.NoError(t, err)
+	_, err = bob.IPSpaceSyncApply()
+	require.NoError(t, err)
+
+	// Bob edits locally, offline.
+	require.NoError(t, bob.IPSpaceEdit(seedRec.ID, "Corp-Bob", "active", nil, ""))
+
+	// Simulate Alice pushing a different edit in the window between Bob's pull
+	// and push. Her version != Bob's expected, so Bob's push must be refused.
+	remote.beforePut = func(b *raceBackend) {
+		alice := ipspace.FromEvents("alice", mustOpen(t, b.blob, "team"))
+		require.NoError(t, alice.Edit(seedRec.ID, "Corp-Alice", "active", nil, ""))
+		sealed, err := ipspace.SealEvents("team", alice.Events())
+		require.NoError(t, err)
+		b.set(sealed)
+	}
+
+	_, err = bob.IPSpaceSyncApply()
+	require.ErrorIs(t, err, ipspace.ErrRemoteChanged)
+
+	// Bob's local store is untouched (still his own edit), nothing clobbered.
+	require.Equal(t, "Corp-Bob", treeNames(bob.IPSpaceTree())[0])
+}
+
+func mustOpen(t *testing.T, blob []byte, pass string) []ipspace.Event {
+	t.Helper()
+	ev, err := ipspace.OpenEvents(pass, blob)
+	require.NoError(t, err)
+	return ev
 }
 
 func treeNames(nodes []ipspace.TreeNode) []string {
