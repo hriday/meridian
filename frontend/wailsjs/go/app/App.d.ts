@@ -165,6 +165,16 @@ export function SyslogStop():Promise<void>;
 
 export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 
+export function TftpList():Promise<app.TftpView>;
+
+export function TftpPreview(arg1:number):Promise<string>;
+
+export function TftpSave(arg1:number):Promise<string>;
+
+export function TftpStart(arg1:number):Promise<void>;
+
+export function TftpStop():Promise<void>;
+
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
 export function TrapPoll(arg1:number):Promise<collector.Poll_github_com_hriday_meridian_internal_snmp_TrapMsg_>;
