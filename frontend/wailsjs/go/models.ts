@@ -70,6 +70,60 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class SyncInfo {
+	    configured: boolean;
+	    kind: string;
+	    location: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configured = source["configured"];
+	        this.kind = source["kind"];
+	        this.location = source["location"];
+	    }
+	}
+	export class SyncResult {
+	    incoming: ipspace.Change[];
+	    outgoing: ipspace.Change[];
+	    conflicts: ipspace.Conflict[];
+	    duplicatePrefixes: ipspace.PrefixCollision[];
+	    applied: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SyncResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.incoming = this.convertValues(source["incoming"], ipspace.Change);
+	        this.outgoing = this.convertValues(source["outgoing"], ipspace.Change);
+	        this.conflicts = this.convertValues(source["conflicts"], ipspace.Conflict);
+	        this.duplicatePrefixes = this.convertValues(source["duplicatePrefixes"], ipspace.PrefixCollision);
+	        this.applied = source["applied"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class TftpView {
 	    running: boolean;
 	    port: number;
@@ -1096,6 +1150,82 @@ export namespace ipspace {
 		    return a;
 		}
 	}
+	export class Change {
+	    kind: string;
+	    record: Record;
+	    prev?: Record;
+	
+	    static createFrom(source: any = {}) {
+	        return new Change(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.record = this.convertValues(source["record"], Record);
+	        this.prev = this.convertValues(source["prev"], Record);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Conflict {
+	    id: string;
+	    prefix: string;
+	    base: Record;
+	    local: Record;
+	    remote: Record;
+	    localDeleted: boolean;
+	    remoteDeleted: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Conflict(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.prefix = source["prefix"];
+	        this.base = this.convertValues(source["base"], Record);
+	        this.local = this.convertValues(source["local"], Record);
+	        this.remote = this.convertValues(source["remote"], Record);
+	        this.localDeleted = source["localDeleted"];
+	        this.remoteDeleted = source["remoteDeleted"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Event {
 	    id: string;
 	    type: string;
@@ -1150,6 +1280,38 @@ export namespace ipspace {
 	        this.skipped = source["skipped"];
 	        this.errors = source["errors"];
 	    }
+	}
+	export class PrefixCollision {
+	    prefix: string;
+	    records: Record[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PrefixCollision(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prefix = source["prefix"];
+	        this.records = this.convertValues(source["records"], Record);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	
 	export class TreeNode {
