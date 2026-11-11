@@ -142,6 +142,10 @@ export function SetPingBaseline(arg1:string):Promise<void>;
 
 export function SnmpSweep(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.SweepHost>>;
 
+export function SpeedtestStart(arg1:string,arg2:string,arg3:number,arg4:string,arg5:number,arg6:number,arg7:boolean):Promise<void>;
+
+export function SpeedtestStop(arg1:string):Promise<void>;
+
 export function StartDeviceMonitor(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function StartIfMonitor(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<void>;

@@ -3,6 +3,7 @@ module github.com/hriday/meridian
 go 1.25.0
 
 require (
+	github.com/appshubcc/go-iperf3 v0.1.0
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/miekg/dns v1.1.62
