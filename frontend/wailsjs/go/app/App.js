@@ -290,6 +290,10 @@ export function SubnetSplit(arg1, arg2) {
   return window['go']['app']['App']['SubnetSplit'](arg1, arg2);
 }
 
+export function SwitchPortMap(arg1, arg2) {
+  return window['go']['app']['App']['SwitchPortMap'](arg1, arg2);
+}
+
 export function SyslogPoll(arg1) {
   return window['go']['app']['App']['SyslogPoll'](arg1);
 }

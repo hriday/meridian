@@ -2110,6 +2110,26 @@ export namespace snmp {
 	        this.value = source["value"];
 	    }
 	}
+	export class PortEntry {
+	    mac: string;
+	    ip: string;
+	    port: string;
+	    ifIndex: number;
+	    vlan: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new PortEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mac = source["mac"];
+	        this.ip = source["ip"];
+	        this.port = source["port"];
+	        this.ifIndex = source["ifIndex"];
+	        this.vlan = source["vlan"];
+	    }
+	}
 	export class SweepHost {
 	    ip: string;
 	    responded: boolean;
