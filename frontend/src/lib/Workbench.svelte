@@ -17,6 +17,7 @@
   import Netcat from "./tools/Netcat.svelte";
   import AdAudit from "./tools/AdAudit.svelte";
   import CiscoPasswords from "./tools/CiscoPasswords.svelte";
+  import SnmpBrute from "./tools/SnmpBrute.svelte";
   import Ntp from "./tools/Ntp.svelte";
   import Dns from "./tools/Dns.svelte";
   import Interfaces from "./tools/Interfaces.svelte";
@@ -78,6 +79,7 @@
     { id: "nc", name: "Netcat", group: "Security", ready: true },
     { id: "adaudit", name: "AD password audit", group: "Security", ready: true },
     { id: "ciscopw", name: "Cisco passwords", group: "Security", ready: true },
+    { id: "snmpbrute", name: "SNMP community audit", group: "Security", ready: true },
     { id: "fwanalyze", name: "Firewall analyzer", group: "Config insight", ready: true },
     { id: "webanalyze", name: "Web server analyzer", group: "Config insight", ready: true },
     { id: "tfexposure", name: "Terraform exposure", group: "Config insight", ready: true },
@@ -237,7 +239,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "swport"}<SwitchPortMapper />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "netflow"}<NetflowCollector />{:else if active === "tftp"}<TftpReceiver />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "speedtest"}<SpeedTest />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "ciscopw"}<CiscoPasswords />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{:else if active === "tfexposure"}<TerraformExposure />{:else if active === "cfgdiff"}<ConfigDiff />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "swport"}<SwitchPortMapper />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "netflow"}<NetflowCollector />{:else if active === "tftp"}<TftpReceiver />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "speedtest"}<SpeedTest />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "ciscopw"}<CiscoPasswords />{:else if active === "snmpbrute"}<SnmpBrute />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{:else if active === "tfexposure"}<TerraformExposure />{:else if active === "cfgdiff"}<ConfigDiff />{/if}
     </main>
   </div>
 </div>
