@@ -130,6 +130,10 @@ export function IPSpaceSyncConfigureLocal(arg1) {
   return window['go']['app']['App']['IPSpaceSyncConfigureLocal'](arg1);
 }
 
+export function IPSpaceSyncConfigureS3(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['app']['App']['IPSpaceSyncConfigureS3'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
 export function IPSpaceSyncInfo() {
   return window['go']['app']['App']['IPSpaceSyncInfo']();
 }

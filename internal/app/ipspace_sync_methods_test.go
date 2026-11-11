@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -140,6 +141,37 @@ func TestSyncConflictBlocksApply(t *testing.T) {
 	require.Equal(t, "Corp-B", treeNames(bob.IPSpaceTree())[0])
 }
 
+func TestSyncConfigureS3SealsCredentials(t *testing.T) {
+	dir := t.TempDir()
+	store := filepath.Join(dir, "store.enc")
+	a := newUnlockedStore(t, store, "team")
+
+	const secret = "super-secret-key-material"
+	require.NoError(t, a.IPSpaceSyncConfigureS3(
+		"https://acct.r2.cloudflarestorage.com", "auto", "inventory", "meridian/ipspace.enc", "AKID", secret))
+
+	info := a.IPSpaceSyncInfo()
+	require.True(t, info.Configured)
+	require.Equal(t, "s3", info.Kind)
+	require.Contains(t, info.Location, "inventory")
+	require.NotContains(t, info.Location, secret, "the secret must not show in the UI location")
+
+	// The config is sealed: an encrypted sidecar exists, no plaintext one, and the
+	// secret does not appear in the bytes on disk.
+	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	require.NoError(t, err)
+	require.NotContains(t, string(encRaw), secret)
+	require.NotContains(t, string(encRaw), "AKID")
+	require.NoFileExists(t, sidecarPath(store, ".sync.json"))
+
+	// A fresh controller unlocks and sees the S3 backend configured.
+	b := New()
+	b.ipPath = store
+	require.NoError(t, b.IPSpaceUnlock("team"))
+	require.True(t, b.IPSpaceSyncInfo().Configured)
+	require.Equal(t, "s3", b.IPSpaceSyncInfo().Kind)
+}
+
 // raceBackend is an in-memory CAS backend whose beforePut hook fires once, just
 // before the CAS check, to simulate another person pushing between this client's
 // pull and push — the exact window the Critical lost-update race lives in.
@@ -182,7 +214,7 @@ func TestSyncApplyRefusesLostUpdate(t *testing.T) {
 	remote := &raceBackend{}
 
 	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
-	bob.ipMakeBackend = func(kind, path string) (ipspace.Backend, bool) { return remote, true }
+	bob.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return remote, true }
 	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote.Describe()))
 
 	// Seed the remote with a block Bob already has (shared base).
