@@ -22,6 +22,10 @@ export function ADAuditSave(arg1, arg2) {
   return window['go']['app']['App']['ADAuditSave'](arg1, arg2);
 }
 
+export function AnalyzeCiscoPasswords(arg1) {
+  return window['go']['app']['App']['AnalyzeCiscoPasswords'](arg1);
+}
+
 export function AnalyzeFirewall(arg1, arg2) {
   return window['go']['app']['App']['AnalyzeFirewall'](arg1, arg2);
 }
