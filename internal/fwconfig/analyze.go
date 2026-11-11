@@ -17,12 +17,20 @@ func Analyze(configText, vendor string) ([]Analysis, error) {
 	if v == "" {
 		v = "fortigate"
 	}
-	if v != "fortigate" {
-		return nil, fmt.Errorf("vendor %q is not supported yet — FortiGate only in this version", vendor)
+	switch v {
+	case "fortigate":
+		root, err := parse(configText)
+		if err != nil {
+			return nil, err
+		}
+		return interpret(root)
+	case "panos":
+		return analyzePanos(configText)
+	case "asa":
+		return analyzeAsa(configText)
+	case "srx":
+		return analyzeSrx(configText)
+	default:
+		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, or srx", vendor)
 	}
-	root, err := parse(configText)
-	if err != nil {
-		return nil, err
-	}
-	return interpret(root)
 }
