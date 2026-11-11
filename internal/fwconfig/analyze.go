@@ -28,6 +28,8 @@ func Analyze(configText, vendor string) ([]Analysis, error) {
 		return analyzePanos(configText)
 	case "asa":
 		return analyzeAsa(configText)
+	case "srx":
+		return analyzeSrx(configText)
 	default:
 		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, or srx", vendor)
 	}
