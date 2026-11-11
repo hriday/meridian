@@ -18,6 +18,7 @@ import (
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/snmp"
+	"github.com/hriday/meridian/internal/tftp"
 )
 
 // collectorBuffer is the rolling message cap for the syslog/trap collectors;
@@ -62,6 +63,7 @@ type App struct {
 	syslog  *collector.Collector[collector.SyslogMsg]
 	traps   *collector.Collector[snmp.TrapMsg]
 	netflow *collector.Collector[netflow.FlowRecord]
+	tftpSrv *tftp.Server
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -77,6 +79,7 @@ func New() *App {
 		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
 		netflow: collector.NewMulti[netflow.FlowRecord](netflowBuffer,
 			func(b []byte, src netip.Addr) []netflow.FlowRecord { return nfParser.Parse(b, src, time.Now()) }),
+		tftpSrv: tftp.New(),
 	}
 }
 
@@ -99,6 +102,7 @@ func OnShutdown(a *App) func(context.Context) {
 		a.syslog.Stop()
 		a.traps.Stop()
 		a.netflow.Stop()
+		a.tftpSrv.Stop()
 	}
 }
 

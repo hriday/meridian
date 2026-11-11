@@ -44,6 +44,8 @@ github.com/netsampler/goflow2/v2 v2.2.7 h1:4TYOgwHsdSCOCrS1GeoXCv4HA7naAhpSouyUe
 github.com/netsampler/goflow2/v2 v2.2.7/go.mod h1:sKVfADpYP0NvkEeMRMh8/vz6T1yq4z1JZqO+N0+RGqk=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
+github.com/pin/tftp/v3 v3.2.0 h1:q6K5G6T0TA7e3wDJsB/7VpD3iaWwVEJD/nEuh3q9Sk0=
+github.com/pin/tftp/v3 v3.2.0/go.mod h1:qc5ySXB5aOS1H6ULneqB4g5nshqV1CgeV/l/M6rEDms=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c h1:+mdjkGKdHQG3305AYmdv1U2eRNDiU2ErMBj1gwrq8eQ=
 github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c/go.mod h1:7rwL4CYBLnjLxUqIJNnCWiEdr3bn6IUYi15bNlnbCCU=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
