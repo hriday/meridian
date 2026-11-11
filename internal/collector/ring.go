@@ -41,6 +41,45 @@ func (r *Ring[T]) Add(v T) {
 	}
 }
 
+// Len returns the number of retained items.
+func (r *Ring[T]) Len() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.buf)
+}
+
+// AddAll appends all of vs under a single lock (one datagram's records), then
+// trims to capacity once.
+func (r *Ring[T]) AddAll(vs []T) {
+	if len(vs) == 0 {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, v := range vs {
+		r.nextSeq++
+		r.buf = append(r.buf, Stamped[T]{Seq: r.nextSeq, Val: v})
+	}
+	if over := len(r.buf) - r.cap; over > 0 {
+		r.buf = append(r.buf[:0], r.buf[over:]...)
+		r.dropped += over
+	}
+}
+
+// Values copies the retained values matching keep, under the lock, so the caller
+// can process them without blocking the writer.
+func (r *Ring[T]) Values(keep func(T) bool) []T {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []T
+	for _, it := range r.buf {
+		if keep(it.Val) {
+			out = append(out, it.Val)
+		}
+	}
+	return out
+}
+
 // Snapshot copies the retained items with Seq > afterSeq, plus the current held
 // count and the lifetime eviction count. The copy is made under the lock so the
 // caller can marshal it without blocking the writer.

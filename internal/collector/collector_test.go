@@ -56,6 +56,45 @@ func TestCollectorUnmapsSource(t *testing.T) {
 	}, 2*time.Second, 10*time.Millisecond)
 }
 
+func TestCollectorMulti(t *testing.T) {
+	// a parse that emits two records per datagram.
+	c := NewMulti[string](100, func(b []byte, _ netip.Addr) []string {
+		if len(b) == 0 {
+			return nil
+		}
+		return []string{string(b) + "-a", string(b) + "-b"}
+	})
+	require.NoError(t, c.Start(0))
+	defer c.Stop()
+	sendUDP(t, c.PollSince(0).Port, "x")
+	require.Eventually(t, func() bool {
+		return len(c.Snapshot(func(string) bool { return true })) == 2
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func TestCollectorSnapshotFilter(t *testing.T) {
+	c := NewMulti[string](100, func(b []byte, _ netip.Addr) []string { return []string{string(b)} })
+	require.NoError(t, c.Start(0))
+	port := c.PollSince(0).Port
+	sendUDP(t, port, "keep")
+	sendUDP(t, port, "drop")
+	require.Eventually(t, func() bool { return len(c.Snapshot(func(string) bool { return true })) == 2 }, 2*time.Second, 10*time.Millisecond)
+	require.Equal(t, []string{"keep"}, c.Snapshot(func(s string) bool { return s == "keep" }))
+	c.Stop()
+	require.Empty(t, c.Snapshot(func(string) bool { return true })) // empty after stop
+}
+
+func TestCollectorCount(t *testing.T) {
+	c := NewMulti[string](3, func(b []byte, _ netip.Addr) []string { return []string{string(b)} })
+	require.NoError(t, c.Start(0))
+	defer c.Stop()
+	port := c.PollSince(0).Port
+	for i := 0; i < 5; i++ {
+		sendUDP(t, port, "x")
+	}
+	require.Eventually(t, func() bool { return c.Count() == 3 }, 2*time.Second, 10*time.Millisecond) // capped at cap
+}
+
 func TestCollectorStopNoLeak(t *testing.T) {
 	c := New[string](100, echoParse)
 	require.NoError(t, c.Start(0))

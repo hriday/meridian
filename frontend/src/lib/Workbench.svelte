@@ -25,6 +25,7 @@
   import MibBrowser from "./tools/MibBrowser.svelte";
   import SyslogReceiver from "./tools/SyslogReceiver.svelte";
   import TrapReceiver from "./tools/TrapReceiver.svelte";
+  import NetflowCollector from "./tools/NetflowCollector.svelte";
   import PingSweep from "./tools/PingSweep.svelte";
   import PortScan from "./tools/PortScan.svelte";
   import WakeOnLan from "./tools/WakeOnLan.svelte";
@@ -58,6 +59,7 @@
     { id: "mib", name: "MIB browser", group: "SNMP & monitoring", ready: true },
     { id: "syslog", name: "Syslog receiver", group: "Collectors", ready: true },
     { id: "traps", name: "Trap receiver", group: "Collectors", ready: true },
+    { id: "netflow", name: "NetFlow", group: "Collectors", ready: true },
     { id: "ping", name: "Ping sweep", group: "Local network", ready: true },
     { id: "ports", name: "Port scanner", group: "Local network", ready: true },
     { id: "wol", name: "Wake-on-LAN", group: "Local network", ready: true },
@@ -180,7 +182,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "netflow"}<NetflowCollector />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{/if}
     </main>
   </div>
 </div>
