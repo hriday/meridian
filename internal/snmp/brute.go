@@ -11,7 +11,10 @@ import (
 // communityProbe tests read access for one community via a single sysDescr GET.
 // It is a package var so tests can inject a fake without touching the network.
 var communityProbe = func(device, community string, timeout time.Duration) bool {
-	c, err := Dial(device, community, timeout)
+	// No retry: a wrong community is silent, so one timeout is enough — a
+	// retransmit would double a brute audit's time and packet count (same reason
+	// the discovery sweep dials with 0 retries).
+	c, err := dialRetries(device, community, timeout, 0)
 	if err != nil {
 		return false
 	}

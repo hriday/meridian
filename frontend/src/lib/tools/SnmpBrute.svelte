@@ -16,10 +16,12 @@
   let hits: string[] = [];
   let tried = 0;
 
+  $: communityCount = list.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).length;
+
   async function run() {
     const d = device.trim();
     const communities = list.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    if (!d || !authorized || loading) return;
+    if (!d || !authorized || loading || communities.length === 0) return;
     err = "";
     ran = false;
     loading = true;
@@ -60,8 +62,8 @@
       <span>I am authorized to test this device.</span>
     </label>
     <div class="row">
-      <button type="button" class="go" on:click={run} disabled={!device.trim() || !authorized || loading}>{loading ? "Testing…" : "Audit communities"}</button>
-      <span class="hint">Read-only; one sysDescr GET per string.</span>
+      <button type="button" class="go" on:click={run} disabled={!device.trim() || !authorized || loading || communityCount === 0}>{loading ? "Testing…" : "Audit communities"}</button>
+      <span class="hint">Read-only; one sysDescr GET per string · SNMPv2c, UDP 161.</span>
     </div>
   </div>
 
