@@ -50,6 +50,21 @@ func TestNetflowStartTopStop(t *testing.T) {
 	require.False(t, a.NetflowTop(60, false).Running)
 }
 
+func TestNetflowNotTruncatedWhenSparse(t *testing.T) {
+	// a freshly started, lightly-loaded collector covers little of a long window
+	// but has evicted nothing — it must NOT report truncation.
+	a := New()
+	require.NoError(t, a.NetflowStart(0))
+	defer a.NetflowStop()
+	port := a.NetflowTop(300, false).Port
+	c, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+	require.NoError(t, err)
+	_, _ = c.Write(v5one("10.0.0.9", "10.0.0.1", 443, 6, 1000))
+	c.Close()
+	require.Eventually(t, func() bool { return a.NetflowTop(300, false).Flows >= 1 }, 2*time.Second, 10*time.Millisecond)
+	require.False(t, a.NetflowTop(300, false).Truncated) // not saturated → no loss to report
+}
+
 func TestNetflowStartBindInUse(t *testing.T) {
 	held, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 0})
 	require.NoError(t, err)

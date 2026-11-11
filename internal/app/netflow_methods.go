@@ -14,6 +14,7 @@ type NetflowView struct {
 	Flows            int                    `json:"flows"`
 	Exporters        int                    `json:"exporters"`
 	WindowSecCovered int                    `json:"windowSecCovered"`
+	Truncated        bool                   `json:"truncated"` // ring saturated → older in-window flows evicted
 	Top              []netflow.Conversation `json:"top"`
 }
 
@@ -42,9 +43,14 @@ func (a *App) NetflowTop(windowSec int, byPackets bool) NetflowView {
 		exporters[f.Exporter] = struct{}{}
 	}
 	top, covered := netflow.TopTalkers(recs, window, now, byPackets, 50)
+	// Truncation is real only when the ring is saturated (so older flows are
+	// being evicted) AND the retained data doesn't reach back the full window —
+	// not merely because the collector just started or traffic is sparse.
+	truncated := a.netflow.Count() >= netflowBuffer && covered < windowSec-2
 	return NetflowView{
 		Running: running, Port: port,
 		Flows: len(recs), Exporters: len(exporters), WindowSecCovered: covered,
-		Top: top,
+		Truncated: truncated,
+		Top:       top,
 	}
 }

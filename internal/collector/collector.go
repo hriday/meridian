@@ -116,6 +116,17 @@ func (c *Collector[T]) stopLocked() {
 	<-done
 }
 
+// Count returns the number of buffered records (0 when not running). Used to tell
+// whether the ring is saturated (evicting) without copying it.
+func (c *Collector[T]) Count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ring == nil {
+		return 0
+	}
+	return c.ring.Len()
+}
+
 // Status returns the running state and bound port without copying the buffer.
 func (c *Collector[T]) Status() (running bool, port int) {
 	c.mu.Lock()

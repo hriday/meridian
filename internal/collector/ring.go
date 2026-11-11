@@ -41,6 +41,13 @@ func (r *Ring[T]) Add(v T) {
 	}
 }
 
+// Len returns the number of retained items.
+func (r *Ring[T]) Len() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.buf)
+}
+
 // AddAll appends all of vs under a single lock (one datagram's records), then
 // trims to capacity once.
 func (r *Ring[T]) AddAll(vs []T) {

@@ -84,6 +84,17 @@ func TestCollectorSnapshotFilter(t *testing.T) {
 	require.Empty(t, c.Snapshot(func(string) bool { return true })) // empty after stop
 }
 
+func TestCollectorCount(t *testing.T) {
+	c := NewMulti[string](3, func(b []byte, _ netip.Addr) []string { return []string{string(b)} })
+	require.NoError(t, c.Start(0))
+	defer c.Stop()
+	port := c.PollSince(0).Port
+	for i := 0; i < 5; i++ {
+		sendUDP(t, port, "x")
+	}
+	require.Eventually(t, func() bool { return c.Count() == 3 }, 2*time.Second, 10*time.Millisecond) // capped at cap
+}
+
 func TestCollectorStopNoLeak(t *testing.T) {
 	c := New[string](100, echoParse)
 	require.NoError(t, c.Start(0))

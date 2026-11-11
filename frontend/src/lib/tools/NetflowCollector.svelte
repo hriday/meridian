@@ -62,8 +62,8 @@
   const hpkts = (p: number) => (p >= 1e6 ? (p / 1e6).toFixed(1) + "M" : p >= 1e3 ? (p / 1e3).toFixed(1) + "k" : "" + p);
 
   $: top = view.top || [];
-  $: maxV = top.length ? (byPackets ? top[0].packets : top[0].bytes) : 1;
-  $: truncated = running && view.windowSecCovered > 0 && view.windowSecCovered < windowSec - 2;
+  $: maxV = Math.max(1, top.length ? (byPackets ? top[0].packets : top[0].bytes) : 1);
+  $: truncated = running && view.truncated;
 </script>
 
 <div class="tool">
