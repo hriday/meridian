@@ -5,7 +5,11 @@
 // offline — nothing leaves the machine.
 package configdiff
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
 
 // Op is the kind of a diff line.
 type Op string
@@ -31,9 +35,13 @@ type Result struct {
 	Sections []string `json:"sections"` // sections containing at least one change, in order
 }
 
-// maxCells caps the LCS table size; above it, fall back to a coarse multiset
-// diff so a huge paste can't exhaust memory (≈ 4000×4000 lines).
-const maxCells = 16_000_000
+// maxCells caps the LCS table size and maxDim caps either dimension; above
+// either, fall back to a coarse multiset diff so a huge (or skewed) paste can't
+// exhaust memory.
+const (
+	maxCells = 16_000_000 // ≈ 4000×4000 lines
+	maxDim   = 200_000    // bounds the table even when the product is small
+)
 
 // Diff compares oldText against newText.
 func Diff(oldText, newText string) Result {
@@ -42,7 +50,11 @@ func Diff(oldText, newText string) Result {
 	secA := sectionsOf(a)
 	secB := sectionsOf(b)
 
-	if int64(len(a))*int64(len(b)) > maxCells {
+	// Fall back to the coarse diff when a side is empty (trivial all-add/all-del),
+	// when either dimension is huge, or when the LCS table would be too large.
+	if len(a) == 0 || len(b) == 0 ||
+		len(a) > maxDim || len(b) > maxDim ||
+		int64(len(a))*int64(len(b)) > maxCells {
 		return coarseDiff(a, b, secA, secB)
 	}
 	return lcsDiff(a, b, secA, secB)
@@ -121,7 +133,13 @@ type resultBuilder struct {
 	changedSec map[string]bool
 }
 
-func newResult() *resultBuilder { return &resultBuilder{changedSec: map[string]bool{}} }
+func newResult() *resultBuilder {
+	// Initialise the slices non-nil so the JSON sent to the UI is [] not null.
+	return &resultBuilder{
+		res:        Result{Lines: []Line{}, Sections: []string{}},
+		changedSec: map[string]bool{},
+	}
+}
 
 func (rb *resultBuilder) add(l Line) {
 	rb.res.Lines = append(rb.res.Lines, l)
@@ -164,14 +182,24 @@ func sectionsOf(lines []string) []string {
 	out := make([]string, len(lines))
 	cur := ""
 	for i, l := range lines {
-		if strings.TrimSpace(l) == "" {
+		t := strings.TrimSpace(l)
+		// Blank lines and bare delimiter/comment lines (`!`, `#`) inherit the
+		// current section rather than starting a new one.
+		if t == "" || t[0] == '!' || t[0] == '#' {
 			out[i] = cur
 			continue
 		}
-		if l[0] != ' ' && l[0] != '\t' {
-			cur = strings.TrimSpace(l)
+		if !isIndented(l) {
+			cur = t
 		}
 		out[i] = cur
 	}
 	return out
+}
+
+// isIndented reports whether a line begins with a whitespace rune (space, tab,
+// or any Unicode space such as a non-breaking space).
+func isIndented(l string) bool {
+	r, _ := utf8.DecodeRuneInString(l)
+	return unicode.IsSpace(r)
 }

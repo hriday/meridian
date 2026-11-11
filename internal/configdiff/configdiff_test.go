@@ -95,6 +95,39 @@ func TestDiffEmptyInputs(t *testing.T) {
 	}
 }
 
+// A zero-change diff must still return non-nil slices, or encoding/json emits
+// `null` and the UI crashes dereferencing .length.
+func TestDiffZeroChangeSlicesNonNil(t *testing.T) {
+	r := Diff(cfgA, cfgA)
+	if r.Sections == nil {
+		t.Error("Sections is nil (would marshal as JSON null)")
+	}
+	if r.Lines == nil {
+		t.Error("Lines is nil (would marshal as JSON null)")
+	}
+	// a trailing-newline-only difference is really no change
+	r2 := Diff("hostname R1\n", "hostname R1")
+	if r2.Added != 0 || r2.Removed != 0 {
+		t.Errorf("trailing-newline-only diff: want 0/0, got %d/%d", r2.Added, r2.Removed)
+	}
+}
+
+// A bare `!` (or comment) delimiter must not become its own section, or every
+// IOS block add/remove pollutes the changed-section summary.
+func TestDiffBangNotASection(t *testing.T) {
+	old := "interface Gi0/1\n shutdown\n!\ninterface Gi0/2\n shutdown\n!"
+	nw := "interface Gi0/1\n shutdown\n!\ninterface Gi0/9\n shutdown\n!\ninterface Gi0/2\n shutdown\n!"
+	r := Diff(old, nw)
+	for _, s := range r.Sections {
+		if s == "!" {
+			t.Errorf("'!' delimiter must not be a changed section; sections=%v", r.Sections)
+		}
+	}
+	if !hasSection(r.Sections, "interface Gi0/9") {
+		t.Errorf("want interface Gi0/9 as a changed section; got %v", r.Sections)
+	}
+}
+
 func contains(s, sub string) bool {
 	for i := 0; i+len(sub) <= len(s); i++ {
 		if s[i:i+len(sub)] == sub {

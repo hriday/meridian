@@ -34,10 +34,10 @@
   // view shows what changed in context and skips untouched sections.
   $: groups = res ? groupChanged(res) : [];
   function groupChanged(r: any) {
-    const changed = new Set(r.sections);
+    const changed = new Set(r.sections ?? []);
     const out: { section: string; lines: any[] }[] = [];
     let cur: { section: string; lines: any[] } | null = null;
-    for (const l of r.lines) {
+    for (const l of r.lines ?? []) {
       if (!changed.has(l.section)) {
         cur = null;
         continue;
@@ -86,12 +86,13 @@
   {/if}
 
   {#if res}
+    {@const secCount = (res.sections ?? []).length}
     <div class="summary">
       <span class="s-add">+{res.added}</span>
       <span class="s-del">−{res.removed}</span>
-      <span class="s-sec">across {res.sections.length} section{res.sections.length === 1 ? "" : "s"}</span>
+      <span class="s-sec">across {secCount} section{secCount === 1 ? "" : "s"}</span>
     </div>
-    {#if res.sections.length === 0}
+    {#if secCount === 0}
       <div class="nochg">No differences — the two configs are identical.</div>
     {:else}
       {#each groups as g}
