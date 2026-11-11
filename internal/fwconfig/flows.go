@@ -136,7 +136,7 @@ func countSubnetsIPs(a *Analysis) int {
 	for _, ad := range a.Addresses {
 		switch ad.Kind {
 		case "subnet", "iprange":
-			if strings.EqualFold(ad.Name, "all") {
+			if strings.EqualFold(ad.Name, "all") || strings.EqualFold(ad.Name, "any") {
 				continue
 			}
 			add(ad.Value)
