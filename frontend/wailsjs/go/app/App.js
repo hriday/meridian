@@ -126,6 +126,10 @@ export function IPSpaceSyncApply() {
   return window['go']['app']['App']['IPSpaceSyncApply']();
 }
 
+export function IPSpaceSyncConfigureGit(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['App']['IPSpaceSyncConfigureGit'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function IPSpaceSyncConfigureLocal(arg1) {
   return window['go']['app']['App']['IPSpaceSyncConfigureLocal'](arg1);
 }

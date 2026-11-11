@@ -27,10 +27,11 @@ const syncTimeout = 30 * time.Second
 // It may hold backend credentials (S3), so it is sealed with the store passphrase
 // rather than written in the clear.
 type syncConfig struct {
-	Kind string              `json:"kind"`           // "local" | "s3" | "sftp"
+	Kind string              `json:"kind"`           // "local" | "s3" | "sftp" | "git"
 	Path string              `json:"path,omitempty"` // local/mounted path
 	S3   *ipspace.S3Config   `json:"s3,omitempty"`   // S3-compatible connection + credentials
 	SFTP *ipspace.SFTPConfig `json:"sftp,omitempty"` // SFTP connection + credentials
+	Git  *ipspace.GitConfig  `json:"git,omitempty"`  // git remote + credentials
 }
 
 // errNoBackend means no sync backend is configured (distinct from a configured
@@ -161,6 +162,11 @@ func (a *App) buildBackend(cfg syncConfig) (ipspace.Backend, error) {
 			return nil, errNoBackend
 		}
 		return ipspace.NewSFTPBackend(*cfg.SFTP)
+	case "git":
+		if cfg.Git == nil {
+			return nil, errNoBackend
+		}
+		return ipspace.NewGitBackend(*cfg.Git)
 	default:
 		return nil, errNoBackend
 	}
@@ -188,6 +194,10 @@ func describeConfig(cfg syncConfig) string {
 	case "sftp":
 		if cfg.SFTP != nil {
 			return cfg.SFTP.Describe()
+		}
+	case "git":
+		if cfg.Git != nil {
+			return cfg.Git.Describe()
 		}
 	}
 	return ""
@@ -287,6 +297,41 @@ func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, k
 	if err != nil {
 		return err
 	}
+	if err := b.Verify(ctx); err != nil {
+		return err
+	}
+	return a.saveSyncConfig(sc)
+}
+
+// IPSpaceSyncConfigureGit points sync at a git repository over HTTPS (the
+// inventory is a file committed and pushed on each sync, with its full history
+// kept). Auth is an HTTPS access token, sealed with the store passphrase. The
+// repo must already exist with an initial commit.
+func (a *App) IPSpaceSyncConfigureGit(url, branch, path, username, token string) error {
+	if err := a.requireUnlocked(); err != nil {
+		return err
+	}
+	cfg := ipspace.GitConfig{
+		URL:      strings.TrimSpace(url),
+		Branch:   strings.TrimSpace(branch),
+		Path:     strings.TrimSpace(path),
+		Username: strings.TrimSpace(username),
+		Token:    token,
+	}
+	if cfg.URL == "" || cfg.Path == "" {
+		return fmt.Errorf("enter the repository URL and the file path within it")
+	}
+	if strings.TrimSpace(cfg.Token) == "" {
+		return fmt.Errorf("enter an access token for the repository")
+	}
+	sc := syncConfig{Kind: "git", Git: &cfg}
+	b, err := a.buildBackend(sc)
+	if err != nil {
+		return err
+	}
+	// Reach the repo (validates URL/branch/credentials; rejects an empty repo).
+	ctx, cancel := context.WithTimeout(context.Background(), syncTimeout)
+	defer cancel()
 	if err := b.Verify(ctx); err != nil {
 		return err
 	}

@@ -3,7 +3,7 @@
   import {
     IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
-    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncPreview, IPSpaceSyncApply,
+    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
 
@@ -18,9 +18,10 @@
 
   // Sync state.
   let showSync = false, syncInfo: any = { configured: false }, syncPath = "";
-  let backendKind: "local" | "s3" | "sftp" = "local";
+  let backendKind: "local" | "s3" | "sftp" | "git" = "local";
   let s3f = { endpoint: "", region: "", bucket: "", key: "meridian/ipspace.enc", accessKey: "", secret: "" };
   let sf = { host: "", port: "22", user: "", password: "", privateKey: "", keyPassphrase: "", path: "" };
+  let gf = { url: "", branch: "main", path: "ipspace.enc", username: "", token: "" };
   let syncResult: any = null, syncErr = "", syncMsg = "", syncBusy = false;
   $: syncChanges = syncResult ? (syncResult.incoming?.length || 0) + (syncResult.outgoing?.length || 0) : 0;
 
@@ -64,8 +65,10 @@
         await IPSpaceSyncConfigureLocal(syncPath.trim());
       } else if (backendKind === "s3") {
         await IPSpaceSyncConfigureS3(s3f.endpoint.trim(), s3f.region.trim(), s3f.bucket.trim(), s3f.key.trim(), s3f.accessKey.trim(), s3f.secret);
-      } else {
+      } else if (backendKind === "sftp") {
         await IPSpaceSyncConfigureSFTP(sf.host.trim(), sf.port.trim(), sf.user.trim(), sf.password, sf.privateKey, sf.keyPassphrase, sf.path.trim());
+      } else {
+        await IPSpaceSyncConfigureGit(gf.url.trim(), gf.branch.trim(), gf.path.trim(), gf.username.trim(), gf.token);
       }
       syncInfo = await IPSpaceSyncInfo();
       syncResult = null;
@@ -75,7 +78,8 @@
   $: canConfigure =
     backendKind === "local" ? !!syncPath.trim() :
     backendKind === "s3" ? !!(s3f.bucket.trim() && s3f.key.trim() && s3f.accessKey.trim() && s3f.secret) :
-    !!(sf.host.trim() && sf.user.trim() && sf.path.trim() && (sf.password || sf.privateKey.trim()));
+    backendKind === "sftp" ? !!(sf.host.trim() && sf.user.trim() && sf.path.trim() && (sf.password || sf.privateKey.trim())) :
+    !!(gf.url.trim() && gf.path.trim() && gf.token);
   async function previewSync() {
     syncErr = ""; syncMsg = ""; syncBusy = true; syncResult = null;
     try { syncResult = await IPSpaceSyncPreview(); }
@@ -196,6 +200,7 @@
           <button class="seg" class:on={backendKind === "local"} on:click={() => (backendKind = "local")}>Local / mounted path</button>
           <button class="seg" class:on={backendKind === "s3"} on:click={() => (backendKind = "s3")}>S3-compatible</button>
           <button class="seg" class:on={backendKind === "sftp"} on:click={() => (backendKind = "sftp")}>SFTP</button>
+          <button class="seg" class:on={backendKind === "git"} on:click={() => (backendKind = "git")}>Git</button>
         </div>
 
         {#if backendKind === "local"}
@@ -218,7 +223,7 @@
             <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Checking…" : "Use this bucket"}</button>
             <span class="hint">AWS S3, Cloudflare R2, and S3-compatible storage that supports conditional writes — Meridian checks when you connect and won't sync somewhere two people could overwrite each other. Credentials are encrypted with your store passphrase, never written in the clear.</span>
           </div>
-        {:else}
+        {:else if backendKind === "sftp"}
           <div class="form">
             <label>Host<input class="field mono" bind:value={sf.host} placeholder="sftp.example.com" /></label>
             <label>Port<input class="field mono" bind:value={sf.port} placeholder="22" /></label>
@@ -231,6 +236,18 @@
           <div class="formbtns">
             <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Connecting…" : "Use this server"}</button>
             <span class="hint">The server's host key is pinned the first time you connect; a later change is refused (to catch impersonation). Credentials are encrypted with your store passphrase, never written in the clear.</span>
+          </div>
+        {:else}
+          <div class="form">
+            <label>Repository URL (HTTPS)<input class="field mono" bind:value={gf.url} placeholder="https://github.com/acme/ipam.git" /></label>
+            <label>Branch<input class="field mono" bind:value={gf.branch} placeholder="main" /></label>
+            <label>File path in repo<input class="field mono" bind:value={gf.path} placeholder="ipspace.enc" /></label>
+            <label>Username<input class="field mono" bind:value={gf.username} autocomplete="off" placeholder="git (or your username)" /></label>
+            <label>Access token<input class="field mono" type="password" bind:value={gf.token} autocomplete="off" placeholder="personal access token" /></label>
+          </div>
+          <div class="formbtns">
+            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Connecting…" : "Use this repo"}</button>
+            <span class="hint">The inventory is a file committed and pushed each sync — its full history is kept. Authenticate with an HTTPS access token (GitHub/GitLab/Bitbucket/self-hosted). The repo must already exist with an initial commit. The token is encrypted with your store passphrase, never written in the clear.</span>
           </div>
         {/if}
         {#if syncInfo.configured}
