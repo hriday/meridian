@@ -36,7 +36,9 @@ func Analyze(configText, vendor string) ([]Analysis, error) {
 		return analyzeCheckpoint(configText)
 	case "vyos":
 		return analyzeVyos(configText)
+	case "pfsense", "opnsense":
+		return analyzePfsense(configText)
 	default:
-		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, arista, checkpoint, or vyos", vendor)
+		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, arista, checkpoint, vyos, or pfsense", vendor)
 	}
 }
