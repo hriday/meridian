@@ -242,6 +242,10 @@ export function SetPingBaseline(arg1) {
   return window['go']['app']['App']['SetPingBaseline'](arg1);
 }
 
+export function SnmpBruteCommunities(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SnmpBruteCommunities'](arg1, arg2, arg3);
+}
+
 export function SnmpSweep(arg1, arg2, arg3) {
   return window['go']['app']['App']['SnmpSweep'](arg1, arg2, arg3);
 }

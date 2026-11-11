@@ -151,6 +151,8 @@ export function SetIfBaseline(arg1:string):Promise<void>;
 
 export function SetPingBaseline(arg1:string):Promise<void>;
 
+export function SnmpBruteCommunities(arg1:string,arg2:Array<string>,arg3:boolean):Promise<Array<string>>;
+
 export function SnmpSweep(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.SweepHost>>;
 
 export function SpeedtestStart(arg1:string,arg2:string,arg3:number,arg4:string,arg5:number,arg6:number,arg7:boolean):Promise<void>;
