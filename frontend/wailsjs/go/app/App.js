@@ -270,6 +270,18 @@ export function Traceroute(arg1, arg2) {
   return window['go']['app']['App']['Traceroute'](arg1, arg2);
 }
 
+export function TrapPoll(arg1) {
+  return window['go']['app']['App']['TrapPoll'](arg1);
+}
+
+export function TrapStart(arg1) {
+  return window['go']['app']['App']['TrapStart'](arg1);
+}
+
+export function TrapStop() {
+  return window['go']['app']['App']['TrapStop']();
+}
+
 export function WakeOnLAN(arg1, arg2, arg3) {
   return window['go']['app']['App']['WakeOnLAN'](arg1, arg2, arg3);
 }
