@@ -66,6 +66,7 @@ type App struct {
 
 // New returns a controller with no context; the context arrives at startup.
 func New() *App {
+	nfParser := netflow.NewParser() // stateful: per-exporter v9/IPFIX template cache
 	return &App{
 		lookup:      lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
 		ipPath:      ipspace.DefaultPath(),
@@ -74,14 +75,9 @@ func New() *App {
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 		syslog:      collector.New[collector.SyslogMsg](collectorBuffer, collector.ParseSyslog),
 		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
-		netflow:     collector.NewMulti[netflow.FlowRecord](netflowBuffer, netflowParse),
+		netflow: collector.NewMulti[netflow.FlowRecord](netflowBuffer,
+			func(b []byte, src netip.Addr) []netflow.FlowRecord { return nfParser.Parse(b, src, time.Now()) }),
 	}
-}
-
-// netflowParse dispatches a datagram to the right version decoder (v5 now;
-// v9/IPFIX added in slice 2).
-func netflowParse(datagram []byte, src netip.Addr) []netflow.FlowRecord {
-	return netflow.ParseV5(datagram, src, time.Now())
 }
 
 // OnStartup returns the Wails OnStartup callback for a. startup stays
