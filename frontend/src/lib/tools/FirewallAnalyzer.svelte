@@ -6,12 +6,14 @@
     { id: "panos", label: "Palo Alto (PAN-OS)" },
     { id: "asa", label: "Cisco ASA" },
     { id: "srx", label: "Juniper SRX" },
+    { id: "arista", label: "Arista EOS" },
   ];
   const FORMAT_HINT: Record<string, string> = {
     fortigate: "a FortiGate config export",
     panos: "a PAN-OS config in set-format (set cli config-output-format set)",
     asa: "a Cisco ASA running-config",
     srx: "a Juniper SRX config in set-format (show configuration | display set)",
+    arista: "an Arista EOS running-config",
   };
 
   let configText = "";
