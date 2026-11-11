@@ -69,7 +69,9 @@
     } catch (e) { syncErr = String(e); }
     finally { syncBusy = false; }
   }
-  $: canConfigure = backendKind === "local" ? !!syncPath.trim() : !!(s3f.bucket.trim() && s3f.key.trim());
+  $: canConfigure = backendKind === "local"
+    ? !!syncPath.trim()
+    : !!(s3f.bucket.trim() && s3f.key.trim() && s3f.accessKey.trim() && s3f.secret);
   async function previewSync() {
     syncErr = ""; syncMsg = ""; syncBusy = true; syncResult = null;
     try { syncResult = await IPSpaceSyncPreview(); }
@@ -181,9 +183,9 @@
         <div class="chead"><h3>Sync — shared IP space</h3><button class="x" on:click={() => (showSync = false)}>✕</button></div>
         <p class="hint" style="margin:0 0 10px">
           Host one encrypted copy of this inventory somewhere your team can reach — a mounted
-          share or synced folder, or an S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2,
-          MinIO) — and everyone pulls and pushes to it. Changes stay on your machine until you
-          sync. Everyone uses the same store passphrase for the shared copy.
+          share or synced folder, or an S3-compatible bucket (AWS S3, Cloudflare R2, and
+          compatibles) — and everyone pulls and pushes to it. Changes stay on your machine until
+          you sync. Everyone uses the same store passphrase for the shared copy.
         </p>
 
         <div class="segs">
@@ -208,8 +210,8 @@
             <label>Secret access key<input class="field mono" type="password" bind:value={s3f.secret} autocomplete="off" /></label>
           </div>
           <div class="formbtns">
-            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>Use this bucket</button>
-            <span class="hint">Works with AWS S3, Cloudflare R2, Backblaze B2, MinIO. Credentials are encrypted with your store passphrase, never written in the clear.</span>
+            <button class="btn" on:click={configureSync} disabled={!canConfigure || syncBusy}>{syncBusy ? "Checking…" : "Use this bucket"}</button>
+            <span class="hint">AWS S3, Cloudflare R2, and S3-compatible storage that supports conditional writes — Meridian checks when you connect and won't sync somewhere two people could overwrite each other. Credentials are encrypted with your store passphrase, never written in the clear.</span>
           </div>
         {/if}
         {#if syncInfo.configured}

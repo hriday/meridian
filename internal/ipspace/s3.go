@@ -19,6 +19,7 @@ import (
 type s3API interface {
 	GetObject(ctx context.Context, in *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 	PutObject(ctx context.Context, in *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	DeleteObject(ctx context.Context, in *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
 }
 
 // S3Backend stores the shared blob as one object in an S3-compatible bucket
@@ -73,11 +74,62 @@ func NewS3Backend(ctx context.Context, c S3Config) (*S3Backend, error) {
 			o.UsePathStyle = true
 		}
 	})
+	return &S3Backend{API: client, Bucket: c.Bucket, Key: c.Key, Label: c.Describe()}, nil
+}
+
+// Describe is a short, credential-free location label for the UI.
+func (c S3Config) Describe() string {
 	label := fmt.Sprintf("S3 %s/%s", c.Bucket, c.Key)
 	if c.Endpoint != "" {
 		label += " @ " + c.Endpoint
 	}
-	return &S3Backend{API: client, Bucket: c.Bucket, Key: c.Key, Label: label}, nil
+	return label
+}
+
+// VerifyConditionalWrites confirms the bucket actually honors conditional writes
+// — the primitive the whole lost-update guard rests on. It writes and deletes a
+// throwaway probe object (never the real store key): a provider that rejects the
+// If-None-Match header (e.g. Backblaze B2) or silently ignores it (older MinIO)
+// is detected and rejected here, at setup, rather than losing a teammate's push
+// later. Compliant providers (AWS S3, Cloudflare R2, modern MinIO) pass.
+func (b S3Backend) VerifyConditionalWrites(ctx context.Context) error {
+	probeKey := b.Key + ".meridian-cas-probe"
+	put := func(ifNoneMatch bool) error {
+		in := &s3.PutObjectInput{Bucket: &b.Bucket, Key: &probeKey, Body: bytes.NewReader([]byte("probe"))}
+		if ifNoneMatch {
+			in.IfNoneMatch = aws.String("*")
+		}
+		_, err := b.API.PutObject(ctx, in)
+		return err
+	}
+	cleanup := func() {
+		_, _ = b.API.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: &b.Bucket, Key: &probeKey})
+	}
+
+	// 1. Create the probe with If-None-Match:*. If a leftover probe exists from a
+	//    crashed prior run, that's a 412 — delete and retry once.
+	if err := put(true); err != nil {
+		if isS3PreconditionFailed(err) {
+			cleanup()
+			err = put(true)
+		}
+		if err != nil {
+			return fmt.Errorf("this storage provider doesn't support the conditional writes Meridian needs to sync safely (so two people can't overwrite each other): %w", err)
+		}
+	}
+	defer cleanup()
+
+	// 2. A second If-None-Match:* MUST be refused now that the object exists. If it
+	//    succeeds, the provider ignores conditional headers and can't protect
+	//    against lost updates.
+	err := put(true)
+	if err == nil {
+		return fmt.Errorf("this storage provider ignores conditional writes, so Meridian can't stop two people from overwriting each other's changes — it won't sync here safely")
+	}
+	if !isS3PreconditionFailed(err) {
+		return fmt.Errorf("couldn't verify conditional-write support on this bucket: %w", err)
+	}
+	return nil
 }
 
 // Get reads the object and returns its bytes and ETag, or (nil, "", nil) when the
@@ -120,6 +172,10 @@ func (b S3Backend) Put(ctx context.Context, blob []byte, expectedVersion string)
 	}
 	return nil
 }
+
+// Verify confirms the bucket honors conditional writes (reaching it validates
+// the endpoint and credentials too).
+func (b S3Backend) Verify(ctx context.Context) error { return b.VerifyConditionalWrites(ctx) }
 
 // Describe returns the bucket/key (and endpoint) for the UI.
 func (b S3Backend) Describe() string { return b.Label }

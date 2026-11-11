@@ -45,6 +45,10 @@ type App struct {
 	ipUnlocked bool
 	// test seam: build a sync backend from config; nil uses the real backends.
 	ipMakeBackend func(cfg syncConfig) (ipspace.Backend, bool)
+	// decrypted sync config, cached so IPSpaceSyncInfo doesn't re-run the KDF on
+	// every refresh; nil+loaded means "not configured".
+	ipSyncCfg       *syncConfig
+	ipSyncCfgLoaded bool
 
 	ncMu       sync.Mutex
 	ncSession  *netcat.Session

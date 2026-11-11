@@ -36,6 +36,11 @@ type Backend interface {
 	// equals expectedVersion ("" meaning "I expect no remote yet"); otherwise it
 	// returns ErrRemoteChanged and leaves the remote untouched.
 	Put(ctx context.Context, blob []byte, expectedVersion string) error
+	// Verify confirms, once at configure time, that this backend can sync safely
+	// — in particular that it honors the conditional writes the compare-and-swap
+	// relies on. It may perform a cheap round-trip (and so validates reachability
+	// and credentials too). A filesystem path always qualifies.
+	Verify(ctx context.Context) error
 	// Describe is a short, human-readable location for the UI.
 	Describe() string
 }
@@ -103,6 +108,10 @@ func (b LocalBackend) Put(ctx context.Context, blob []byte, expectedVersion stri
 	}
 	return os.Rename(tmpName, b.Path)
 }
+
+// Verify is a no-op for a filesystem path: its CAS is the content-hash check in
+// Put, which always works, so there is nothing to probe.
+func (b LocalBackend) Verify(ctx context.Context) error { return nil }
 
 // Describe returns the configured path.
 func (b LocalBackend) Describe() string {
