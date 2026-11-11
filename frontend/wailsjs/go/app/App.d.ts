@@ -113,6 +113,12 @@ export function NetcatListen(arg1:string,arg2:string):Promise<string>;
 
 export function NetcatSend(arg1:string):Promise<void>;
 
+export function NetflowStart(arg1:number):Promise<void>;
+
+export function NetflowStop():Promise<void>;
+
+export function NetflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
+
 export function PickFile(arg1:string):Promise<string>;
 
 export function PingHost(arg1:string,arg2:number):Promise<ping.Stats>;

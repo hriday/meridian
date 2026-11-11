@@ -6,6 +6,7 @@ package app
 import (
 	"context"
 	"net/http"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -13,13 +14,18 @@ import (
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netcat"
+	"github.com/hriday/meridian/internal/netflow"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 	"github.com/hriday/meridian/internal/snmp"
 )
 
-// collectorBuffer is the rolling message cap for each collector (in-memory).
-const collectorBuffer = 10000
+// collectorBuffer is the rolling message cap for the syslog/trap collectors;
+// netflowBuffer is larger since flow records are small and feed a windowed view.
+const (
+	collectorBuffer = 10000
+	netflowBuffer   = 65536
+)
 
 // App is the Wails-bound controller. Its public methods are exposed to the
 // frontend; unexported fields and methods are not, which is why the context
@@ -53,8 +59,9 @@ type App struct {
 	monMu    sync.Mutex
 	monitors map[string]*monitor
 
-	syslog *collector.Collector[collector.SyslogMsg]
-	traps  *collector.Collector[snmp.TrapMsg]
+	syslog  *collector.Collector[collector.SyslogMsg]
+	traps   *collector.Collector[snmp.TrapMsg]
+	netflow *collector.Collector[netflow.FlowRecord]
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -67,7 +74,14 @@ func New() *App {
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 		syslog:      collector.New[collector.SyslogMsg](collectorBuffer, collector.ParseSyslog),
 		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
+		netflow:     collector.NewMulti[netflow.FlowRecord](netflowBuffer, netflowParse),
 	}
+}
+
+// netflowParse dispatches a datagram to the right version decoder (v5 now;
+// v9/IPFIX added in slice 2).
+func netflowParse(datagram []byte, src netip.Addr) []netflow.FlowRecord {
+	return netflow.ParseV5(datagram, src, time.Now())
 }
 
 // OnStartup returns the Wails OnStartup callback for a. startup stays
@@ -84,7 +98,12 @@ func (a *App) startup(ctx context.Context) {
 // OnShutdown returns the Wails OnShutdown callback: stop every running monitor
 // so no polling goroutine outlives the app.
 func OnShutdown(a *App) func(context.Context) {
-	return func(context.Context) { a.stopAllMonitors(); a.syslog.Stop(); a.traps.Stop() }
+	return func(context.Context) {
+		a.stopAllMonitors()
+		a.syslog.Stop()
+		a.traps.Stop()
+		a.netflow.Stop()
+	}
 }
 
 // lookupCtx is the context for outbound lookups: the Wails startup context

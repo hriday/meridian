@@ -28,6 +28,48 @@ export namespace app {
 	        this.unlocked = source["unlocked"];
 	    }
 	}
+	export class NetflowView {
+	    running: boolean;
+	    port: number;
+	    flows: number;
+	    exporters: number;
+	    windowSecCovered: number;
+	    truncated: boolean;
+	    top: netflow.Conversation[];
+	
+	    static createFrom(source: any = {}) {
+	        return new NetflowView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.running = source["running"];
+	        this.port = source["port"];
+	        this.flows = source["flows"];
+	        this.exporters = source["exporters"];
+	        this.windowSecCovered = source["windowSecCovered"];
+	        this.truncated = source["truncated"];
+	        this.top = this.convertValues(source["top"], netflow.Conversation);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 
@@ -1501,6 +1543,35 @@ export namespace netcat {
 	        this.issuer = source["issuer"];
 	        this.notAfter = source["notAfter"];
 	        this.verified = source["verified"];
+	    }
+	}
+
+}
+
+export namespace netflow {
+	
+	export class Conversation {
+	    srcIp: string;
+	    dstIp: string;
+	    dstPort: number;
+	    proto: string;
+	    bytes: number;
+	    packets: number;
+	    flows: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Conversation(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.srcIp = source["srcIp"];
+	        this.dstIp = source["dstIp"];
+	        this.dstPort = source["dstPort"];
+	        this.proto = source["proto"];
+	        this.bytes = source["bytes"];
+	        this.packets = source["packets"];
+	        this.flows = source["flows"];
 	    }
 	}
 
