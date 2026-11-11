@@ -32,7 +32,9 @@ func Analyze(configText, vendor string) ([]Analysis, error) {
 		return analyzeSrx(configText)
 	case "arista", "eos":
 		return analyzeArista(configText)
+	case "checkpoint", "cp":
+		return analyzeCheckpoint(configText)
 	default:
-		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, or arista", vendor)
+		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, arista, or checkpoint", vendor)
 	}
 }
