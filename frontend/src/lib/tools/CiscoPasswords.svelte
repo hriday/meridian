@@ -92,7 +92,7 @@
                   <td class="mono ty">type {s.type}</td>
                   <td><span class="badge {verdictClass(s.verdict)}">{verdictLabel[s.verdict] || s.verdict}</span></td>
                   <td class="pw">
-                    {#if s.decoded}<span class="mono plain">{s.plaintext}</span>{:else}<span class="hash">— not reversible</span>{/if}
+                    {#if s.decoded}<span class="mono plain">{s.plaintext}</span>{:else if s.type === "7"}<span class="hash">— malformed type 7</span>{:else}<span class="hash">— not reversible</span>{/if}
                   </td>
                 </tr>
               {/each}

@@ -47,7 +47,15 @@ type Secret struct {
 	Verdict   string `json:"verdict"`   // cleartext|reversible|reversible-with-key|weak-hash|deprecated-hash|strong-hash
 }
 
-// Analyze scans a config for password/secret commands and classifies each.
+// Analyze scans a config for password/secret commands and classifies each. It
+// is anchored on Cisco's command grammar rather than the bare word "password":
+// a TYPED secret is any password-ish keyword (password/secret/passwd/key/
+// key-string/md5) directly followed by a type digit (0,4,5,6,7,8,9) and a value
+// — this catches reversible type-7 keys in OSPF/NTP/TACACS/key-chains too. A
+// no-digit cleartext is recorded only inside a real password command (enable/
+// username/password/passwd), with an ASA `… encrypted` trailer treated as a
+// hash. Banner/description/remark text is skipped, so the word "password" in
+// prose is never mistaken for a secret.
 func Analyze(configText string) []Secret {
 	var out []Secret
 	section := ""
@@ -59,29 +67,78 @@ func Analyze(configText string) []Secret {
 			section = strings.TrimSpace(raw)
 		}
 		toks := strings.Fields(raw)
-		for i := 0; i < len(toks); i++ {
-			if toks[i] != "password" && toks[i] != "secret" {
+		if len(toks) == 0 {
+			continue
+		}
+		switch toks[0] {
+		case "banner", "description", "remark":
+			continue // prose, not config
+		}
+		if strings.HasPrefix(toks[0], "!") {
+			continue
+		}
+
+		// Typed secrets: <keyword> <type-digit> <value>, anywhere on the line.
+		matched := false
+		for i := 0; i+2 < len(toks); i++ {
+			if isSecretKeyword(toks[i]) && isTypeDigit(toks[i+1]) {
+				out = append(out, classify(ctxOf(toks, i, section), toks[i], toks[i+1], toks[i+2]))
+				matched = true
+				i += 2
+			}
+		}
+		if matched {
+			continue
+		}
+
+		// No-digit cleartext (or an ASA `… encrypted` hash) only inside a real
+		// password command.
+		if !isPasswordCmd(toks[0]) {
+			continue
+		}
+		asaEncrypted := len(toks) >= 2 && toks[len(toks)-1] == "encrypted"
+		for i := 0; i+1 < len(toks); i++ {
+			kw := toks[i]
+			if kw != "password" && kw != "secret" && kw != "passwd" {
 				continue
 			}
-			if i+1 >= len(toks) {
-				continue
+			val := toks[i+1]
+			if isTypeDigit(val) {
+				break // a truncated `password 7` — not a cleartext value
 			}
-			var typ, val string
-			consumed := i + 1
-			if isTypeDigit(toks[i+1]) && i+2 < len(toks) {
-				typ, val, consumed = toks[i+1], toks[i+2], i+2
+			ctx := ctxOf(toks, i, section)
+			if asaEncrypted {
+				out = append(out, Secret{Context: ctx, Keyword: kw, Type: "encrypted", Encoded: val, Verdict: "weak-hash"})
 			} else {
-				typ, val = "0", toks[i+1]
+				out = append(out, classify(ctx, kw, "0", val))
 			}
-			ctx := strings.Join(toks[:i], " ")
-			if ctx == "" {
-				ctx = section
-			}
-			out = append(out, classify(ctx, toks[i], typ, val))
-			i = consumed
+			break // one implicit secret per line
 		}
 	}
 	return out
+}
+
+func ctxOf(toks []string, i int, section string) string {
+	if ctx := strings.Join(toks[:i], " "); ctx != "" {
+		return ctx
+	}
+	return section
+}
+
+func isSecretKeyword(s string) bool {
+	switch s {
+	case "password", "secret", "passwd", "key", "key-string", "md5":
+		return true
+	}
+	return false
+}
+
+func isPasswordCmd(first string) bool {
+	switch first {
+	case "enable", "username", "password", "passwd":
+		return true
+	}
+	return false
 }
 
 func classify(ctx, kw, typ, val string) Secret {

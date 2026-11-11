@@ -89,3 +89,57 @@ line vty 0 4
 		t.Errorf("type-0 cleartext not flagged; secrets=%+v", secs)
 	}
 }
+
+// The word "password"/"secret" in banners, descriptions, or community names must
+// not be mistaken for a secret.
+func TestAnalyzeIgnoresNonSecretText(t *testing.T) {
+	cfg := `banner motd ^C Please change your password now ^C
+interface Gi0/1
+ description reset password portal link
+snmp-server community s3cr3t RO
+no service password-encryption`
+	secs := Analyze(cfg)
+	if len(secs) != 0 {
+		t.Errorf("no secrets should be found in non-secret text; got %+v", secs)
+	}
+}
+
+// ASA stores hashed passwords with a trailing `encrypted`; that is a hash, not
+// cleartext, and must not be shown as a recovered password.
+func TestAnalyzeASAEncryptedIsHash(t *testing.T) {
+	cfg := `enable password 2KFQnbNIdI.2KYOU encrypted
+passwd aBcDeFgH12345678 encrypted`
+	secs := Analyze(cfg)
+	if len(secs) != 2 {
+		t.Fatalf("want 2 secrets, got %d: %+v", len(secs), secs)
+	}
+	for _, s := range secs {
+		if s.Decoded || s.Plaintext != "" {
+			t.Errorf("ASA encrypted must not decode: %+v", s)
+		}
+		if s.Verdict == "cleartext" || s.Verdict == "reversible" {
+			t.Errorf("ASA encrypted should be classified as a hash: %+v", s)
+		}
+	}
+}
+
+// Reversible type-7 keys appear outside password/secret (OSPF md5, key chains,
+// TACACS) and must still be decoded.
+func TestAnalyzeType7KeysEverywhere(t *testing.T) {
+	cfg := `interface Gi0/1
+ ip ospf message-digest-key 1 md5 7 0822455D0A16
+key chain KC
+ key 1
+  key-string 7 0822455D0A16
+tacacs-server key 7 0822455D0A16`
+	secs := Analyze(cfg)
+	n := 0
+	for _, s := range secs {
+		if s.Type == "7" && s.Plaintext == "cisco" {
+			n++
+		}
+	}
+	if n != 3 {
+		t.Errorf("want 3 decoded type-7 keys, got %d: %+v", n, secs)
+	}
+}
