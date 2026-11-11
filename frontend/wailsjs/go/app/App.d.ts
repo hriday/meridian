@@ -175,6 +175,8 @@ export function SubnetDescribe(arg1:string):Promise<subnet.Info>;
 
 export function SubnetSplit(arg1:string,arg2:number):Promise<Array<string>>;
 
+export function SwitchPortMap(arg1:string,arg2:string):Promise<Array<snmp.PortEntry>>;
+
 export function SyslogPoll(arg1:number):Promise<collector.Poll_github_com_hriday_meridian_internal_collector_SyslogMsg_>;
 
 export function SyslogStart(arg1:number):Promise<void>;
