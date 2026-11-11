@@ -30,20 +30,21 @@ func deriveKey(passphrase string, salt []byte) [keyLen]byte {
 	return key
 }
 
-// Save writes the event log to path as a passphrase-encrypted blob, atomically
-// (temp file + rename).
-func Save(path, passphrase string, events []Event) error {
+// SealEvents encrypts the event log into a self-contained blob
+// (salt | nonce | secretbox) with a key derived from the passphrase. This is the
+// exact on-disk format Save writes and the wire format the sync backends carry.
+func SealEvents(passphrase string, events []Event) ([]byte, error) {
 	plain, err := json.Marshal(events)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	salt := make([]byte, saltLen)
 	if _, err := rand.Read(salt); err != nil {
-		return err
+		return nil, err
 	}
 	var nonce [nonceLen]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
-		return err
+		return nil, err
 	}
 	key := deriveKey(passphrase, salt)
 	sealed := secretbox.Seal(nil, plain, &nonce, &key)
@@ -52,7 +53,39 @@ func Save(path, passphrase string, events []Event) error {
 	blob = append(blob, salt...)
 	blob = append(blob, nonce[:]...)
 	blob = append(blob, sealed...)
+	return blob, nil
+}
 
+// OpenEvents decrypts and parses a blob produced by SealEvents. A wrong
+// passphrase or any tamper yields a clear error rather than garbage data.
+func OpenEvents(passphrase string, blob []byte) ([]Event, error) {
+	if len(blob) < saltLen+nonceLen+secretbox.Overhead {
+		return nil, errors.New("ipspace: store blob is truncated or not a Meridian store")
+	}
+	salt := blob[:saltLen]
+	var nonce [nonceLen]byte
+	copy(nonce[:], blob[saltLen:saltLen+nonceLen])
+	sealed := blob[saltLen+nonceLen:]
+
+	key := deriveKey(passphrase, salt)
+	plain, ok := secretbox.Open(nil, sealed, &nonce, &key)
+	if !ok {
+		return nil, errors.New("couldn't unlock the IP-space store (wrong passphrase, or the file is corrupt)")
+	}
+	var events []Event
+	if err := json.Unmarshal(plain, &events); err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+// Save writes the event log to path as a passphrase-encrypted blob, atomically
+// (temp file + rename).
+func Save(path, passphrase string, events []Event) error {
+	blob, err := SealEvents(passphrase, events)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -80,24 +113,7 @@ func Load(path, passphrase string) ([]Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(blob) < saltLen+nonceLen+secretbox.Overhead {
-		return nil, errors.New("ipspace: store file is truncated or not a Meridian store")
-	}
-	salt := blob[:saltLen]
-	var nonce [nonceLen]byte
-	copy(nonce[:], blob[saltLen:saltLen+nonceLen])
-	sealed := blob[saltLen+nonceLen:]
-
-	key := deriveKey(passphrase, salt)
-	plain, ok := secretbox.Open(nil, sealed, &nonce, &key)
-	if !ok {
-		return nil, errors.New("couldn't unlock the IP-space store (wrong passphrase, or the file is corrupt)")
-	}
-	var events []Event
-	if err := json.Unmarshal(plain, &events); err != nil {
-		return nil, err
-	}
-	return events, nil
+	return OpenEvents(passphrase, blob)
 }
 
 // Exists reports whether a store file is present at path.

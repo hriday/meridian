@@ -3,6 +3,7 @@
   import {
     IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
+    IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
 
@@ -14,6 +15,11 @@
   let form = { prefix: "", name: "", status: "active", tags: "", notes: "" };
   let editing = false, editForm = { name: "", status: "active", tags: "", notes: "" };
   let showCsv = false, importText = "", exportText = "", importReport: any = null, csvErr = "";
+
+  // Sync state.
+  let showSync = false, syncInfo: any = { configured: false }, syncPath = "";
+  let syncResult: any = null, syncErr = "", syncMsg = "", syncBusy = false;
+  $: syncChanges = syncResult ? (syncResult.incoming?.length || 0) + (syncResult.outgoing?.length || 0) : 0;
 
   // Flatten the tree into rows with a depth, for rendering.
   function flatten(nodes: any[], depth = 0, out: any[] = []): any[] {
@@ -45,6 +51,43 @@
     tree = await IPSpaceTree();
     history = (await IPSpaceHistory()).slice().reverse();
     if (selected) selected = findRec(rows, selected.id);
+    try { syncInfo = await IPSpaceSyncInfo(); } catch (e) { syncInfo = { configured: false }; }
+  }
+
+  async function configureSync() {
+    syncErr = ""; syncMsg = "";
+    try { await IPSpaceSyncConfigureLocal(syncPath.trim()); syncInfo = await IPSpaceSyncInfo(); syncResult = null; }
+    catch (e) { syncErr = String(e); }
+  }
+  async function previewSync() {
+    syncErr = ""; syncMsg = ""; syncBusy = true; syncResult = null;
+    try { syncResult = await IPSpaceSyncPreview(); }
+    catch (e) { syncErr = String(e); }
+    finally { syncBusy = false; }
+  }
+  async function applySync() {
+    syncErr = ""; syncMsg = ""; syncBusy = true;
+    try {
+      const r = await IPSpaceSyncApply();
+      if (r.applied) {
+        const inc = r.incoming?.length || 0, out = r.outgoing?.length || 0;
+        syncMsg = `Synced — pulled ${inc} change${inc === 1 ? "" : "s"}, pushed ${out} of your own.`;
+        syncResult = null; // the diff is applied; clear it so the columns don't linger
+        await refresh();
+      } else {
+        syncResult = r; // conflicts — keep them on screen to resolve
+      }
+    } catch (e) {
+      // ErrRemoteChanged lands here: someone pushed while we were syncing.
+      syncErr = String(e);
+      syncResult = null;
+    }
+    finally { syncBusy = false; }
+  }
+  function changeLabel(c: any): string {
+    const p = c.record?.prefix || c.prev?.prefix || c.record?.id || "";
+    const n = c.record?.name || c.prev?.name || "";
+    return `${c.kind} ${p}${n ? " — " + n : ""}`;
   }
   function findRec(list: any[], id: string) { return (list.find((r) => r.rec.id === id) || {}).rec || null; }
   function select(rec: any) { selected = rec; editing = false; }
@@ -118,8 +161,68 @@
       <button class="btn" on:click={() => { showAdd = !showAdd; addErr = ""; addMsg = ""; }}>+ Add block</button>
       <button class="btn ghost" on:click={undo} disabled={!history.length}>Undo</button>
       <button class="btn ghost" on:click={openExport}>CSV…</button>
+      <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
       <span class="lock">🔓 Unlocked · encrypted at rest</span>
     </div>
+
+    {#if showSync}
+      <div class="card synccard">
+        <div class="chead"><h3>Sync — shared IP space</h3><button class="x" on:click={() => (showSync = false)}>✕</button></div>
+        <p class="hint" style="margin:0 0 10px">
+          Host one encrypted copy of this inventory somewhere your team can reach — a mounted
+          share, a synced folder (Drive/Dropbox/iCloud), or a USB drive — and everyone pulls and
+          pushes to it. Changes stay on your machine until you sync. Everyone uses the same store
+          passphrase for the shared copy.
+        </p>
+
+        <div class="form" style="grid-template-columns:1fr auto;align-items:end;gap:8px">
+          <label>Shared file path
+            <input class="field mono" bind:value={syncPath} placeholder="/Volumes/share/meridian-ipspace.enc" />
+          </label>
+          <button class="btn" on:click={configureSync} disabled={!syncPath.trim()}>Use this location</button>
+        </div>
+        {#if syncInfo.configured}
+          <div class="synced mono">Syncing through {syncInfo.location}</div>
+          <div class="formbtns">
+            <button class="btn" on:click={previewSync} disabled={syncBusy}>{syncBusy ? "Working…" : "Pull & review"}</button>
+            <button class="btn ghost" on:click={applySync} disabled={syncBusy || (syncResult && syncResult.conflicts?.length)}>Sync now</button>
+            <span class="hint">Review pulls the shared copy and shows the diff; Sync now applies it and pushes yours back.</span>
+          </div>
+        {/if}
+
+        {#if syncErr}<div class="err" style="margin-top:10px">{syncErr}</div>{/if}
+        {#if syncMsg}<div class="ok" style="margin:10px 0 0">{syncMsg}</div>{/if}
+
+        {#if syncResult}
+          {#if syncResult.conflicts?.length}
+            <div class="conflict">
+              <b>{syncResult.conflicts.length} conflict{syncResult.conflicts.length === 1 ? "" : "s"}</b> — these records were changed on both sides since your last sync. Sync is paused so nothing gets clobbered; resolve them (edit one side to match, or undo your change) and review again.
+              <ul>
+                {#each syncResult.conflicts as c}
+                  <li class="mono">{c.prefix || c.id} — yours: “{c.localDeleted ? "deleted" : c.local?.name}” · theirs: “{c.remoteDeleted ? "deleted" : c.remote?.name}”</li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+          {#if syncResult.duplicatePrefixes?.length}
+            <div class="dup">Heads up: {syncResult.duplicatePrefixes.length} prefix{syncResult.duplicatePrefixes.length === 1 ? "" : "es"} now recorded by more than one entry (added independently on both sides).</div>
+          {/if}
+          {#if !syncResult.applied && !syncResult.conflicts?.length && syncChanges === 0}
+            <div class="ok" style="margin-top:10px">Already in sync — nothing to pull or push.</div>
+          {/if}
+          <div class="diffcols">
+            <div>
+              <p class="lbl">Incoming ({syncResult.incoming?.length || 0}) — from the shared copy</p>
+              {#if syncResult.incoming?.length}<ul class="difflist">{#each syncResult.incoming as c}<li class="mono i-{c.kind}">{changeLabel(c)}</li>{/each}</ul>{:else}<p class="muted">None.</p>{/if}
+            </div>
+            <div>
+              <p class="lbl">Outgoing ({syncResult.outgoing?.length || 0}) — your local changes</p>
+              {#if syncResult.outgoing?.length}<ul class="difflist">{#each syncResult.outgoing as c}<li class="mono i-{c.kind}">{changeLabel(c)}</li>{/each}</ul>{:else}<p class="muted">None.</p>{/if}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
 
     {#if addMsg}<div class="ok">{addMsg}</div>{/if}
 
@@ -266,6 +369,21 @@
   .pill.active { color: var(--good, #5ad17a); border-color: transparent; background: var(--good-bg, #102516); }
   .pill.reserved { color: var(--accent); border-color: var(--accent); }
   .pill.deprecated { color: var(--text-faint); }
+  .btn.on { border-color: var(--accent); color: var(--accent); }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good, #5ad17a); margin-left: 6px; vertical-align: middle; }
+  .synccard { margin-bottom: 14px; }
+  .synced { font-size: 0.78rem; color: var(--text-dim); margin: 10px 0; padding: 6px 10px; background: var(--well); border-radius: 6px; }
+  .conflict { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); border-radius: 7px; padding: 9px 12px; font-size: 0.82rem; margin-top: 10px; }
+  .conflict ul, .diffcols ul { margin: 6px 0 0; padding-left: 18px; }
+  .conflict li { font-size: 0.78rem; margin: 2px 0; }
+  .dup { color: var(--text-dim); font-size: 0.8rem; margin-top: 8px; }
+  .diffcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  @media (max-width: 700px) { .diffcols { grid-template-columns: 1fr; } }
+  .difflist { list-style: none; margin: 4px 0 0; padding: 0; }
+  .difflist li { font-size: 0.78rem; padding: 2px 0 2px 10px; border-left: 2px solid var(--border); color: var(--text-dim); }
+  .difflist li.i-add { border-left-color: var(--good, #5ad17a); }
+  .difflist li.i-edit { border-left-color: var(--accent); }
+  .difflist li.i-delete { border-left-color: var(--bad, #ff6b6b); }
   .log { font-size: 0.8rem; }
   .logrow { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
   .logrow .who { color: var(--text-strong); } .logrow .act { color: var(--text-dim); }

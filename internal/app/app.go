@@ -43,6 +43,8 @@ type App struct {
 	ipPass     string
 	ipStore    *ipspace.Store
 	ipUnlocked bool
+	// test seam: build a sync backend from config; nil uses the real backends.
+	ipMakeBackend func(kind, path string) (ipspace.Backend, bool)
 
 	ncMu       sync.Mutex
 	ncSession  *netcat.Session

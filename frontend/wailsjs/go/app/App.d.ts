@@ -91,6 +91,14 @@ export function IPSpaceImportCSV(arg1:string):Promise<ipspace.ImportReport>;
 
 export function IPSpaceStatus():Promise<app.IPSpaceState>;
 
+export function IPSpaceSyncApply():Promise<app.SyncResult>;
+
+export function IPSpaceSyncConfigureLocal(arg1:string):Promise<void>;
+
+export function IPSpaceSyncInfo():Promise<app.SyncInfo>;
+
+export function IPSpaceSyncPreview():Promise<app.SyncResult>;
+
 export function IPSpaceTree():Promise<Array<ipspace.TreeNode>>;
 
 export function IPSpaceUndo():Promise<void>;

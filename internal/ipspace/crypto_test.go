@@ -53,3 +53,41 @@ func TestLoadMissingFile(t *testing.T) {
 	_, err := Load(path, "pw")
 	require.Error(t, err)
 }
+
+func TestSealOpenRoundTrip(t *testing.T) {
+	ev := sampleEvents()
+	blob, err := SealEvents("correct horse", ev)
+	require.NoError(t, err)
+	require.NotEmpty(t, blob)
+
+	got, err := OpenEvents("correct horse", blob)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	require.Equal(t, "10.1.0.0/16", got[1].Record.Prefix)
+	require.True(t, ev[0].At.Equal(got[0].At))
+}
+
+func TestOpenWrongPassphrase(t *testing.T) {
+	blob, err := SealEvents("right", sampleEvents())
+	require.NoError(t, err)
+	_, err = OpenEvents("wrong", blob)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unlock")
+}
+
+func TestOpenTruncatedBlob(t *testing.T) {
+	_, err := OpenEvents("pw", []byte{1, 2, 3})
+	require.Error(t, err)
+}
+
+// Save/Load must stay interoperable with Seal/Open: a blob written by Save on
+// disk opens with OpenEvents, and vice versa.
+func TestSaveLoadSealOpenInterop(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "store.enc")
+	require.NoError(t, Save(path, "pw", sampleEvents()))
+	blob, err := os.ReadFile(path)
+	require.NoError(t, err)
+	got, err := OpenEvents("pw", blob)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+}

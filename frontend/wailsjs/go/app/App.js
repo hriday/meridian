@@ -122,6 +122,22 @@ export function IPSpaceStatus() {
   return window['go']['app']['App']['IPSpaceStatus']();
 }
 
+export function IPSpaceSyncApply() {
+  return window['go']['app']['App']['IPSpaceSyncApply']();
+}
+
+export function IPSpaceSyncConfigureLocal(arg1) {
+  return window['go']['app']['App']['IPSpaceSyncConfigureLocal'](arg1);
+}
+
+export function IPSpaceSyncInfo() {
+  return window['go']['app']['App']['IPSpaceSyncInfo']();
+}
+
+export function IPSpaceSyncPreview() {
+  return window['go']['app']['App']['IPSpaceSyncPreview']();
+}
+
 export function IPSpaceTree() {
   return window['go']['app']['App']['IPSpaceTree']();
 }
