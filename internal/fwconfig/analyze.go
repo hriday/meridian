@@ -34,7 +34,9 @@ func Analyze(configText, vendor string) ([]Analysis, error) {
 		return analyzeArista(configText)
 	case "checkpoint", "cp":
 		return analyzeCheckpoint(configText)
+	case "vyos":
+		return analyzeVyos(configText)
 	default:
-		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, arista, or checkpoint", vendor)
+		return nil, fmt.Errorf("vendor %q is not supported — use fortigate, panos, asa, srx, arista, checkpoint, or vyos", vendor)
 	}
 }

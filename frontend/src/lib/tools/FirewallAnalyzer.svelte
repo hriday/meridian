@@ -8,6 +8,7 @@
     { id: "srx", label: "Juniper SRX" },
     { id: "arista", label: "Arista EOS" },
     { id: "checkpoint", label: "Check Point" },
+    { id: "vyos", label: "VyOS" },
   ];
   const FORMAT_HINT: Record<string, string> = {
     fortigate: "a FortiGate config export",
@@ -16,6 +17,7 @@
     srx: "a Juniper SRX config in set-format (show configuration | display set)",
     arista: "an Arista EOS running-config",
     checkpoint: "a Check Point rulebase as JSON (mgmt_cli show access-rulebase --format json --details-level full)",
+    vyos: "a VyOS config in set-format (show configuration commands)",
   };
 
   let configText = "";
