@@ -8,6 +8,7 @@
   import FirewallAnalyzer from "./tools/FirewallAnalyzer.svelte";
   import WebServerAnalyzer from "./tools/WebServerAnalyzer.svelte";
   import TerraformExposure from "./tools/TerraformExposure.svelte";
+  import ConfigDiff from "./tools/ConfigDiff.svelte";
   import Tls from "./tools/Tls.svelte";
   import HttpCheck from "./tools/HttpCheck.svelte";
   import Whois from "./tools/Whois.svelte";
@@ -76,6 +77,7 @@
     { id: "fwanalyze", name: "Firewall analyzer", group: "Config insight", ready: true },
     { id: "webanalyze", name: "Web server analyzer", group: "Config insight", ready: true },
     { id: "tfexposure", name: "Terraform exposure", group: "Config insight", ready: true },
+    { id: "cfgdiff", name: "Config diff", group: "Config insight", ready: true },
   ];
   const groups = [...new Set(tools.map((t) => t.group))];
 
@@ -231,7 +233,7 @@
 
     <main class="main">
       <div class="tabs"><div class="tab on">{activeTool?.name ?? ""}</div></div>
-      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "netflow"}<NetflowCollector />{:else if active === "tftp"}<TftpReceiver />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "speedtest"}<SpeedTest />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{:else if active === "tfexposure"}<TerraformExposure />{/if}
+      {#if active === "lookup"}<Lookup />{:else if active === "trace"}<Traceroute />{:else if active === "bgp"}<Bgp />{:else if active === "atlasping"}<AtlasPing />{:else if active === "atlastrace"}<AtlasTrace />{:else if active === "tls"}<Tls />{:else if active === "http"}<HttpCheck />{:else if active === "whois"}<Whois />{:else if active === "blocklist"}<Blocklist />{:else if active === "dnsaudit"}<DnsAudit />{:else if active === "subnet"}<SubnetCalc />{:else if active === "ipspace"}<IpSpace />{:else if active === "ntp"}<Ntp />{:else if active === "dns"}<Dns />{:else if active === "ifaces"}<Interfaces />{:else if active === "ping1"}<Ping />{:else if active === "pingmon"}<PingMonitor />{:else if active === "ifmon"}<SnmpMonitor />{:else if active === "devhealth"}<DeviceHealth />{:else if active === "snmpsweep"}<SnmpSweep />{:else if active === "mib"}<MibBrowser />{:else if active === "syslog"}<SyslogReceiver />{:else if active === "traps"}<TrapReceiver />{:else if active === "netflow"}<NetflowCollector />{:else if active === "tftp"}<TftpReceiver />{:else if active === "ping"}<PingSweep />{:else if active === "ports"}<PortScan />{:else if active === "wol"}<WakeOnLan />{:else if active === "macvendor"}<MacVendor />{:else if active === "speedtest"}<SpeedTest />{:else if active === "nc"}<Netcat />{:else if active === "adaudit"}<AdAudit />{:else if active === "fwanalyze"}<FirewallAnalyzer />{:else if active === "webanalyze"}<WebServerAnalyzer />{:else if active === "tfexposure"}<TerraformExposure />{:else if active === "cfgdiff"}<ConfigDiff />{/if}
     </main>
   </div>
 </div>
