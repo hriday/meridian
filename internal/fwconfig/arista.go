@@ -21,12 +21,18 @@ func analyzeArista(configText string) ([]Analysis, error) {
 	}
 	a := newAnalysis("")
 
-	type ifaceAcc struct{ name, subnet string }
+	type ifaceAcc struct {
+		name, subnet string
+		bound        bool // has an `ip access-group` binding
+	}
 	var cur *ifaceAcc
 	segByName := map[string]*VLAN{}
 	var segOrder []string
+	// Only L3/segment-bearing interfaces are segments: a real EOS config is
+	// mostly L2 access ports and admin-down interfaces, which have neither an
+	// `ip address` nor an ACL binding and must not pollute the zone list.
 	flushIface := func() {
-		if cur != nil && cur.name != "" {
+		if cur != nil && cur.name != "" && (cur.subnet != "" || cur.bound) {
 			if _, ok := segByName[cur.name]; !ok {
 				segOrder = append(segOrder, cur.name)
 			}
@@ -46,7 +52,7 @@ func analyzeArista(configText string) ([]Analysis, error) {
 	}
 
 	type bind struct{ intf, dir string }
-	bindings := map[string]bind{} // acl name -> interface + direction
+	bindings := map[string][]bind{} // acl name -> interface(s) + direction
 
 	var curAcl string // name of the `ip access-list` block we're inside ("" if none)
 	aclSkip := false  // true inside a `standard` ACL block
@@ -97,7 +103,8 @@ func analyzeArista(configText string) ([]Analysis, error) {
 				} else if len(toks) >= 4 && toks[1] == "access-group" {
 					// ip access-group <name> in|out
 					if d := toks[3]; d == "in" || d == "out" {
-						bindings[toks[2]] = bind{intf: cur.name, dir: d}
+						bindings[toks[2]] = append(bindings[toks[2]], bind{intf: cur.name, dir: d})
+						cur.bound = true
 					}
 				}
 			}
@@ -109,13 +116,24 @@ func analyzeArista(configText string) ([]Analysis, error) {
 	}
 	flushIface()
 
-	// bind each ACL's rules to its interface (in → source, out → destination)
-	for acl, b := range bindings {
-		for _, p := range aces[acl] {
+	// Bind each ACL's rules to its interface(s). One ACL applied to several
+	// interfaces is idiomatic EOS, so collect every `in` interface as a source
+	// and every `out` interface as a destination — each yields its own flow.
+	for acl, bs := range bindings {
+		var srcIntf, dstIntf []string
+		for _, b := range bs {
 			if b.dir == "in" {
-				p.SrcIntf = []string{b.intf}
+				srcIntf = append(srcIntf, b.intf)
 			} else {
-				p.DstIntf = []string{b.intf}
+				dstIntf = append(dstIntf, b.intf)
+			}
+		}
+		for _, p := range aces[acl] {
+			if len(srcIntf) > 0 {
+				p.SrcIntf = srcIntf
+			}
+			if len(dstIntf) > 0 {
+				p.DstIntf = dstIntf
 			}
 		}
 	}
@@ -247,9 +265,15 @@ func readAristaDstPort(toks []string, i *int) string {
 		return ""
 	}
 	switch toks[*i] {
-	case "eq", "neq":
+	case "eq":
 		if *i+1 < len(toks) {
 			v := toks[*i+1]
+			*i += 2
+			return v
+		}
+	case "neq":
+		if *i+1 < len(toks) {
+			v := "!" + toks[*i+1] // "every port except" — not the same as eq
 			*i += 2
 			return v
 		}
