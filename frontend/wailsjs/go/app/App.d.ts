@@ -7,6 +7,7 @@ import {webconf} from '../models';
 import {app} from '../models';
 import {atlas} from '../models';
 import {dnsbl} from '../models';
+import {update} from '../models';
 import {netinput} from '../models';
 import {dnsaudit} from '../models';
 import {dnsx} from '../models';
@@ -44,6 +45,8 @@ export function AnalyzeTerraform(arg1:string,arg2:string):Promise<tfscan.Analysi
 
 export function AnalyzeWebServer(arg1:string,arg2:string):Promise<webconf.Analysis>;
 
+export function AppVersion():Promise<string>;
+
 export function AtlasKeyStatus():Promise<app.AtlasKeyStatus>;
 
 export function AtlasPing(arg1:string,arg2:number):Promise<atlas.Report>;
@@ -51,6 +54,8 @@ export function AtlasPing(arg1:string,arg2:number):Promise<atlas.Report>;
 export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
 
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
+
+export function CheckForUpdate():Promise<update.Result>;
 
 export function Classify(arg1:string):Promise<netinput.Result>;
 

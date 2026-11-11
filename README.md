@@ -127,8 +127,9 @@ go run ./cmd/meridian-cli bgp 1.1.1.1       # e.g. the BGP looking glass
 ## Privacy
 
 Meridian makes outbound requests **only when you ask it to**, to public
-services: RDAP, RIPEstat, Team Cymru (IP-to-ASN), and the NTP/DNS servers you
-query. Requests carry a generic `meridian/0.1 (+https://github.com/hriday/meridian)`
+services: RDAP, RIPEstat, Team Cymru (IP-to-ASN), the NTP/DNS servers you
+query, and GitHub's Releases API when you click **Check for updates** (there is
+no automatic update check). Requests carry a generic `meridian/0.1 (+https://github.com/hriday/meridian)`
 User-Agent and **no identifying information** — no account, no user identity, no
 telemetry. Your IP-space inventory is stored locally and encrypted; it is never
 uploaded.

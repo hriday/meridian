@@ -60,11 +60,11 @@ jobs:
 
       - name: Build (macOS / Windows)
         if: runner.os != 'Linux'
-        run: wails build -clean -platform ${{ matrix.platform }}
+        run: wails build -clean -platform ${{ matrix.platform }} -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}"
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
-        run: wails build -clean -platform ${{ matrix.platform }} -tags webkit2_41
+        run: wails build -clean -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}"
 
       - name: Package macOS DMG
         if: runner.os == 'macOS'
