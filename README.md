@@ -39,10 +39,20 @@ really say?* — and explains every answer in plain language, not just raw numbe
 
 ## Screenshots
 
-_Added per release — see `docs/media/`._
+Meridian ships three themes — **dark**, **light**, and a green-on-black
+**terminal** mode (toggle in the top-right).
 
-<!-- ![Lookup](docs/media/lookup.png) -->
-<!-- ![BGP & looking glass](docs/media/bgp.png) -->
+![Lookup — an entity page for an IP, with registration, routing and AS ownership (dark theme)](docs/media/lookup.png)
+
+<p align="center"><em>Lookup — paste any IP, ASN, prefix or domain and get registration (RDAP), routing (RIPEstat) and AS ownership, with RPKI status. Dark theme.</em></p>
+
+![BGP & looking glass — origin AS, RPKI, upstreams/transit and AS paths seen across public route collectors (light theme)](docs/media/bgp.png)
+
+<p align="center"><em>BGP &amp; looking glass — origin AS and RPKI validity, who carries the prefix, and the AS paths seen across public route collectors. Light theme.</em></p>
+
+![Firewall analyzer — segments, flows and a flow diagram read from an exported ruleset (terminal theme)](docs/media/firewall.png)
+
+<p align="center"><em>Firewall analyzer — reads an exported firewall config locally and shows the segments, what talks to what, and a flow diagram. Terminal theme.</em></p>
 
 ## Install
 
