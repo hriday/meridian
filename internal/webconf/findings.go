@@ -17,21 +17,25 @@ func analyzeFindings(a *Analysis) {
 		a.Findings = append(a.Findings, Finding{Severity: sev, Category: cat, Title: title, Detail: detail, File: file, Line: line})
 	}
 
-	// Routing + undefined upstream.
-	for si := range a.Servers {
-		s := &a.Servers[si]
-		disp := serverDisplay(s)
-		for _, loc := range s.Locations {
-			if loc.Kind != "proxy" || loc.Target == "" {
-				continue
-			}
-			if idx, ok := upIndex[loc.Target]; ok {
-				a.Upstreams[idx].UsedBy = append(a.Upstreams[idx].UsedBy, disp+" "+loc.Path)
-			} else {
-				add("error", "breaking",
-					"proxy_pass to undefined upstream "+loc.Target,
-					fmt.Sprintf("%s %s proxies to upstream %q, which is never defined", disp, loc.Path, loc.Target),
-					s.File, s.Line)
+	// Routing + undefined upstream. nginx-only: Apache ProxyPass and Caddy
+	// reverse_proxy target a backend URL directly (no named upstream pool), so
+	// their proxy Target is the URL and must not be flagged as "undefined".
+	if a.ServerType == "nginx" {
+		for si := range a.Servers {
+			s := &a.Servers[si]
+			disp := serverDisplay(s)
+			for _, loc := range s.Locations {
+				if loc.Kind != "proxy" || loc.Target == "" {
+					continue
+				}
+				if idx, ok := upIndex[loc.Target]; ok {
+					a.Upstreams[idx].UsedBy = append(a.Upstreams[idx].UsedBy, disp+" "+loc.Path)
+				} else {
+					add("error", "breaking",
+						"proxy_pass to undefined upstream "+loc.Target,
+						fmt.Sprintf("%s %s proxies to upstream %q, which is never defined", disp, loc.Path, loc.Target),
+						s.File, s.Line)
+				}
 			}
 		}
 	}
@@ -70,7 +74,9 @@ func analyzeFindings(a *Analysis) {
 				ssl = true
 			}
 		}
-		if ssl && s.TLSCert == "" {
+		if ssl && s.TLSCert == "" && a.ServerType != "caddy" {
+			// Caddy auto-HTTPS provisions a certificate automatically, so an SSL
+			// listener with no explicit cert is normal there, not broken.
 			add("error", "breaking", "listen ssl with no ssl_certificate",
 				disp+" has an SSL listener but no ssl_certificate — the TLS listener can't start", s.File, s.Line)
 		}
@@ -106,9 +112,19 @@ func analyzeFindings(a *Analysis) {
 		}
 	}
 
-	if serverTokensLeak(a) {
-		add("warning", "best-practice", "server_tokens not off — leaks the nginx version",
-			"set server_tokens off; at http or server level so the version doesn't appear in responses", "", 0)
+	switch a.ServerType {
+	case "caddy":
+		// Caddy sends no version in its Server header by default — no finding.
+	case "apache":
+		if len(a.Servers) > 0 && apacheVersionLeaks(a) {
+			add("warning", "best-practice", "ServerTokens not Prod — leaks the Apache version",
+				"set ServerTokens Prod (and ServerSignature Off) so the Apache version doesn't appear in responses", "", 0)
+		}
+	default: // nginx
+		if serverTokensLeak(a) {
+			add("warning", "best-practice", "server_tokens not off — leaks the nginx version",
+				"set server_tokens off; at http or server level so the version doesn't appear in responses", "", 0)
+		}
 	}
 
 	listeners, locations, errs, warns := 0, 0, 0, 0
@@ -167,6 +183,9 @@ func effectiveHeader(s *Server, a *Analysis, name string) bool {
 			return true
 		}
 	}
+	if a.ServerType != "nginx" {
+		return false // Apache/Caddy: only the server's own headers (checked above)
+	}
 	// nginx add_header inheritance is all-or-nothing: a block that defines any
 	// add_header of its own inherits NONE from http, so http-level headers only
 	// apply when the server sets none.
@@ -175,6 +194,17 @@ func effectiveHeader(s *Server, a *Analysis, name string) bool {
 	}
 	for _, h := range a.httpHeaders {
 		if strings.EqualFold(h, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// apacheVersionLeaks reports whether any Apache vhost's ServerTokens is not
+// Prod (only Prod suppresses the version in the Server header).
+func apacheVersionLeaks(a *Analysis) bool {
+	for _, s := range a.Servers {
+		if !strings.EqualFold(s.ServerTokens, "Prod") {
 			return true
 		}
 	}
