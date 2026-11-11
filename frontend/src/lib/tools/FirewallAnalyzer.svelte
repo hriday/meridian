@@ -9,6 +9,7 @@
     { id: "arista", label: "Arista EOS" },
     { id: "checkpoint", label: "Check Point" },
     { id: "vyos", label: "VyOS" },
+    { id: "pfsense", label: "pfSense / OPNsense" },
   ];
   const FORMAT_HINT: Record<string, string> = {
     fortigate: "a FortiGate config export",
@@ -18,6 +19,7 @@
     arista: "an Arista EOS running-config",
     checkpoint: "a Check Point rulebase as JSON (mgmt_cli show access-rulebase --format json --details-level full)",
     vyos: "a VyOS config in set-format (show configuration commands)",
+    pfsense: "a pfSense/OPNsense config.xml (Diagnostics > Backup/Restore)",
   };
 
   let configText = "";
