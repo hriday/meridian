@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"path"
+	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -39,6 +40,7 @@ type stored struct {
 
 // Server is a receive-only TFTP server with an in-memory, bounded store.
 type Server struct {
+	opMu    sync.Mutex // serializes Start/Stop so their sections can't interleave
 	mu      sync.Mutex
 	running bool
 	port    int
@@ -46,6 +48,8 @@ type Server struct {
 	done    chan struct{}
 	files   []stored
 	nextID  int
+
+	onStore func() // test hook fired just before a received file is appended; nil in production
 }
 
 // New returns a stopped server.
@@ -54,7 +58,9 @@ func New() *Server { return &Server{} }
 // Start binds 0.0.0.0:port (0 → OS-chosen) and serves; starting while running
 // restarts it. A bind failure is returned.
 func (s *Server) Start(port int) error {
-	s.Stop()
+	s.opMu.Lock() // whole Start is atomic against another Start/Stop
+	defer s.opMu.Unlock()
+	s.stopLocked() // restart semantics; no-op when not running
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: port})
 	if err != nil {
 		return err
@@ -78,6 +84,15 @@ func (s *Server) Start(port int) error {
 // Stop stops the server (closing the socket), waits for it to exit, and clears
 // the store.
 func (s *Server) Stop() {
+	s.opMu.Lock()
+	defer s.opMu.Unlock()
+	s.stopLocked()
+}
+
+// stopLocked stops the server; the caller must hold opMu. It clears the store
+// only after in-flight transfers have finished, so an upload that lands during
+// shutdown can't repopulate it.
+func (s *Server) stopLocked() {
 	s.mu.Lock()
 	if !s.running {
 		s.mu.Unlock()
@@ -87,11 +102,14 @@ func (s *Server) Stop() {
 	s.running = false
 	s.srv = nil
 	s.port = 0
-	s.files = nil
 	s.mu.Unlock()
 
 	srv.Shutdown() // closes the conn + waits for in-flight transfers
 	<-done
+
+	s.mu.Lock()
+	s.files = nil
+	s.mu.Unlock()
 }
 
 // List returns the running state, port, and the received files' metadata.
@@ -149,6 +167,9 @@ func (s *Server) onWrite(filename string, wt io.WriterTo) error {
 	if _, err := wt.WriteTo(&limitWriter{w: &buf, max: maxTftpFile}); err != nil {
 		return err // oversize or aborted → not stored
 	}
+	if s.onStore != nil {
+		s.onStore()
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.nextID++
@@ -179,10 +200,12 @@ func (l *limitWriter) Write(p []byte) (int, error) {
 }
 
 // baseName strips any path and control characters from a client-supplied name.
+// It treats both "/" and "\" as separators so a Windows-style or traversal name
+// can't survive into the Save dialog's default filename.
 func baseName(name string) string {
-	b := path.Base(name)
-	b = string([]rune(removeControl(b)))
-	if b == "" || b == "." || b == "/" {
+	b := path.Base(strings.ReplaceAll(name, `\`, "/"))
+	b = removeControl(b)
+	if b == "" || b == "." || b == ".." || b == "/" {
 		return "upload"
 	}
 	return b
