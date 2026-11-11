@@ -108,3 +108,39 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  # Bump the Homebrew cask (version + DMG sha256) on master after a release, so
+  # `brew install --cask meridian` always tracks the latest tag.
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: meridian-macOS
+          path: dist
+
+      - name: Bump cask
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          DMG="dist/Meridian-${GITHUB_REF_NAME}-macos-universal.dmg"
+          [ -f "$DMG" ] || { echo "no DMG at $DMG" >&2; exit 1; }
+          SHA="$(shasum -a 256 "$DMG" | cut -d' ' -f1)"
+          sed -i -E "s|^  version \".*\"|  version \"${VER}\"|" Casks/meridian.rb
+          sed -i -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" Casks/meridian.rb
+
+      - name: Commit the bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/meridian.rb
+          git commit -m "chore(homebrew): meridian ${GITHUB_REF_NAME} [skip ci]" || { echo "no cask change"; exit 0; }
+          git push origin HEAD:master

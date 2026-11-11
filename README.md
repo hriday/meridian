@@ -66,6 +66,17 @@ open-source app without a paid signing certificate.
   ./Meridian-*-linux-x86_64.AppImage
   ```
 
+### Homebrew (macOS)
+
+```bash
+brew tap hriday/meridian https://github.com/hriday/meridian
+brew install --cask meridian
+```
+
+The cask installs the universal `.dmg` from the latest release. Because the app
+isn't code-signed yet, follow the macOS first-launch steps above (the cask
+repeats them). Upgrade with `brew upgrade --cask meridian`.
+
 ## Build from source
 
 ### Prerequisites
