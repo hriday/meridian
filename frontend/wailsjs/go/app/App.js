@@ -174,6 +174,18 @@ export function NetcatSend(arg1) {
   return window['go']['app']['App']['NetcatSend'](arg1);
 }
 
+export function NetflowStart(arg1) {
+  return window['go']['app']['App']['NetflowStart'](arg1);
+}
+
+export function NetflowStop() {
+  return window['go']['app']['App']['NetflowStop']();
+}
+
+export function NetflowTop(arg1, arg2) {
+  return window['go']['app']['App']['NetflowTop'](arg1, arg2);
+}
+
 export function PickFile(arg1) {
   return window['go']['app']['App']['PickFile'](arg1);
 }

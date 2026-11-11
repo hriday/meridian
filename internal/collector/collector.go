@@ -116,6 +116,13 @@ func (c *Collector[T]) stopLocked() {
 	<-done
 }
 
+// Status returns the running state and bound port without copying the buffer.
+func (c *Collector[T]) Status() (running bool, port int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.running, c.port
+}
+
 // Snapshot returns the buffered values matching keep (copied under the ring
 // lock), or nil when the collector isn't running. The caller processes them
 // outside the lock.
