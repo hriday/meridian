@@ -34,6 +34,7 @@ export namespace app {
 	    flows: number;
 	    exporters: number;
 	    windowSecCovered: number;
+	    truncated: boolean;
 	    top: netflow.Conversation[];
 	
 	    static createFrom(source: any = {}) {
@@ -47,6 +48,7 @@ export namespace app {
 	        this.flows = source["flows"];
 	        this.exporters = source["exporters"];
 	        this.windowSecCovered = source["windowSecCovered"];
+	        this.truncated = source["truncated"];
 	        this.top = this.convertValues(source["top"], netflow.Conversation);
 	    }
 	
