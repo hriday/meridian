@@ -9,12 +9,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hriday/meridian/internal/collector"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
 	"github.com/hriday/meridian/internal/netcat"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
 )
+
+// collectorBuffer is the rolling message cap for each collector (in-memory).
+const collectorBuffer = 10000
 
 // App is the Wails-bound controller. Its public methods are exposed to the
 // frontend; unexported fields and methods are not, which is why the context
@@ -47,6 +51,8 @@ type App struct {
 
 	monMu    sync.Mutex
 	monitors map[string]*monitor
+
+	syslog *collector.Collector[collector.SyslogMsg]
 }
 
 // New returns a controller with no context; the context arrives at startup.
@@ -57,6 +63,7 @@ func New() *App {
 		adCracker:   pwaudit.NewHashcatCracker(),
 		wordlistDir: defaultWordlistDir(),
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
+		syslog:      collector.New[collector.SyslogMsg](collectorBuffer, collector.ParseSyslog),
 	}
 }
 
@@ -74,7 +81,7 @@ func (a *App) startup(ctx context.Context) {
 // OnShutdown returns the Wails OnShutdown callback: stop every running monitor
 // so no polling goroutine outlives the app.
 func OnShutdown(a *App) func(context.Context) {
-	return func(context.Context) { a.stopAllMonitors() }
+	return func(context.Context) { a.stopAllMonitors(); a.syslog.Stop() }
 }
 
 // lookupCtx is the context for outbound lookups: the Wails startup context
