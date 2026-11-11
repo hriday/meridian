@@ -139,6 +139,59 @@ func TestMergeDuplicatePrefix(t *testing.T) {
 	}
 }
 
+// An add then an edit of the same record sharing a timestamp, where the edit's
+// event ID sorts before the add's: a (At, ID) sort would run the edit first and
+// drop it. The edit must survive.
+func TestMergeEqualTimestampAddThenEditNotDropped(t *testing.T) {
+	local := []Event{
+		{ID: "zz", Type: EventAdd, Actor: "me", At: t1, Record: Record{ID: "R", Prefix: "10.0.0.0/24", Name: "web", Status: Active}},
+		{ID: "aa", Type: EventEdit, Actor: "me", At: t1, Record: Record{ID: "R", Name: "web-prod", Status: Active}},
+	}
+	res := Merge(nil, local, nil)
+	if len(res.Outgoing) != 1 || res.Outgoing[0].Record.Name != "web-prod" {
+		t.Fatalf("the rename was dropped; outgoing=%+v", res.Outgoing)
+	}
+	if replay(res.Merged)["R"].Name != "web-prod" {
+		t.Errorf("merged log replays to %q, want web-prod", replay(res.Merged)["R"].Name)
+	}
+}
+
+// Remote's clock is behind, so its edit of a base-added record carries an
+// earlier timestamp than the add. The edit must still apply.
+func TestMergeClockSkewEditNotDropped(t *testing.T) {
+	base := []Event{addEv("e1", "me", t2, "R", "10.0.0.0/24", "web")}       // add @ t2
+	remote := append(cloneLog(base), editName("e2", "jo", t1, "R", "web-prod")) // edit @ t1
+	res := Merge(base, base, remote)
+	if len(res.Incoming) != 1 || res.Incoming[0].Record.Name != "web-prod" {
+		t.Fatalf("skewed edit dropped; incoming=%+v", res.Incoming)
+	}
+	if replay(res.Merged)["R"].Name != "web-prod" {
+		t.Errorf("merged replays to %q, want web-prod", replay(res.Merged)["R"].Name)
+	}
+}
+
+// Both sides delete the same record → agreement, not a conflict.
+func TestMergeBothDeleteNoConflict(t *testing.T) {
+	base := []Event{addEv("e1", "me", t1, "R", "10.0.0.0/24", "web")}
+	local := append(cloneLog(base), delEv("e2", "me", t2, "R"))
+	remote := append(cloneLog(base), delEv("e3", "jo", t2, "R"))
+	res := Merge(base, local, remote)
+	if len(res.Conflicts) != 0 {
+		t.Errorf("both deleting R is agreement, not a conflict; got %+v", res.Conflicts)
+	}
+}
+
+// Both sides make the SAME edit → they converge, not a conflict.
+func TestMergeConvergentEditNoConflict(t *testing.T) {
+	base := []Event{addEv("e1", "me", t1, "R", "10.0.0.0/24", "web")}
+	local := append(cloneLog(base), editName("e2", "me", t2, "R", "web-prod"))
+	remote := append(cloneLog(base), editName("e3", "jo", t2, "R", "web-prod"))
+	res := Merge(base, local, remote)
+	if len(res.Conflicts) != 0 {
+		t.Errorf("identical edits converge, not a conflict; got %+v", res.Conflicts)
+	}
+}
+
 func cloneLog(evs []Event) []Event {
 	out := make([]Event, len(evs))
 	copy(out, evs)
