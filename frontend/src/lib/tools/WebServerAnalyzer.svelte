@@ -1,14 +1,21 @@
 <script lang="ts">
   import { AnalyzeWebServer } from "../../../wailsjs/go/app/App.js";
 
+  const SERVERS = [
+    { id: "nginx", label: "nginx", cmd: "sudo nginx -T > nginx-config.txt", get: "the full running config (nginx.conf + every include, resolved)", placeholder: "Paste `nginx -T` output here, or use Load file…" },
+    { id: "apache", label: "Apache httpd", cmd: "sudo apachectl -S  # vhosts; then paste apache2.conf / httpd.conf", get: "your apache2.conf / httpd.conf (and the included vhost files)", placeholder: "Paste your Apache httpd config here, or use Load file…" },
+    { id: "caddy", label: "Caddy", cmd: "cat /etc/caddy/Caddyfile", get: "your Caddyfile", placeholder: "Paste your Caddyfile here, or use Load file…" },
+  ];
+
   let configText = "";
+  let server = "nginx";
   let busy = false;
   let error = "";
   let a: any = null;
   let fileInput: HTMLInputElement;
   let copied = false;
 
-  const cmd = "sudo nginx -T > nginx-config.txt";
+  $: cfg = SERVERS.find((s) => s.id === server) ?? SERVERS[0];
 
   async function analyze() {
     const v = configText.trim();
@@ -17,12 +24,16 @@
     a = null;
     busy = true;
     try {
-      a = await AnalyzeWebServer(v, "nginx");
+      a = await AnalyzeWebServer(v, server);
     } catch (e) {
       error = String(e);
     } finally {
       busy = false;
     }
+  }
+
+  function onServerChange() {
+    if (configText.trim()) analyze();
   }
 
   function loadFile(e: Event) {
@@ -36,7 +47,7 @@
   function clearAll() { configText = ""; a = null; error = ""; }
 
   async function copyCmd() {
-    try { await navigator.clipboard.writeText(cmd); copied = true; setTimeout(() => (copied = false), 1200); } catch {}
+    try { await navigator.clipboard.writeText(cfg.cmd); copied = true; setTimeout(() => (copied = false), 1200); } catch {}
   }
 
   const sev = (s: string) => (s === "error" ? "bad" : s === "warning" ? "warn" : "info");
@@ -44,29 +55,38 @@
 
 <div class="tool">
   <p class="lede">
-    Analyze an <strong>nginx</strong> (and nginx Plus) config — offline. Shows what's served,
-    what routes to which backend, and what looks wrong. It's structure + sanity checks, not a
-    substitute for <span class="mono">nginx -t</span>. Nothing leaves your machine.
+    Analyze an <strong>nginx</strong>, <strong>Apache</strong> or <strong>Caddy</strong> config —
+    offline. Shows what's served, what routes to which backend, and what looks wrong. It's
+    structure + sanity checks, not a substitute for the server's own config test. Nothing
+    leaves your machine.
   </p>
+
+  <div class="card span">
+    <div class="row serverrow">
+      <span class="k0">Server</span>
+      <select class="serversel" bind:value={server} on:change={onServerChange}>
+        {#each SERVERS as sv}
+          <option value={sv.id}>{sv.label}</option>
+        {/each}
+      </select>
+    </div>
+  </div>
 
   {#if !a}
     <div class="card span">
       <div class="k">Get the whole config</div>
-      <p class="note">On the box, dump the full running config (nginx.conf + every include, resolved):</p>
+      <p class="note">On the box, get {cfg.get}:</p>
       <div class="cmdrow">
-        <code class="cmd mono">{cmd}</code>
+        <code class="cmd mono">{cfg.cmd}</code>
         <button class="ghost" on:click={copyCmd}>{copied ? "Copied" : "Copy"}</button>
       </div>
-      <p class="note dim">
-        In a container: <span class="mono">docker exec &lt;container&gt; nginx -T</span> ·
-        custom path: <span class="mono">nginx -T -c /path/to/nginx.conf</span> · then paste it below or Load file.
-      </p>
+      <p class="note dim">Then paste it below or Load file.</p>
     </div>
   {/if}
 
   <div class="card span">
     <textarea class="mono input" bind:value={configText}
-      placeholder="Paste `nginx -T` output here, or use Load file…" spellcheck="false"></textarea>
+      placeholder={cfg.placeholder} spellcheck="false"></textarea>
     <div class="row">
       <button class="go" on:click={analyze} disabled={busy || !configText.trim()}>{busy ? "Analyzing…" : "Analyze"}</button>
       <button class="ghost" on:click={() => fileInput.click()}>Load file…</button>
@@ -166,6 +186,10 @@
   .input { width: 100%; min-height: 150px; resize: vertical; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 10px 12px; color: var(--text); font-size: 0.8rem; outline: none; line-height: 1.45; }
   .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+  .serverrow { margin-top: 0; }
+  .k0 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); }
+  .serversel { background: var(--well); border: 1px solid var(--field-border); color: var(--text); border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 0.82rem; }
+  .serversel:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 8px 16px; font: inherit; font-size: 0.9rem; cursor: pointer; }
   .go:disabled { opacity: .6; cursor: default; }
   .ghost { background: transparent; border: 1px solid var(--border-soft); color: var(--text-dim); border-radius: 7px; padding: 7px 13px; font: inherit; font-size: 0.82rem; cursor: pointer; }
