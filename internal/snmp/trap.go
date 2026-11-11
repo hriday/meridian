@@ -37,8 +37,10 @@ var trapNames = map[string]string{
 	"1.3.6.1.6.3.1.1.5.5": "authenticationFailure",
 }
 
-// genericTrapNames maps the v1 generic-trap numbers to names.
-var genericTrapNames = [6]string{"coldStart", "warmStart", "linkDown", "linkUp", "authenticationFailure", "egpNeighborLoss"}
+const (
+	maxTrapVarbinds   = 64  // cap display varbinds per trap (OID extraction scans all)
+	maxTrapVarbindVal = 512 // cap each varbind's rendered value
+)
 
 // ParseTrap decodes a v1/v2c trap datagram. It is defensive against malformed,
 // attacker-reachable input (a decode error or panic yields ok=false) and never
@@ -57,6 +59,11 @@ func ParseTrap(datagram []byte, src netip.Addr) (m TrapMsg, ok bool) {
 	if err != nil || pkt == nil {
 		return TrapMsg{}, false
 	}
+	switch pkt.PDUType { // only actual traps/informs, not Get/Set/Response probes
+	case g.Trap, g.SNMPv2Trap, g.InformRequest:
+	default:
+		return TrapMsg{}, false
+	}
 
 	m = TrapMsg{T: time.Now(), Source: src.String()}
 	switch pkt.Version {
@@ -70,11 +77,17 @@ func ParseTrap(datagram []byte, src netip.Addr) (m TrapMsg, ok bool) {
 
 	for _, v := range pkt.Variables {
 		raw := pduValue(v)
-		m.Varbinds = append(m.Varbinds, TrapVar{OID: v.Name, Type: typeName(v.Type), Value: formatMIBValue(raw)})
 		if trimOID(v.Name) == oidSnmpTrapOID { // v2c: the trap OID is this varbind's value
 			if s, sok := raw.(string); sok {
 				m.TrapOID = trimOID(s)
 			}
+		}
+		if len(m.Varbinds) < maxTrapVarbinds { // OID extraction above scans all; display is capped
+			val := formatMIBValue(raw)
+			if len(val) > maxTrapVarbindVal {
+				val = val[:maxTrapVarbindVal]
+			}
+			m.Varbinds = append(m.Varbinds, TrapVar{OID: v.Name, Type: typeName(v.Type), Value: val})
 		}
 	}
 
@@ -91,9 +104,9 @@ func trimOID(s string) string { return strings.TrimPrefix(s, ".") }
 // numbers (enterpriseSpecific → enterprise.0.specific).
 func v1TrapOID(pkt *g.SnmpPacket) string {
 	switch gt := pkt.GenericTrap; {
-	case gt >= 0 && gt < len(genericTrapNames):
+	case gt >= 0 && gt <= 5: // standard generic traps → snmpTraps.(gt+1)
 		return "1.3.6.1.6.3.1.1.5." + strconv.Itoa(gt+1)
-	case gt == 6:
+	case gt == 6: // enterpriseSpecific → enterprise.0.specific
 		return trimOID(pkt.Enterprise) + ".0." + strconv.Itoa(pkt.SpecificTrap)
 	default:
 		return ""

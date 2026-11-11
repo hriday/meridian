@@ -3,6 +3,8 @@ package snmp
 import (
 	"encoding/json"
 	"net/netip"
+	"strconv"
+	"strings"
 	"testing"
 
 	g "github.com/gosnmp/gosnmp"
@@ -41,6 +43,37 @@ func TestParseTrapNoCommunity(t *testing.T) {
 	require.True(t, ok)
 	b, _ := json.Marshal(m)
 	require.NotContains(t, string(b), "s3cr3tCommunity")
+}
+
+func TestParseTrapRejectsNonTrap(t *testing.T) {
+	// a GetRequest/Response/Set to the trap port must not be ingested as a trap.
+	gs := &g.GoSNMP{Version: g.Version2c, Community: "public"}
+	for _, pt := range []g.PDUType{g.GetRequest, g.GetResponse, g.SetRequest} {
+		data, err := gs.SnmpEncodePacket(pt, []g.SnmpPDU{{Name: "1.3.6.1.2.1.1.1.0", Type: g.Null}}, 0, 0)
+		require.NoError(t, err)
+		_, ok := ParseTrap(data, trapSrc)
+		require.False(t, ok, "PDUType %v must be rejected", pt)
+	}
+}
+
+func TestParseTrapBoundsVarbinds(t *testing.T) {
+	gs := &g.GoSNMP{Version: g.Version2c, Community: "public"}
+	pdus := []g.SnmpPDU{
+		{Name: "1.3.6.1.6.3.1.1.4.1.0", Type: g.ObjectIdentifier, Value: "1.3.6.1.6.3.1.1.5.3"},
+		{Name: "1.3.6.1.4.1.9.1", Type: g.OctetString, Value: strings.Repeat("A", 5000)},
+	}
+	for i := 0; i < 300; i++ {
+		pdus = append(pdus, g.SnmpPDU{Name: "1.3.6.1.4.1.9." + strconv.Itoa(i+2), Type: g.Integer, Value: i})
+	}
+	data, err := gs.SnmpEncodePacket(g.SNMPv2Trap, pdus, 0, 0)
+	require.NoError(t, err)
+	m, ok := ParseTrap(data, trapSrc)
+	require.True(t, ok)
+	require.Equal(t, "1.3.6.1.6.3.1.1.5.3", m.TrapOID) // OID extraction unaffected by the cap
+	require.LessOrEqual(t, len(m.Varbinds), 64)
+	for _, v := range m.Varbinds {
+		require.LessOrEqual(t, len(v.Value), 512)
+	}
 }
 
 func TestParseTrapGarbage(t *testing.T) {
