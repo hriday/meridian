@@ -250,6 +250,18 @@ export function SubnetSplit(arg1, arg2) {
   return window['go']['app']['App']['SubnetSplit'](arg1, arg2);
 }
 
+export function SyslogPoll(arg1) {
+  return window['go']['app']['App']['SyslogPoll'](arg1);
+}
+
+export function SyslogStart(arg1) {
+  return window['go']['app']['App']['SyslogStart'](arg1);
+}
+
+export function SyslogStop() {
+  return window['go']['app']['App']['SyslogStop']();
+}
+
 export function TLSCheck(arg1) {
   return window['go']['app']['App']['TLSCheck'](arg1);
 }
