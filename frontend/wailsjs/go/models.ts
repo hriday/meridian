@@ -2115,6 +2115,7 @@ export namespace snmp {
 	    ip: string;
 	    port: string;
 	    ifIndex: number;
+	    vlan: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new PortEntry(source);
@@ -2126,6 +2127,7 @@ export namespace snmp {
 	        this.ip = source["ip"];
 	        this.port = source["port"];
 	        this.ifIndex = source["ifIndex"];
+	        this.vlan = source["vlan"];
 	    }
 	}
 	export class SweepHost {

@@ -60,11 +60,12 @@
       <div class="card span">
         <div class="tablewrap">
           <table>
-            <thead><tr><th>Port</th><th>MAC</th><th>IP</th></tr></thead>
+            <thead><tr><th>Port</th><th>VLAN</th><th>MAC</th><th>IP</th></tr></thead>
             <tbody>
               {#each rows as r}
                 <tr>
                   <td class="mono port">{r.port}</td>
+                  <td class="mono vlan">{r.vlan || "—"}</td>
                   <td class="mono mac">{r.mac}</td>
                   <td class="mono ip">{r.ip || "—"}</td>
                 </tr>
@@ -109,6 +110,7 @@
   tbody tr:last-child td { border-bottom: 0; }
   tbody tr:hover { background: var(--card2, var(--well)); }
   .port { color: var(--text-strong); }
+  .vlan { color: var(--text-dim); }
   .mac { color: var(--text); }
   .ip { color: var(--text-dim); }
 </style>

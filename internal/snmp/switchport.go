@@ -9,7 +9,8 @@ import (
 
 // Switch Port Mapper OIDs (BRIDGE-MIB, IF-MIB, IP-MIB).
 const (
-	oidFdbPort    = "1.3.6.1.2.1.17.4.3.1.2" // dot1dTpFdbPort: MAC(6) -> bridge port
+	oidFdbPort    = "1.3.6.1.2.1.17.4.3.1.2"     // dot1dTpFdbPort: MAC(6) -> bridge port
+	oidQFdbPort   = "1.3.6.1.2.1.17.7.1.2.2.1.2" // dot1qTpFdbPort: VLAN.MAC(6) -> bridge port (VLAN-aware switches)
 	oidBasePortIf = "1.3.6.1.2.1.17.1.4.1.2" // dot1dBasePortIfIndex: bridge port -> ifIndex
 	oidIfName     = "1.3.6.1.2.1.31.1.1.1.1" // ifName: ifIndex -> name (oidIfDescr is the fallback, defined in ifmib.go)
 	oidArpPhys    = "1.3.6.1.2.1.4.22.1.2"   // ipNetToMediaPhysAddress: ifIndex.IP -> MAC
@@ -22,6 +23,7 @@ type PortEntry struct {
 	IP      string `json:"ip"`
 	Port    string `json:"port"` // interface name (ifName / ifDescr)
 	IfIndex int    `json:"ifIndex"`
+	VLAN    int    `json:"vlan"` // 0 when unknown (dot1d table)
 }
 
 // SwitchPorts builds the MAC-to-port table from a switch's SNMP forwarding
@@ -32,6 +34,7 @@ func SwitchPorts(c Client) ([]PortEntry, error) {
 	if err != nil {
 		return nil, err
 	}
+	qfdb, _ := c.Walk(oidQFdbPort)
 	base, _ := c.Walk(oidBasePortIf)
 	names, _ := c.Walk(oidIfName)
 	descr, _ := c.Walk(oidIfDescr)
@@ -59,33 +62,55 @@ func SwitchPorts(c Client) ([]PortEntry, error) {
 	for _, p := range arp {
 		if mac := macFromValue(p.Value); mac != "" {
 			if ip := arpIP(p.OID, oidArpPhys); ip != "" {
-				macToIP[mac] = ip
+				if _, ok := macToIP[mac]; !ok { // first ARP IP wins (deterministic)
+					macToIP[mac] = ip
+				}
 			}
 		}
 	}
 
 	var out []PortEntry
 	seen := map[string]bool{}
-	for _, p := range fdb {
-		mac := macFromFdbOID(p.OID, oidFdbPort)
+	emit := func(mac string, vlan int, portVal any) {
 		if mac == "" {
-			continue
+			return
 		}
-		idx := portToIf[asInt(p.Value)]
+		bp := asInt(portVal)
+		idx := portToIf[bp]
 		name := ifName[idx]
 		if name == "" {
-			name = fmt.Sprintf("if%d", idx)
+			if idx != 0 {
+				name = fmt.Sprintf("if%d", idx)
+			} else {
+				name = fmt.Sprintf("port %d", bp) // unmapped: keep distinct ports distinct
+			}
 		}
-		if key := mac + "|" + name; seen[key] {
-			continue
-		} else {
-			seen[key] = true
+		key := fmt.Sprintf("%s|%s|%d", mac, name, vlan)
+		if seen[key] {
+			return
 		}
-		out = append(out, PortEntry{MAC: mac, IP: macToIP[mac], Port: name, IfIndex: idx})
+		seen[key] = true
+		out = append(out, PortEntry{MAC: mac, IP: macToIP[mac], Port: name, IfIndex: idx, VLAN: vlan})
 	}
+
+	for _, p := range fdb { // dot1d (VLAN-unaware) forwarding table
+		emit(macFromFdbOID(p.OID, oidFdbPort), 0, p.Value)
+	}
+	for _, p := range qfdb { // dot1q (VLAN-aware) forwarding table: index is VLAN.MAC(6)
+		parts := strings.Split(oidSuffix(p.OID, oidQFdbPort), ".")
+		if len(parts) < 7 {
+			continue
+		}
+		vlan, _ := strconv.Atoi(parts[0])
+		emit(octetsToMAC(parts[len(parts)-6:]), vlan, p.Value)
+	}
+
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Port != out[j].Port {
 			return out[i].Port < out[j].Port
+		}
+		if out[i].VLAN != out[j].VLAN {
+			return out[i].VLAN < out[j].VLAN
 		}
 		return out[i].MAC < out[j].MAC
 	})

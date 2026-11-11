@@ -57,6 +57,46 @@ func TestSwitchPortsNoArpOrName(t *testing.T) {
 	}
 }
 
+// VLAN-aware switches populate the Q-bridge table (vlan + MAC index); it must be
+// walked, the VLAN captured, and the MAC/port resolved.
+func TestSwitchPortsQBridge(t *testing.T) {
+	f := &fakeClient{walk: map[string][]PDU{
+		oidQFdbPort:   {{OID: oidQFdbPort + ".10.0.12.41.56.120.144", Value: 3}}, // vlan 10
+		oidBasePortIf: {{OID: oidBasePortIf + ".3", Value: 10001}},
+		oidIfName:     {{OID: oidIfName + ".10001", Value: "GigabitEthernet0/1"}},
+	}}
+	ents, err := SwitchPorts(f)
+	if err != nil {
+		t.Fatalf("SwitchPorts: %v", err)
+	}
+	if len(ents) != 1 {
+		t.Fatalf("want 1 entry, got %d: %+v", len(ents), ents)
+	}
+	e := ents[0]
+	if e.MAC != "00:0c:29:38:78:90" || e.VLAN != 10 || e.Port != "GigabitEthernet0/1" {
+		t.Errorf("Q-bridge entry wrong: %+v", e)
+	}
+}
+
+// Two FDB entries on different bridge ports with no base-port mapping must stay
+// distinct, not both collapse to "if0".
+func TestSwitchPortsUnmappedPortsStayDistinct(t *testing.T) {
+	f := &fakeClient{walk: map[string][]PDU{
+		oidFdbPort: {
+			{OID: oidFdbPort + ".0.0.0.0.0.1", Value: 7},
+			{OID: oidFdbPort + ".0.0.0.0.0.2", Value: 9},
+		},
+	}}
+	ents, _ := SwitchPorts(f)
+	ports := map[string]bool{}
+	for _, e := range ents {
+		ports[e.Port] = true
+	}
+	if len(ports) != 2 {
+		t.Errorf("two unmapped bridge ports should stay distinct; got ports %v", ports)
+	}
+}
+
 // A fabricated error from the required FDB walk propagates.
 func TestSwitchPortsFDBError(t *testing.T) {
 	if _, err := SwitchPorts(errClient{}); err == nil {
