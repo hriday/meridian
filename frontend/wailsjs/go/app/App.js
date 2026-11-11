@@ -78,6 +78,10 @@ export function DNSSystem() {
   return window['go']['app']['App']['DNSSystem']();
 }
 
+export function DiffConfigs(arg1, arg2) {
+  return window['go']['app']['App']['DiffConfigs'](arg1, arg2);
+}
+
 export function HTTPCheck(arg1) {
   return window['go']['app']['App']['HTTPCheck'](arg1);
 }
