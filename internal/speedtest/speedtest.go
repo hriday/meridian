@@ -55,11 +55,17 @@ func Run(ctx context.Context, o Options, onSample func(Sample)) (Result, error) 
 	if host == "" {
 		return Result{}, fmt.Errorf("enter a host running iperf3 -s")
 	}
+	if err := ctx.Err(); err != nil {
+		return Result{}, err // already cancelled — not a resolve failure
+	}
 	// Pre-resolve for a clear DNS error — the library has no DNS error code.
 	rctx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	_, rerr := net.DefaultResolver.LookupHost(rctx, host)
 	cancel()
 	if rerr != nil {
+		if cerr := ctx.Err(); cerr != nil {
+			return Result{}, cerr
+		}
 		return Result{}, fmt.Errorf("couldn't resolve %q", host)
 	}
 
@@ -110,8 +116,12 @@ func mapError(code, host string, port int) error {
 		return fmt.Errorf("no iperf3 server answered at %s:%d — start `iperf3 -s` there", host, port)
 	case "busy":
 		return fmt.Errorf("that iperf3 server is busy running another test — try again shortly")
-	case "cancelled", "interrupted":
-		return context.Canceled
+	case "cancelled":
+		return context.Canceled // our own Stop; the app's ctx.Err guard suppresses it
+	case "interrupted":
+		return fmt.Errorf("the connection to %s dropped mid-test — the server may have stopped or the link went down", host)
+	case "protocol":
+		return fmt.Errorf("%s:%d answered but isn't an iperf3 server — check the host and port", host, port)
 	case "udp":
 		return fmt.Errorf("the UDP test couldn't be set up — the server may not accept UDP")
 	default:

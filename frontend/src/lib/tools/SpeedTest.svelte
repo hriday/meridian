@@ -86,9 +86,11 @@
 
   $: curDownR = fmtRate(snap?.downMbps);
   $: curUpR = fmtRate(snap?.upMbps);
+  // StreamChart resolves a bare "--token" to its computed value; a full var()
+  // string would reach the canvas unresolved and draw in the grid color.
   $: series = [
-    ...(showDown ? [{ values: dnVals, color: "var(--accent, #4b9fff)" }] : []),
-    ...(showUp ? [{ values: upVals, color: "var(--good, #4bd38a)" }] : []),
+    ...(showDown ? [{ values: dnVals, color: "--accent" }] : []),
+    ...(showUp ? [{ values: upVals, color: "--good" }] : []),
   ];
 </script>
 

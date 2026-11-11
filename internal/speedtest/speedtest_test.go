@@ -83,6 +83,25 @@ func TestRunBadHost(t *testing.T) {
 	require.Contains(t, strings.ToLower(err.Error()), "resolve")
 }
 
+func TestMapErrorMessages(t *testing.T) {
+	// our Stop → context.Canceled (the app's ctx.Err guard suppresses it)
+	require.ErrorIs(t, mapError("cancelled", "h", 5201), context.Canceled)
+	// a real mid-test drop is NOT our cancel → a descriptive error
+	ierr := mapError("interrupted", "h", 5201)
+	require.Error(t, ierr)
+	require.NotErrorIs(t, ierr, context.Canceled)
+	require.Contains(t, strings.ToLower(ierr.Error()), "drop")
+	// wrong host/port (not an iperf3 endpoint) → a helpful message
+	require.Contains(t, strings.ToLower(mapError("protocol", "h", 5201).Error()), "iperf3")
+}
+
+func TestRunPreCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := Run(ctx, Options{Host: "127.0.0.1", Port: 5201, Duration: time.Second}, func(Sample) {})
+	require.ErrorIs(t, err, context.Canceled) // not mislabeled "couldn't resolve"
+}
+
 func TestRunCancel(t *testing.T) {
 	port := loopbackServer(t)
 	ctx, cancel := context.WithCancel(context.Background())
