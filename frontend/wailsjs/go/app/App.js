@@ -230,6 +230,14 @@ export function SnmpSweep(arg1, arg2, arg3) {
   return window['go']['app']['App']['SnmpSweep'](arg1, arg2, arg3);
 }
 
+export function SpeedtestStart(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['app']['App']['SpeedtestStart'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function SpeedtestStop(arg1) {
+  return window['go']['app']['App']['SpeedtestStop'](arg1);
+}
+
 export function StartDeviceMonitor(arg1, arg2, arg3) {
   return window['go']['app']['App']['StartDeviceMonitor'](arg1, arg2, arg3);
 }
