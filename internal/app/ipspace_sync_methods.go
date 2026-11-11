@@ -303,28 +303,26 @@ func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, k
 	return a.saveSyncConfig(sc)
 }
 
-// IPSpaceSyncConfigureGit points sync at a git repository (the inventory is a
-// file committed and pushed on each sync, with its full history kept). Auth is an
-// HTTPS token or an SSH key; both are sealed with the store passphrase. The repo
-// must already exist with an initial commit.
-func (a *App) IPSpaceSyncConfigureGit(url, branch, path, username, token, privateKey, keyPassphrase string) error {
+// IPSpaceSyncConfigureGit points sync at a git repository over HTTPS (the
+// inventory is a file committed and pushed on each sync, with its full history
+// kept). Auth is an HTTPS access token, sealed with the store passphrase. The
+// repo must already exist with an initial commit.
+func (a *App) IPSpaceSyncConfigureGit(url, branch, path, username, token string) error {
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
 	cfg := ipspace.GitConfig{
-		URL:           strings.TrimSpace(url),
-		Branch:        strings.TrimSpace(branch),
-		Path:          strings.TrimSpace(path),
-		Username:      strings.TrimSpace(username),
-		Token:         token,
-		PrivateKey:    privateKey,
-		KeyPassphrase: keyPassphrase,
+		URL:      strings.TrimSpace(url),
+		Branch:   strings.TrimSpace(branch),
+		Path:     strings.TrimSpace(path),
+		Username: strings.TrimSpace(username),
+		Token:    token,
 	}
 	if cfg.URL == "" || cfg.Path == "" {
 		return fmt.Errorf("enter the repository URL and the file path within it")
 	}
-	if strings.TrimSpace(cfg.Token) == "" && strings.TrimSpace(cfg.PrivateKey) == "" {
-		return fmt.Errorf("enter an access token or a private key for the repository")
+	if strings.TrimSpace(cfg.Token) == "" {
+		return fmt.Errorf("enter an access token for the repository")
 	}
 	sc := syncConfig{Kind: "git", Git: &cfg}
 	b, err := a.buildBackend(sc)

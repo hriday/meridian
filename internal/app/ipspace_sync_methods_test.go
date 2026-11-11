@@ -240,7 +240,7 @@ func TestSyncConfigureGitSealsToken(t *testing.T) {
 	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true } // Verify offline
 
 	const token = "ghp_secrettoken12345"
-	require.NoError(t, a.IPSpaceSyncConfigureGit("https://github.com/acme/ipam.git", "main", "ipspace.enc", "acme-bot", token, "", ""))
+	require.NoError(t, a.IPSpaceSyncConfigureGit("https://github.com/acme/ipam.git", "main", "ipspace.enc", "acme-bot", token))
 
 	info := a.IPSpaceSyncInfo()
 	require.True(t, info.Configured)
@@ -256,7 +256,7 @@ func TestSyncConfigureGitSealsToken(t *testing.T) {
 func TestSyncConfigureGitRequiresAuth(t *testing.T) {
 	store := filepath.Join(t.TempDir(), "store.enc")
 	a := newUnlockedStore(t, store, "team")
-	err := a.IPSpaceSyncConfigureGit("https://x/y.git", "main", "ipspace.enc", "", "", "", "")
+	err := a.IPSpaceSyncConfigureGit("https://x/y.git", "main", "ipspace.enc", "", "")
 	require.Error(t, err)
 	require.False(t, a.IPSpaceSyncInfo().Configured)
 }

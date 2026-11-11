@@ -1,11 +1,19 @@
 package ipspace
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/go-git/go-billy/v5/memfs"
 	git "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,4 +88,59 @@ func TestGitPullPushViaBackend(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	require.NotEmpty(t, ver)
+}
+
+// The REAL concurrent-write race (not just the curHead early-check): two clones
+// at the same HEAD, one pushes, the other's push is a genuine non-fast-forward
+// rejected by go-git — and mapPushErr must turn that into ErrRemoteChanged.
+func TestGitRealNonFastForwardMapsToRemoteChanged(t *testing.T) {
+	url := bareRepo(t)
+	require.NoError(t, gitB(url).Put(context.Background(), []byte("v1"), "")) // seed main
+
+	r1 := cloneMain(t, url)
+	r2 := cloneMain(t, url) // both at the same HEAD
+
+	// r1 commits and pushes — advances the remote.
+	require.NoError(t, commitAndPushMain(r1, []byte("a")))
+	// r2 commits on the now-stale HEAD and pushes — a real non-fast-forward.
+	err := commitAndPushMain(r2, []byte("b"))
+	require.Error(t, err, "go-git must reject the stale push")
+	require.ErrorIs(t, mapPushErr(err), ErrRemoteChanged, "the real push rejection must map to ErrRemoteChanged")
+}
+
+func TestSanitizeURLStripsCredentials(t *testing.T) {
+	require.Equal(t, "https://github.com/acme/ipam.git", sanitizeURL("https://user:ghp_token@github.com/acme/ipam.git"))
+	require.Equal(t, "https://github.com/acme/ipam.git", sanitizeURL("https://github.com/acme/ipam.git"))
+	require.NotContains(t, (GitConfig{URL: "https://u:secret@h/r.git", Path: "p"}).Describe(), "secret")
+}
+
+func cloneMain(t *testing.T, url string) *git.Repository {
+	t.Helper()
+	r, err := git.CloneContext(context.Background(), memory.NewStorage(), memfs.New(), &git.CloneOptions{
+		URL: url, ReferenceName: plumbing.NewBranchReferenceName("main"), SingleBranch: true,
+	})
+	require.NoError(t, err)
+	return r
+}
+
+func commitAndPushMain(r *git.Repository, data []byte) error {
+	wt, err := r.Worktree()
+	if err != nil {
+		return err
+	}
+	f, err := wt.Filesystem.Create("ipspace.enc")
+	if err != nil {
+		return err
+	}
+	io.Copy(f, bytes.NewReader(data))
+	f.Close()
+	if _, err := wt.Add("ipspace.enc"); err != nil {
+		return err
+	}
+	if _, err := wt.Commit("edit", &git.CommitOptions{Author: &object.Signature{Name: "t", Email: "t@t", When: time.Now()}}); err != nil {
+		return err
+	}
+	return r.Push(&git.PushOptions{
+		RefSpecs: []config.RefSpec{config.RefSpec("refs/heads/main:refs/heads/main")},
+	})
 }

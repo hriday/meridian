@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
-	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
@@ -33,16 +33,16 @@ type GitBackend struct {
 	Label string
 }
 
-// GitConfig is the connection detail for a git remote. Secret fields (Token,
-// PrivateKey, KeyPassphrase) are sealed with the store passphrase.
+// GitConfig is the connection detail for a git remote over HTTPS. The secret
+// field (Token) is sealed with the store passphrase. HTTPS-token auth only: it
+// works everywhere (GitHub/GitLab/Bitbucket/self-hosted) and avoids the SSH
+// known_hosts/host-key management an SSH path would need.
 type GitConfig struct {
-	URL           string // https://… or git@…:…
-	Branch        string // default "main"
-	Path          string // file path within the repo, e.g. "ipspace.enc"
-	Username      string // for HTTPS token auth (default "git")
-	Token         string // HTTPS personal access token / password
-	PrivateKey    string // SSH PEM, optional
-	KeyPassphrase string
+	URL      string // https://…
+	Branch   string // default "main"
+	Path     string // file path within the repo, e.g. "ipspace.enc"
+	Username string // for HTTPS token auth (default "git")
+	Token    string // HTTPS personal access token / password
 }
 
 func (c GitConfig) branch() string {
@@ -52,23 +52,34 @@ func (c GitConfig) branch() string {
 	return strings.TrimSpace(c.Branch)
 }
 
-// Describe is the credential-free label.
+// Describe is the credential-free label. Any userinfo embedded in the URL (e.g.
+// a pasted https://user:token@host) is stripped so a token can't leak into the
+// UI or an error string.
 func (c GitConfig) Describe() string {
-	return fmt.Sprintf("git %s (%s) [%s]", c.URL, c.branch(), c.Path)
+	return fmt.Sprintf("git %s (%s) [%s]", sanitizeURL(c.URL), c.branch(), c.Path)
 }
 
-func (c GitConfig) auth() (transport.AuthMethod, error) {
-	if strings.TrimSpace(c.PrivateKey) != "" {
-		return gitssh.NewPublicKeys("git", []byte(c.PrivateKey), c.KeyPassphrase)
+// sanitizeURL removes any embedded credentials (userinfo) from a URL.
+func sanitizeURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
 	}
+	if u.User != nil {
+		u.User = nil
+	}
+	return u.String()
+}
+
+func (c GitConfig) auth() transport.AuthMethod {
 	if c.Token != "" {
 		user := c.Username
 		if user == "" {
 			user = "git"
 		}
-		return &githttp.BasicAuth{Username: user, Password: c.Token}, nil
+		return &githttp.BasicAuth{Username: user, Password: c.Token}
 	}
-	return nil, nil // local transport / no auth
+	return nil // local transport / no auth
 }
 
 // NewGitBackend builds a backend from config.
@@ -86,13 +97,9 @@ func (b GitBackend) refName() plumbing.ReferenceName {
 // cloneBranch clones the configured branch into memory. A truly empty remote
 // returns (nil, nil) so the caller can create the first commit.
 func (b GitBackend) cloneBranch(ctx context.Context) (*git.Repository, error) {
-	auth, err := b.Cfg.auth()
-	if err != nil {
-		return nil, err
-	}
 	r, err := git.CloneContext(ctx, memory.NewStorage(), memfs.New(), &git.CloneOptions{
 		URL:           b.Cfg.URL,
-		Auth:          auth,
+		Auth:          b.Cfg.auth(),
 		ReferenceName: b.refName(),
 		SingleBranch:  true,
 	})
@@ -144,10 +151,6 @@ func (b GitBackend) Get(ctx context.Context) ([]byte, string, error) {
 // still equals expectedVersion (nothing pushed since the pull). A non-fast-
 // forward push (someone pushed in between) maps to ErrRemoteChanged.
 func (b GitBackend) Put(ctx context.Context, blob []byte, expectedVersion string) error {
-	auth, err := b.Cfg.auth()
-	if err != nil {
-		return err
-	}
 	r, err := b.cloneBranch(ctx)
 	if err != nil {
 		return err
@@ -165,25 +168,38 @@ func (b GitBackend) Put(ctx context.Context, blob []byte, expectedVersion string
 	}
 	if r == nil {
 		// Empty remote: create the first commit and push it to the branch.
-		return b.firstPush(ctx, auth, blob)
+		return b.firstPush(ctx, b.Cfg.auth(), blob)
 	}
 	wt, err := r.Worktree()
 	if err != nil {
 		return err
 	}
-	if err := writeWorktreeFile(wt, b.Cfg.Path, blob); err != nil {
-		return err
-	}
-	if _, err := wt.Add(b.Cfg.Path); err != nil {
+	if err := b.stageBlob(wt, blob); err != nil {
 		return err
 	}
 	if _, err := wt.Commit("Update IP space inventory", &git.CommitOptions{Author: gitSignature()}); err != nil {
 		return err
 	}
 	return mapPushErr(r.PushContext(ctx, &git.PushOptions{
-		Auth:     auth,
+		Auth:     b.Cfg.auth(),
 		RefSpecs: []config.RefSpec{config.RefSpec(fmt.Sprintf("%s:%s", b.refName(), b.refName()))},
 	}))
+}
+
+// stageBlob writes the blob and a .gitattributes entry marking it binary (so a
+// human later using real git on the repo can't corrupt the sealed bytes via
+// text/eol normalization), then stages both.
+func (b GitBackend) stageBlob(wt *git.Worktree, blob []byte) error {
+	if err := writeWorktreeFile(wt, b.Cfg.Path, blob); err != nil {
+		return err
+	}
+	if _, err := wt.Add(b.Cfg.Path); err != nil {
+		return err
+	}
+	if err := ensureGitattributes(wt, b.Cfg.Path); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b GitBackend) firstPush(ctx context.Context, auth transport.AuthMethod, blob []byte) error {
@@ -198,10 +214,7 @@ func (b GitBackend) firstPush(ctx context.Context, auth transport.AuthMethod, bl
 	if err != nil {
 		return err
 	}
-	if err := writeWorktreeFile(wt, b.Cfg.Path, blob); err != nil {
-		return err
-	}
-	if _, err := wt.Add(b.Cfg.Path); err != nil {
+	if err := b.stageBlob(wt, blob); err != nil {
 		return err
 	}
 	if _, err := wt.Commit("Create IP space inventory", &git.CommitOptions{Author: gitSignature()}); err != nil {
@@ -248,6 +261,30 @@ func writeWorktreeFile(wt *git.Worktree, path string, data []byte) error {
 	return f.Close()
 }
 
+// ensureGitattributes adds a line marking the blob path binary, if not already
+// present, and stages the file.
+func ensureGitattributes(wt *git.Worktree, blobPath string) error {
+	const name = ".gitattributes"
+	marker := blobPath + " -text"
+	existing := ""
+	if f, err := wt.Filesystem.Open(name); err == nil {
+		b, _ := io.ReadAll(f)
+		f.Close()
+		existing = string(b)
+	}
+	if strings.Contains(existing, marker) {
+		return nil
+	}
+	if existing != "" && !strings.HasSuffix(existing, "\n") {
+		existing += "\n"
+	}
+	if err := writeWorktreeFile(wt, name, []byte(existing+marker+"\n")); err != nil {
+		return err
+	}
+	_, err := wt.Add(name)
+	return err
+}
+
 func gitSignature() *object.Signature {
 	return &object.Signature{Name: "Meridian", Email: "meridian@localhost", When: time.Now()}
 }
@@ -256,8 +293,21 @@ func mapPushErr(err error) error {
 	if err == nil || errors.Is(err, git.NoErrAlreadyUpToDate) {
 		return nil
 	}
-	if errors.Is(err, git.ErrNonFastForwardUpdate) {
+	// A rejected push is a concurrent-write race. go-git does NOT return the
+	// git.ErrNonFastForwardUpdate sentinel for a *push* (that's the pull path);
+	// the push error is a plain message, and a real server's report-status
+	// rejection is another phrasing — so match the sentinel AND the known
+	// messages, mapping all of them to the CAS "remote changed" signal.
+	if errors.Is(err, git.ErrNonFastForwardUpdate) || isNonFastForward(err) {
 		return ErrRemoteChanged
 	}
 	return err
+}
+
+func isNonFastForward(err error) bool {
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "non-fast-forward") ||
+		strings.Contains(s, "fetch first") ||
+		strings.Contains(s, "stale info") ||
+		strings.Contains(s, "cannot lock ref")
 }
