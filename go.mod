@@ -3,6 +3,7 @@ module github.com/hriday/meridian
 go 1.25.0
 
 require (
+	github.com/appshubcc/go-iperf3 v0.1.0
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/hashicorp/hcl/v2 v2.25.0
 	github.com/miekg/dns v1.1.62
@@ -20,7 +21,6 @@ require (
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
-	github.com/appshubcc/go-iperf3 v0.1.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
