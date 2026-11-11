@@ -117,6 +117,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -137,10 +138,32 @@ jobs:
           sed -i -E "s|^  version \".*\"|  version \"${VER}\"|" Casks/meridian.rb
           sed -i -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" Casks/meridian.rb
 
-      - name: Commit the bump
+      # master is a protected branch (changes must go through a PR), so the bot
+      # can't push the bump directly. Open a short-lived branch, raise a PR, and
+      # squash-merge it (0 required reviews, no required checks → mergeable at once).
+      - name: Open and merge the cask bump
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if git diff --quiet -- Casks/meridian.rb; then
+            echo "cask already current for ${GITHUB_REF_NAME}"; exit 0
+          fi
+          BRANCH="homebrew-bump-${GITHUB_REF_NAME}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
           git add Casks/meridian.rb
-          git commit -m "chore(homebrew): meridian ${GITHUB_REF_NAME} [skip ci]" || { echo "no cask change"; exit 0; }
-          git push origin HEAD:master
+          git commit -m "chore(homebrew): meridian ${GITHUB_REF_NAME}"
+          git push origin "$BRANCH"
+          gh pr create --base master --head "$BRANCH" \
+            --title "chore(homebrew): meridian ${GITHUB_REF_NAME}" \
+            --body "Automated Homebrew cask bump for ${GITHUB_REF_NAME} (release job already published the DMG)."
+          for i in $(seq 1 10); do
+            if gh pr merge "$BRANCH" --squash --delete-branch \
+                 --subject "chore(homebrew): meridian ${GITHUB_REF_NAME} [skip ci]"; then
+              exit 0
+            fi
+            echo "PR not mergeable yet, retrying in 6s…"; sleep 6
+          done
+          echo "could not auto-merge the cask bump PR for ${GITHUB_REF_NAME}" >&2
+          exit 1
