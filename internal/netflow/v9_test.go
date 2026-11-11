@@ -119,6 +119,32 @@ func TestParseV9SeparateTemplate(t *testing.T) {
 	require.Equal(t, "10.0.0.1", recs[0].Dst.String())
 }
 
+func TestParserCapsExporters(t *testing.T) {
+	// an attacker spoofing many source IPs must not grow the template cache
+	// without bound.
+	old := maxExporters
+	maxExporters = 4
+	defer func() { maxExporters = old }()
+	p := NewParser()
+	pkt := append(append(v9Header(2), v9TemplateFS()...), v9DataFS("10.0.0.9", "10.0.0.1", 50000, 443, 6, 120000, 100)...)
+	for i := 0; i < 50; i++ {
+		p.Parse(pkt, netip.AddrFrom4([4]byte{10, 0, 0, byte(i)}), time.Now())
+	}
+	require.LessOrEqual(t, len(p.templates), 4)
+}
+
+func TestFlowFromFieldsSkipsEnterprise(t *testing.T) {
+	// an enterprise field with a colliding type/length must not be read as a std field
+	fields := []nf.DataField{
+		{Type: 8, Value: []byte{10, 0, 0, 9}},
+		{Type: 12, Value: []byte{10, 0, 0, 1}},
+		{Type: 7, PenProvided: true, Pen: 9, Value: []byte{0xff, 0xff}}, // enterprise, NOT a real src port
+	}
+	fr, ok := flowFromFields(fields, netip.Addr{}, time.Now())
+	require.True(t, ok)
+	require.EqualValues(t, 0, fr.SrcPort) // enterprise field ignored
+}
+
 func TestParseGarbageTemplated(t *testing.T) {
 	g := append(v9Header(1), []byte{0xde, 0xad, 0xbe, 0xef, 0x01, 0x02}...)
 	require.Empty(t, NewParser().Parse(g, netip.MustParseAddr("10.0.0.254"), time.Now())) // no panic

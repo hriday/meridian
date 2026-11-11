@@ -16,6 +16,12 @@ type Parser struct {
 	templates map[netip.Addr]nf.NetFlowTemplateSystem
 }
 
+// maxExporters bounds the per-exporter template cache so a spoofed-source flood
+// on the listening UDP port can't exhaust memory. Real deployments have a handful
+// of exporters; once full, datagrams from new (likely spoofed) sources are
+// dropped rather than growing the map.
+var maxExporters = 4096
+
 // NewParser returns a ready parser.
 func NewParser() *Parser {
 	return &Parser{templates: map[netip.Addr]nf.NetFlowTemplateSystem{}}
@@ -49,6 +55,9 @@ func (p *Parser) parseTemplated(datagram []byte, exporter netip.Addr, now time.T
 	}()
 	ts := p.templates[exporter]
 	if ts == nil {
+		if len(p.templates) >= maxExporters {
+			return nil // cache full — drop new (likely spoofed) sources
+		}
 		ts = nf.CreateTemplateSystem()
 		p.templates[exporter] = ts
 	}
@@ -81,6 +90,9 @@ func flowFromFields(values []nf.DataField, exporter netip.Addr, now time.Time) (
 	fr := FlowRecord{Exporter: exporter, T: now}
 	var hasSrc, hasDst bool
 	for _, v := range values {
+		if v.PenProvided { // skip vendor enterprise fields (type numbers collide with std IEs)
+			continue
+		}
 		b, ok := v.Value.([]byte)
 		if !ok {
 			continue
