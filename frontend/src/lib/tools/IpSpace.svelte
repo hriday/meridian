@@ -5,6 +5,7 @@
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
     IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory, IPSpaceExportHandoff,
     IPSpaceImportOpen, IPSpaceImportPreviewMerge, IPSpaceImportApplyMerge, IPSpaceImportAsNew, IPSpaceImportTree, IPSpaceImportCancel,
+    IPSpaceInventoryTree, IPSpacePullRecords,
     IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
@@ -138,6 +139,30 @@
     finally { importBusy = false; }
   }
   function impLabel(c: any): string { return changeLabel(c); }
+
+  // Pull records from another inventory into the active one.
+  let showPull = false, pullSourceId = "", pullRows: any[] = [], pullSelected: Record<string, boolean> = {}, pullReport: any = null, pullErr = "", pullBusy = false;
+  $: pullSources = invList.filter((i) => i.unlocked && i.id !== activeId);
+  $: pullCount = Object.values(pullSelected).filter(Boolean).length;
+  async function openPull() {
+    showPull = true; pullReport = null; pullErr = ""; pullSelected = {}; pullRows = [];
+    pullSourceId = pullSources.length ? pullSources[0].id : "";
+    if (pullSourceId) await loadPullTree();
+  }
+  async function loadPullTree() {
+    pullSelected = {}; pullReport = null;
+    try { pullRows = flatten(await IPSpaceInventoryTree(pullSourceId)); }
+    catch (e) { pullErr = String(e); }
+  }
+  async function doPull() {
+    pullErr = ""; pullReport = null;
+    const prefixes = pullRows.filter((r) => pullSelected[r.rec.prefix]).map((r) => r.rec.prefix);
+    if (!prefixes.length) { pullErr = "Select at least one record to pull."; return; }
+    pullBusy = true;
+    try { pullReport = await IPSpacePullRecords(pullSourceId, prefixes); pullSelected = {}; await refresh(); }
+    catch (e) { pullErr = String(e); }
+    finally { pullBusy = false; }
+  }
 
   // Export (park / share) to an encrypted file.
   let showExport = false, exportMode: "park" | "share" = "share", exportPass = "", exportMsg = "", exportErr = "", exportBusy = false;
@@ -312,6 +337,9 @@
       <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
       <button class="btn ghost" class:on={showExport} on:click={() => { showExport = !showExport; exportErr = ''; exportMsg = ''; }}>Export…</button>
       <button class="btn ghost" class:on={showImport} on:click={() => showImport ? closeImport() : openImportPanel()}>Import…</button>
+      {#if pullSources.length}
+        <button class="btn ghost" class:on={showPull} on:click={() => showPull ? (showPull = false) : openPull()}>Pull from…</button>
+      {/if}
       <button class="btn ghost" on:click={startRename} title="Rename this inventory">Rename</button>
       <button class="btn ghost" on:click={() => { confirmingDelete = true; renaming = false; invErr = ''; }} title="Delete this inventory">Delete</button>
       <span class="lock">🔓 {activeName()} · encrypted at rest</span>
@@ -433,6 +461,38 @@
         {/if}
 
         {#if importErr}<div class="err" style="margin-top:10px">{importErr}</div>{/if}
+      </div>
+    {/if}
+
+    {#if showPull}
+      <div class="card synccard">
+        <div class="chead"><h3>Pull records into {activeName()}</h3><button class="x" on:click={() => (showPull = false)}>✕</button></div>
+        <p class="hint" style="margin:0 0 10px">Copy records from another inventory into this one. The source is left unchanged; a prefix you already have is skipped.</p>
+        <label class="auth" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span class="k0" style="font-size:0.72rem;color:var(--text-dim)">From</span>
+          <select class="field" style="max-width:240px" bind:value={pullSourceId} on:change={loadPullTree}>
+            {#each pullSources as s}<option value={s.id}>{s.name}</option>{/each}
+          </select>
+        </label>
+        {#if pullRows.length}
+          <div class="card" style="max-height:240px;overflow:auto;padding:8px 10px">
+            {#each pullRows as r}
+              <label class="pullrow" style={`padding-left:${r.depth * 16}px`}>
+                <input type="checkbox" bind:checked={pullSelected[r.rec.prefix]} />
+                <span class="cidr mono">{r.rec.prefix}</span><span class="nm">{r.rec.name}</span><span class="st pill {r.rec.status}">{r.rec.status}</span>
+              </label>
+            {/each}
+          </div>
+          <div class="formbtns">
+            <button class="btn" on:click={doPull} disabled={pullBusy || !pullCount}>{pullBusy ? "Pulling…" : `Pull ${pullCount || ""} record${pullCount === 1 ? "" : "s"} →`}</button>
+          </div>
+        {:else}
+          <p class="muted">That inventory has no records.</p>
+        {/if}
+        {#if pullErr}<div class="err" style="margin-top:10px">{pullErr}</div>{/if}
+        {#if pullReport}
+          <div class="ok" style="margin-top:10px">Pulled {pullReport.added} record{pullReport.added === 1 ? "" : "s"}.{#if pullReport.skipped?.length} Skipped {pullReport.skipped.length}: {pullReport.skipped.join("; ")}{/if}</div>
+        {/if}
       </div>
     {/if}
 
@@ -664,6 +724,9 @@
   .destopt:hover { border-color: var(--accent); }
   .destopt .ichip { width: 9px; height: 9px; border-radius: 50%; }
   .destopt:disabled { opacity: .55; cursor: default; }
+  .pullrow { display: flex; align-items: center; gap: 9px; padding: 4px 2px; font-size: 0.84rem; cursor: pointer; }
+  .pullrow .nm { color: var(--text-dim); }
+  .pullrow .st { margin-left: auto; }
   h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; color: var(--text-strong); }
   .sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 12px; }
   .muted { color: var(--text-dim); font-size: 0.85rem; }

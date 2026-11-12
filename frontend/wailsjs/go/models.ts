@@ -110,6 +110,20 @@ export namespace app {
 		    return a;
 		}
 	}
+	export class PullReport {
+	    added: number;
+	    skipped: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PullReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.added = source["added"];
+	        this.skipped = source["skipped"];
+	    }
+	}
 	export class SyncInfo {
 	    configured: boolean;
 	    kind: string;

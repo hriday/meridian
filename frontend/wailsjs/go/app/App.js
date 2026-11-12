@@ -150,8 +150,16 @@ export function IPSpaceImportTree() {
   return window['go']['app']['App']['IPSpaceImportTree']();
 }
 
+export function IPSpaceInventoryTree(arg1) {
+  return window['go']['app']['App']['IPSpaceInventoryTree'](arg1);
+}
+
 export function IPSpaceList() {
   return window['go']['app']['App']['IPSpaceList']();
+}
+
+export function IPSpacePullRecords(arg1, arg2) {
+  return window['go']['app']['App']['IPSpacePullRecords'](arg1, arg2);
 }
 
 export function IPSpaceRemoveInventory(arg1) {
