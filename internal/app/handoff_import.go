@@ -1,9 +1,11 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -18,6 +20,7 @@ import (
 
 // ImportInfo describes an opened hand-off file for the destination chooser.
 type ImportInfo struct {
+	Opened  bool   `json:"opened"`  // false when the user cancelled the file picker
 	Name    string `json:"name"`    // the inventory's name in the file
 	Mode    string `json:"mode"`    // "park" | "share"
 	Count   int    `json:"count"`   // records in the file
@@ -27,7 +30,7 @@ type ImportInfo struct {
 func (a *App) importInfo() ImportInfo {
 	hf := a.pendingImport
 	recs := ipspace.FromEvents("", hf.Events).Records()
-	return ImportInfo{Name: hf.Name, Mode: hf.Mode, Count: len(recs), HasSync: hf.Sync != nil}
+	return ImportInfo{Opened: true, Name: hf.Name, Mode: hf.Mode, Count: len(recs), HasSync: hf.Sync != nil}
 }
 
 // setPendingImport decrypts a hand-off blob and stashes it for a destination
@@ -78,6 +81,22 @@ func (a *App) IPSpaceImportTree() []ipspace.TreeNode {
 	return ipspace.FromEvents("", a.pendingImport.Events).Tree()
 }
 
+// commonEventsByID returns the events of a whose id also appears in b, in a's
+// causal order — the shared history of the two logs, used as the merge base.
+func commonEventsByID(a, b []ipspace.Event) []ipspace.Event {
+	inB := make(map[string]bool, len(b))
+	for _, e := range b {
+		inB[e.ID] = true
+	}
+	var out []ipspace.Event
+	for _, e := range a {
+		if inB[e.ID] {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // targetLive returns the live store/pass/path of an unlocked inventory (the
 // active one, or a parked unlocked one), or ok=false if it must be unlocked first.
 func (a *App) targetLive(id string) (store *ipspace.Store, pass, path string, ok bool) {
@@ -91,10 +110,14 @@ func (a *App) targetLive(id string) (store *ipspace.Store, pass, path string, ok
 }
 
 // mergeImport reconciles the opened file against a target inventory. apply=false
-// previews; apply=true writes the merge when there is no conflict. A hand-off has
-// no shared sync base, so the merge is against a nil base (event-ID union):
-// records the file adds come in, same-id records edited on both sides surface as
-// conflicts, and shared history dedupes.
+// previews; apply=true writes the merge when there is no conflict. The base is
+// the events the two logs SHARE by id (their common history), so this is a true
+// 3-way merge: a record the file added/edited/DELETED since that shared point
+// shows as incoming (a delete the file made is applied and previewed, not
+// silently dropped), a change made only locally is outgoing, and a record
+// changed on both sides — including edit-vs-delete — is a conflict that blocks
+// the write. A share from someone with no shared history has an empty base, so
+// everything in it is incoming.
 func (a *App) mergeImport(targetID string, apply bool) (SyncResult, error) {
 	if a.pendingImport == nil {
 		return SyncResult{}, fmt.Errorf("open a file to import first")
@@ -103,7 +126,9 @@ func (a *App) mergeImport(targetID string, apply bool) (SyncResult, error) {
 	if !ok {
 		return SyncResult{}, fmt.Errorf("unlock that inventory first, then import into it")
 	}
-	res := ipspace.Merge(nil, store.Events(), a.pendingImport.Events)
+	local := store.Events()
+	base := commonEventsByID(local, a.pendingImport.Events)
+	res := ipspace.Merge(base, local, a.pendingImport.Events)
 	if !apply || len(res.Conflicts) > 0 {
 		return toSyncResult(res, false), nil
 	}
@@ -138,7 +163,9 @@ func (a *App) IPSpaceImportApplyMerge(targetID string) (SyncResult, error) {
 
 // IPSpaceImportAsNew lands the opened file as its own new inventory (a free slot
 // required), sealed with a new store passphrase. A park file also restores its
-// sync config.
+// sync config. The inventory's files are written in full BEFORE it is committed
+// to the registry and made active, so a failed write can't leave a half-created
+// active inventory; a failure at the final registry write rolls everything back.
 func (a *App) IPSpaceImportAsNew(name, passphrase string) error {
 	a.ipMu.Lock()
 	defer a.ipMu.Unlock()
@@ -146,18 +173,65 @@ func (a *App) IPSpaceImportAsNew(name, passphrase string) error {
 	if a.pendingImport == nil {
 		return fmt.Errorf("open a file to import first")
 	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("give the inventory a name")
+	}
+	if len(a.invs) >= maxInventories {
+		return fmt.Errorf("all %d inventory slots are in use — park one to a file first", maxInventories)
+	}
+	if len(passphrase) < 6 {
+		return fmt.Errorf("use a passphrase of at least 6 characters")
+	}
 	hf := a.pendingImport
-	if err := a.createInventory(name, passphrase); err != nil {
+	id := newInvID()
+	dir := a.invDir(id)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	a.ipStore = ipspace.FromEvents(ipspace.Actor(), hf.Events)
-	if err := a.ipSave(); err != nil {
+	storePath := filepath.Join(dir, "store.enc")
+	// Write all of the inventory's files first; roll back the dir on any failure.
+	if err := ipspace.Save(storePath, passphrase, hf.Events); err != nil {
+		os.RemoveAll(dir)
 		return err
 	}
 	if hf.Sync != nil {
-		if err := a.saveSyncConfig(*hf.Sync); err != nil {
+		raw, err := json.Marshal(*hf.Sync)
+		if err == nil {
+			var blob []byte
+			blob, err = ipspace.Seal(passphrase, raw)
+			if err == nil {
+				err = os.WriteFile(sidecarPath(storePath, ".sync.enc"), blob, 0o600)
+			}
+		}
+		if err != nil {
+			os.RemoveAll(dir)
 			return err
 		}
+	}
+	// Files are durable — now commit to the registry and make it active.
+	prevActive := a.activeID
+	a.parkActive()
+	a.invs = append(a.invs, invMeta{ID: id, Name: name})
+	a.activeID = id
+	a.ipPath = storePath
+	a.ipPass = passphrase
+	a.ipStore = ipspace.FromEvents(ipspace.Actor(), hf.Events)
+	a.ipUnlocked = true
+	if hf.Sync != nil {
+		c := *hf.Sync
+		a.ipSyncCfg, a.ipSyncCfgLoaded = &c, true
+	} else {
+		a.ipSyncCfg, a.ipSyncCfgLoaded = nil, false
+	}
+	if err := a.saveRegistry(); err != nil {
+		// Roll back to the previous active inventory and remove the new files.
+		os.RemoveAll(dir)
+		a.invs = a.invs[:len(a.invs)-1]
+		a.activeID = prevActive
+		a.applyActivePath()
+		a.loadActiveLive(prevActive)
+		return err
 	}
 	a.pendingImport = nil
 	return nil

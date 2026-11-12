@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import {
     IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
@@ -50,8 +50,9 @@
   }
 
   async function switchTo(id: string) {
-    if (id === activeId || syncBusy) return;
+    if (id === activeId || syncBusy || importBusy) return;
     gateErr = ""; pass = ""; creatingInv = false; renaming = false; confirmingDelete = false;
+    if (showImport) { try { await IPSpaceImportCancel(); } catch (e) {} showImport = false; resetImport(); } // drop any open import (and its decrypted data)
     try { await IPSpaceSetActive(id); selected = null; }
     catch (e) { gateErr = String(e); }
     finally { await loadList(); } // always resync the UI to the backend's actual active
@@ -100,7 +101,7 @@
   async function doImportOpen() {
     importErr = ""; if (!importPass.trim()) { importErr = "Enter the file's hand-off password."; return; }
     importBusy = true;
-    try { importInfo = await IPSpaceImportOpen(importPass); if (importInfo && importInfo.name !== undefined) importStep = "choose"; }
+    try { const r = await IPSpaceImportOpen(importPass); if (r && r.opened) { importInfo = r; importStep = "choose"; } } // r.opened is false if the file picker was cancelled
     catch (e) { importErr = String(e); }
     finally { importBusy = false; }
   }
@@ -253,6 +254,9 @@
   }
 
   onMount(init);
+  // Leaving the tool with an import open discards its decrypted data (a park file
+  // holds backend credentials in memory until then).
+  onDestroy(() => { if (showImport) { try { IPSpaceImportCancel(); } catch (e) {} } });
 </script>
 
 <div class="tool">

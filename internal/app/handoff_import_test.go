@@ -114,6 +114,66 @@ func TestImportJustLookSavesNothing(t *testing.T) {
 	require.Len(t, dst.IPSpaceList(), 1)
 }
 
+// A delete made in the file (shared record id) is shown as an incoming delete
+// and applied — never silently dropping or silently deleting without preview.
+func TestImportFileDeleteIsPreviewedAndApplied(t *testing.T) {
+	src := newUnlockedStore(t, "team")
+	rec, err := src.IPSpaceAdd("10.0.0.0/8", "Corp", "active", nil, "")
+	require.NoError(t, err)
+	blob, _, err := src.sealHandoff("share", "hp")
+	require.NoError(t, err)
+
+	dst := newUnlockedStore(t, "team")
+	_, err = dst.setPendingImport(blob, "hp")
+	require.NoError(t, err)
+	require.NoError(t, dst.IPSpaceImportAsNew("Imported", "pw2345")) // dst now holds the same record id
+
+	// The sender deletes the record and re-shares.
+	require.NoError(t, src.IPSpaceDelete(rec.ID))
+	blob2, _, err := src.sealHandoff("share", "hp")
+	require.NoError(t, err)
+	_, err = dst.setPendingImport(blob2, "hp")
+	require.NoError(t, err)
+
+	prev, err := dst.mergeImport(dst.activeID, false)
+	require.NoError(t, err)
+	require.Len(t, prev.Incoming, 1)
+	require.Equal(t, "delete", prev.Incoming[0].Kind, "the file's delete is previewed, not hidden")
+
+	res, err := dst.mergeImport(dst.activeID, true)
+	require.NoError(t, err)
+	require.True(t, res.Applied)
+	require.Empty(t, treeNames(dst.IPSpaceTree()), "the delete is applied")
+}
+
+// A record edited locally but deleted in the file is an edit-vs-delete conflict
+// that blocks the write — local work isn't silently lost.
+func TestImportEditVsDeleteIsConflict(t *testing.T) {
+	src := newUnlockedStore(t, "team")
+	rec, err := src.IPSpaceAdd("10.0.0.0/8", "Corp", "active", nil, "")
+	require.NoError(t, err)
+	blob, _, err := src.sealHandoff("share", "hp")
+	require.NoError(t, err)
+
+	dst := newUnlockedStore(t, "team")
+	_, err = dst.setPendingImport(blob, "hp")
+	require.NoError(t, err)
+	require.NoError(t, dst.IPSpaceImportAsNew("Imported", "pw2345"))
+	require.NoError(t, dst.IPSpaceEdit(rec.ID, "Corp-local", "active", nil, "")) // real local work
+
+	require.NoError(t, src.IPSpaceDelete(rec.ID)) // file deletes it
+	blob2, _, err := src.sealHandoff("share", "hp")
+	require.NoError(t, err)
+	_, err = dst.setPendingImport(blob2, "hp")
+	require.NoError(t, err)
+
+	res, err := dst.mergeImport(dst.activeID, true)
+	require.NoError(t, err)
+	require.False(t, res.Applied)
+	require.Len(t, res.Conflicts, 1)
+	require.Equal(t, "Corp-local", treeNames(dst.IPSpaceTree())[0], "local edit is untouched")
+}
+
 func TestImportWrongPassword(t *testing.T) {
 	blob := exportBlob(t, "share", "10.0.0.0/8", "Corp", "right")
 	dst := newUnlockedStore(t, "team")

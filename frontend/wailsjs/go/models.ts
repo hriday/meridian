@@ -29,6 +29,7 @@ export namespace app {
 	    }
 	}
 	export class ImportInfo {
+	    opened: boolean;
 	    name: string;
 	    mode: string;
 	    count: number;
@@ -40,6 +41,7 @@ export namespace app {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.opened = source["opened"];
 	        this.name = source["name"];
 	        this.mode = source["mode"];
 	        this.count = source["count"];
