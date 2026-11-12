@@ -384,6 +384,39 @@ export namespace atlas {
 
 }
 
+export namespace certexpiry {
+	
+	export class Result {
+	    host: string;
+	    ok: boolean;
+	    error?: string;
+	    subject?: string;
+	    issuer?: string;
+	    notAfter?: string;
+	    daysLeft: number;
+	    expired: boolean;
+	    notYet: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.ok = source["ok"];
+	        this.error = source["error"];
+	        this.subject = source["subject"];
+	        this.issuer = source["issuer"];
+	        this.notAfter = source["notAfter"];
+	        this.daysLeft = source["daysLeft"];
+	        this.expired = source["expired"];
+	        this.notYet = source["notYet"];
+	    }
+	}
+
+}
+
 export namespace ciscopw {
 	
 	export class Secret {

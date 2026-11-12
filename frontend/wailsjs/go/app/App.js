@@ -78,6 +78,10 @@ export function CVESearch(arg1) {
   return window['go']['app']['App']['CVESearch'](arg1);
 }
 
+export function CertExpiryCheck(arg1) {
+  return window['go']['app']['App']['CertExpiryCheck'](arg1);
+}
+
 export function CheckForUpdate() {
   return window['go']['app']['App']['CheckForUpdate']();
 }
