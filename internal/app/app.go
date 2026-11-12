@@ -39,6 +39,12 @@ type App struct {
 	traceCancel context.CancelFunc
 	traceGen    int
 
+	// ipMu serializes every IP-space binding call. Wails dispatches each JS→Go
+	// call on its own goroutine, so without this a sync in flight (up to 30s on
+	// the network) could race an inventory switch and write one inventory's
+	// records into another's store, or crash on the invLive map. Public IPSpace*
+	// methods take it; unexported helpers assume it is already held.
+	ipMu sync.Mutex
 	// Active inventory live state. ip* always reflects the active inventory; other
 	// unlocked inventories are parked in invLive (see inventory.go).
 	ipPath     string

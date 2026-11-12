@@ -49,10 +49,11 @@
   }
 
   async function switchTo(id: string) {
-    if (id === activeId) return;
-    gateErr = ""; pass = "";
-    try { await IPSpaceSetActive(id); selected = null; await loadList(); }
+    if (id === activeId || syncBusy) return;
+    gateErr = ""; pass = ""; creatingInv = false; renaming = false; confirmingDelete = false;
+    try { await IPSpaceSetActive(id); selected = null; }
     catch (e) { gateErr = String(e); }
+    finally { await loadList(); } // always resync the UI to the backend's actual active
   }
 
   async function create() {
@@ -73,14 +74,17 @@
     catch (e) { gateErr = String(e); }
   }
 
-  async function renameActive() {
-    const name = prompt("Rename inventory", activeName());
-    if (!name || !name.trim()) return;
-    try { await IPSpaceRenameInventory(activeId, name.trim()); await loadList(); } catch (e) { gateErr = String(e); }
+  // Inline rename/delete — window.prompt/confirm aren't reliable in the webview.
+  let renaming = false, renameVal = "", confirmingDelete = false, invErr = "";
+  function startRename() { renaming = true; confirmingDelete = false; renameVal = activeName(); invErr = ""; }
+  async function saveRename() {
+    if (!renameVal.trim()) { invErr = "Give the inventory a name."; return; }
+    try { await IPSpaceRenameInventory(activeId, renameVal.trim()); renaming = false; await loadList(); }
+    catch (e) { invErr = String(e); }
   }
-  async function removeActive() {
-    if (!confirm(`Delete “${activeName()}” and all its records? This can't be undone.`)) return;
-    try { await IPSpaceRemoveInventory(activeId); await loadList(); } catch (e) { gateErr = String(e); }
+  async function doRemove() {
+    try { await IPSpaceRemoveInventory(activeId); confirmingDelete = false; selected = null; await loadList(); }
+    catch (e) { invErr = String(e); }
   }
   function activeName(): string { return (invList.find((i) => i.id === activeId) || {}).name || ""; }
   const CHIPS = ["var(--accent)", "#a78bfa", "#f0a85a"];
@@ -196,14 +200,14 @@
     {#if invList.length > 0}
       <div class="invbar">
         {#each invList as inv (inv.id)}
-          <button class="invtab" class:on={inv.id === activeId} on:click={() => switchTo(inv.id)}>
+          <button class="invtab" class:on={inv.id === activeId} on:click={() => switchTo(inv.id)} disabled={syncBusy}>
             <span class="ichip" style={`background:${chipColor(inv.id)}`}></span>
             <span class="iname">{inv.name}</span>
             <span class="ilock">{inv.unlocked ? "🔓" : "🔒"}</span>
           </button>
         {/each}
         {#if invList.length < 3}
-          <button class="invtab add" on:click={() => { creatingInv = true; gateErr = ''; newName = ''; pass = ''; pass2 = ''; }}>+ inventory</button>
+          <button class="invtab add" on:click={() => { creatingInv = true; gateErr = ''; newName = ''; pass = ''; pass2 = ''; }} disabled={syncBusy}>+ inventory</button>
         {:else}
           <span class="slotnote">3 of 3 slots</span>
         {/if}
@@ -239,10 +243,27 @@
       <button class="btn ghost" on:click={undo} disabled={!history.length}>Undo</button>
       <button class="btn ghost" on:click={openExport}>CSV…</button>
       <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
-      <button class="btn ghost" on:click={renameActive} title="Rename this inventory">Rename</button>
-      <button class="btn ghost" on:click={removeActive} title="Delete this inventory">Delete</button>
+      <button class="btn ghost" on:click={startRename} title="Rename this inventory">Rename</button>
+      <button class="btn ghost" on:click={() => { confirmingDelete = true; renaming = false; invErr = ''; }} title="Delete this inventory">Delete</button>
       <span class="lock">🔓 {activeName()} · encrypted at rest</span>
     </div>
+
+    {#if renaming}
+      <div class="card inlinebar">
+        <span class="lbl">Rename inventory</span>
+        <input class="field" bind:value={renameVal} on:keydown={(e) => e.key === "Enter" && saveRename()} />
+        <button class="btn" on:click={saveRename}>Save</button>
+        <button class="btn ghost" on:click={() => (renaming = false)}>Cancel</button>
+      </div>
+    {/if}
+    {#if confirmingDelete}
+      <div class="card inlinebar danger">
+        <span>Delete <b>{activeName()}</b> and all its records? This can't be undone.</span>
+        <button class="btn bad" on:click={doRemove}>Delete inventory</button>
+        <button class="btn ghost" on:click={() => (confirmingDelete = false)}>Cancel</button>
+      </div>
+    {/if}
+    {#if invErr}<div class="err" style="margin-bottom:12px">{invErr}</div>{/if}
 
     {#if showSync}
       <div class="card synccard">
@@ -462,6 +483,11 @@
   .invtab .ilock { font-size: 0.74rem; }
   .invtab.add { border-style: dashed; color: var(--text-faint); }
   .slotnote { font-size: 0.72rem; color: var(--text-faint); }
+  .inlinebar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; font-size: 0.86rem; }
+  .inlinebar .lbl { color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; }
+  .inlinebar .field { flex: 1 1 200px; min-width: 0; }
+  .inlinebar.danger { border-color: color-mix(in srgb, var(--bad, #ff6b6b) 45%, var(--border)); }
+  .btn.bad { background: var(--bad, #ff6b6b); border-color: transparent; color: #fff; }
   h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; color: var(--text-strong); }
   .sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 12px; }
   .muted { color: var(--text-dim); font-size: 0.85rem; }

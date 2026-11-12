@@ -1,10 +1,58 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
+	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/stretchr/testify/require"
 )
+
+// A pre-multi-inventory single store migrates into the first inventory, intact.
+func TestLegacyStoreMigrates(t *testing.T) {
+	meridian := filepath.Join(t.TempDir(), "Meridian")
+	require.NoError(t, os.MkdirAll(meridian, 0o700))
+	legacy := filepath.Join(meridian, "ipspace.enc")
+	st := ipspace.NewStore("tester")
+	_, err := st.Add("10.0.0.0/8", "Corp", "active", nil, "")
+	require.NoError(t, err)
+	require.NoError(t, ipspace.Save(legacy, "pw1234", st.Events()))
+
+	a := New()
+	a.invRoot = filepath.Join(meridian, "inventories")
+	list := a.IPSpaceList()
+	require.Len(t, list, 1)
+	require.Equal(t, "My IP space", list[0].Name)
+	require.NoFileExists(t, legacy, "the legacy store is moved, not copied")
+
+	require.NoError(t, a.IPSpaceUnlock("pw1234"))
+	tree := a.IPSpaceTree()
+	require.Len(t, tree, 1)
+	require.Equal(t, "Corp", tree[0].Record.Name)
+}
+
+// Concurrent binding calls (Wails dispatches each on its own goroutine) must not
+// race the invLive map or the ip* live state. Run under -race.
+func TestInventoryConcurrentAccessNoRace(t *testing.T) {
+	a := New()
+	a.invRoot = t.TempDir()
+	require.NoError(t, a.IPSpaceCreateInventory("A", "pw1aaa"))
+	require.NoError(t, a.IPSpaceCreateInventory("B", "pw2bbb"))
+	ids := a.IPSpaceList()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 30; i++ {
+		wg.Add(4)
+		go func() { defer wg.Done(); a.IPSpaceList() }()
+		go func() { defer wg.Done(); _ = a.IPSpaceSetActive(ids[0].ID) }()
+		go func() { defer wg.Done(); _ = a.IPSpaceSetActive(ids[1].ID) }()
+		go func() { defer wg.Done(); a.IPSpaceStatus() }()
+	}
+	wg.Wait()
+	require.Len(t, a.IPSpaceList(), 2)
+}
 
 func TestAppIPSpaceCreateAddUnlock(t *testing.T) {
 	a := New()

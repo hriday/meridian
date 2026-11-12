@@ -125,22 +125,28 @@ func (a *App) migrateLegacy() {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return
 	}
-	// Move the store and any sidecars to the inventory dir, keeping the suffix
-	// scheme (store.enc, store.sync.enc, store.base.enc, store.sync.json).
-	moves := map[string]string{
-		legacy:                             filepath.Join(dir, "store.enc"),
-		sidecarPath(legacy, ".sync.enc"):   filepath.Join(dir, "store.sync.enc"),
-		sidecarPath(legacy, ".base.enc"):   filepath.Join(dir, "store.base.enc"),
-		sidecarPath(legacy, ".sync.json"):  filepath.Join(dir, "store.sync.json"),
+	// Move the store (the critical data) first. If that fails, abort with the
+	// legacy store untouched so the next launch retries — never a half-migration.
+	newStore := filepath.Join(dir, "store.enc")
+	if err := os.Rename(legacy, newStore); err != nil {
+		return
 	}
-	for from, to := range moves {
-		if ipspace.Exists(from) {
-			_ = os.Rename(from, to)
+	// Sidecars are best-effort — losing a sync config or base is degraded, not
+	// data loss, and they move with the same suffix scheme.
+	for suffix, name := range map[string]string{".sync.enc": "store.sync.enc", ".base.enc": "store.base.enc", ".sync.json": "store.sync.json"} {
+		if from := sidecarPath(legacy, suffix); ipspace.Exists(from) {
+			_ = os.Rename(from, filepath.Join(dir, name))
 		}
 	}
 	a.invs = []invMeta{{ID: id, Name: "My IP space"}}
 	a.activeID = id
-	_ = a.saveRegistry()
+	if err := a.saveRegistry(); err != nil {
+		// Couldn't record the migration — roll the store back so it isn't orphaned
+		// under a random-id dir, and retry on the next launch.
+		_ = os.Rename(newStore, legacy)
+		a.invs = nil
+		a.activeID = ""
+	}
 }
 
 func (a *App) findInv(id string) *invMeta {
@@ -193,6 +199,8 @@ func (a *App) loadActiveLive(id string) {
 
 // IPSpaceList returns the inventories for the selector.
 func (a *App) IPSpaceList() []InvInfo {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	out := make([]InvInfo, 0, len(a.invs))
 	for _, m := range a.invs {
@@ -217,6 +225,8 @@ func (a *App) inventoryHasSync(id string) bool {
 
 // IPSpaceActive returns the active inventory id.
 func (a *App) IPSpaceActive() string {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	return a.activeID
 }
@@ -224,6 +234,8 @@ func (a *App) IPSpaceActive() string {
 // IPSpaceSetActive switches the active inventory (parking the current one's
 // unlocked state so a later switch back doesn't re-prompt).
 func (a *App) IPSpaceSetActive(id string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	if a.findInv(id) == nil {
 		return fmt.Errorf("no such inventory")
@@ -241,6 +253,8 @@ func (a *App) IPSpaceSetActive(id string) error {
 // IPSpaceCreateInventory adds a new, empty inventory and makes it active +
 // unlocked. Up to maxInventories.
 func (a *App) IPSpaceCreateInventory(name, passphrase string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -271,6 +285,8 @@ func (a *App) IPSpaceCreateInventory(name, passphrase string) error {
 
 // IPSpaceRenameInventory renames an inventory.
 func (a *App) IPSpaceRenameInventory(id, name string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -287,9 +303,16 @@ func (a *App) IPSpaceRenameInventory(id, name string) error {
 // IPSpaceRemoveInventory deletes an inventory and its files. This is
 // irreversible; the caller confirms first.
 func (a *App) IPSpaceRemoveInventory(id string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	a.ensureInv()
 	if a.findInv(id) == nil {
 		return fmt.Errorf("no such inventory")
+	}
+	// Delete the files first; only drop it from the registry once they're gone,
+	// so a failed delete leaves a consistent state rather than a dangling entry.
+	if err := os.RemoveAll(a.invDir(id)); err != nil {
+		return err
 	}
 	filtered := a.invs[:0:0]
 	for _, m := range a.invs {
@@ -299,9 +322,6 @@ func (a *App) IPSpaceRemoveInventory(id string) error {
 	}
 	a.invs = filtered
 	delete(a.invLive, id)
-	if err := os.RemoveAll(a.invDir(id)); err != nil {
-		return err
-	}
 	if a.activeID == id {
 		a.activeID = ""
 		if len(a.invs) > 0 {
