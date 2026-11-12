@@ -62,7 +62,7 @@
                 <td class="r piv">
                   <button class="link" on:click={() => pivot("lookup", s.name)}>Look up</button>
                   <button class="link" on:click={() => pivot("tls", s.name)}>TLS</button>
-                  <button class="link" on:click={() => pivot("http", "https://" + s.name)}>HTTP</button>
+                  <button class="link" on:click={() => pivot("sechdr", "https://" + s.name)}>Hdrs</button>
                 </td>
               </tr>
             {/each}
