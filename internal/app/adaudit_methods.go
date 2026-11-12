@@ -23,6 +23,14 @@ func defaultWordlistDir() string {
 	return filepath.Join(dir, "meridian", "wordlists")
 }
 
+func defaultRulesDir() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "rules"
+	}
+	return filepath.Join(dir, "meridian", "rules")
+}
+
 func (a *App) emit(event string, data any) {
 	if a.ctx != nil {
 		wruntime.EventsEmit(a.ctx, event, data)
@@ -111,6 +119,29 @@ func (a *App) WordlistInstalled() ([]string, error) { return wordlist.Installed(
 
 // WordlistDir is where wordlists are stored.
 func (a *App) WordlistDir() string { return a.wordlistDir }
+
+// RulesCatalog returns the built-in, checksum-pinned hashcat rule files.
+func (a *App) RulesCatalog() []wordlist.Entry { return wordlist.RulesCatalog() }
+
+// RulesInstalled lists rule files already downloaded.
+func (a *App) RulesInstalled() ([]string, error) { return wordlist.Installed(a.rulesDir) }
+
+// RulesDir is where rule files are stored.
+func (a *App) RulesDir() string { return a.rulesDir }
+
+// RulesDownload fetches a rules catalog entry by name (checksum-verified),
+// streaming `rules:progress` events, and returns the saved path.
+func (a *App) RulesDownload(name string) (string, error) {
+	for _, e := range wordlist.RulesCatalog() {
+		if e.Name == name {
+			return wordlist.Download(a.lookupCtx(), e, a.rulesDir, nil,
+				func(done, total int64) {
+					a.emit("rules:progress", map[string]int64{"done": done, "total": total})
+				})
+		}
+	}
+	return "", fmt.Errorf("unknown rule %q", name)
+}
 
 // WordlistDownload fetches a catalog entry by name (checksum-verified),
 // streaming `wordlist:progress` events, and returns the saved path.

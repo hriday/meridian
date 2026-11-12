@@ -25,12 +25,12 @@ import {ntp} from '../models';
 import {netcat} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
+import {wordlist} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tlscheck} from '../models';
 import {trace} from '../models';
 import {whois} from '../models';
-import {wordlist} from '../models';
 
 export function ADAuditCheckPwned():Promise<Record<string, number>>;
 
@@ -189,6 +189,14 @@ export function PingHost(arg1:string,arg2:number):Promise<ping.Stats>;
 export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;
+
+export function RulesCatalog():Promise<Array<wordlist.Entry>>;
+
+export function RulesDir():Promise<string>;
+
+export function RulesDownload(arg1:string):Promise<string>;
+
+export function RulesInstalled():Promise<Array<string>>;
 
 export function ScanCommonPorts():Promise<Array<number>>;
 

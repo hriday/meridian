@@ -3,6 +3,7 @@
   import {
     ADAuditDetect, ADAuditParseText, ADAuditParseFile, ADAuditRun, ADAuditSave, ADAuditCheckPwned,
     WordlistCatalog, WordlistInstalled, WordlistDir, WordlistDownload, PickFile,
+    RulesCatalog, RulesInstalled, RulesDir, RulesDownload,
   } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
 
@@ -44,6 +45,7 @@
     : [];
 
   let downloading = "";
+  let rulesCatalog: any[] = [], rulesInstalled: string[] = [], rulesDir = "", downloadingRule = "";
 
   async function refresh() {
     cracker = await ADAuditDetect();
@@ -51,7 +53,22 @@
     catalog = await WordlistCatalog();
     installed = (await WordlistInstalled()) || [];
     if (!selectedWordlist && installed.length) selectedWordlist = installed[0];
+    rulesDir = await RulesDir();
+    rulesCatalog = await RulesCatalog();
+    rulesInstalled = (await RulesInstalled()) || [];
   }
+
+  async function downloadRule(name: string) {
+    downloadingRule = name;
+    try {
+      const p = await RulesDownload(name);
+      rulesInstalled = (await RulesInstalled()) || [];
+      rulesPath = p; // use it for the next run
+    } catch (e) { parseErr = String(e); }
+    finally { downloadingRule = ""; }
+  }
+  function ruleInstalled(name: string): boolean { return rulesInstalled.includes(name); }
+  function ruleUse(name: string) { rulesPath = rulesDir ? `${rulesDir}/${name}` : name; }
 
   onMount(() => {
     refresh();
@@ -186,14 +203,26 @@
   <div class="card span">
     <div class="k">Run audit</div>
     <div class="sub">Rules (optional)</div>
+    <div class="line wrap">
+      {#each rulesCatalog as r}
+        {#if ruleInstalled(r.name)}
+          <button class="chip" class:on={rulesPath.endsWith(r.name)} on:click={() => ruleUse(r.name)} title={r.desc}>✓ {r.name}{rulesPath.endsWith(r.name) ? " — in use" : ""}</button>
+        {:else}
+          <button class="chip" on:click={() => downloadRule(r.name)} disabled={downloadingRule === r.name} title={r.desc}>
+            {downloadingRule === r.name ? "downloading…" : `↓ ${r.name}`}
+          </button>
+        {/if}
+      {/each}
+    </div>
     <div class="line">
       <input class="field sm mono grow" bind:value={rulesPath} placeholder="hashcat rules file — e.g. best64.rule" />
       <button class="go ghost" on:click={pickRules}>Browse…</button>
+      {#if rulesPath}<button class="go ghost sm" on:click={() => (rulesPath = '')}>Clear</button>{/if}
     </div>
     <div class="cap">
       Rules mutate each word into many variations (add a year, capitalize, a→@ …), so <span class="mono">password</span>
-      also tries <span class="mono">Password1</span>, <span class="mono">P@ssw0rd!</span>, etc. Leave empty for a plain wordlist run;
-      <span class="mono">best64.rule</span> (shipped in hashcat's <span class="mono">rules/</span> folder) is a good default.
+      also tries <span class="mono">Password1</span>, <span class="mono">P@ssw0rd!</span>, etc. Download
+      <span class="mono">OneRuleToRuleThemStill</span> above for a strong default (by <a href="https://github.com/stealthsploit/OneRuleToRuleThemStill" target="_blank" rel="noreferrer">stealthsploit</a>, checksum-verified), or Browse to hashcat's own <span class="mono">best64.rule</span>. Leave empty for a plain wordlist run.
     </div>
     <div class="line">
       <button class="go" on:click={run} disabled={running || !cracker.available || accounts.length === 0}>

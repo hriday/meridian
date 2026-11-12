@@ -76,6 +76,7 @@ type App struct {
 	adCracker   pwaudit.Cracker
 	adReport    *pwaudit.AuditReport // last run, held for an encrypted save
 	wordlistDir string
+	rulesDir    string
 
 	scanMu     sync.Mutex
 	scanCancel context.CancelFunc
@@ -98,6 +99,7 @@ func New() *App {
 		invRoot:     defaultInvRoot(),
 		adCracker:   pwaudit.NewHashcatCracker(),
 		wordlistDir: defaultWordlistDir(),
+		rulesDir:    defaultRulesDir(),
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },
 		syslog:      collector.New[collector.SyslogMsg](collectorBuffer, collector.ParseSyslog),
 		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
