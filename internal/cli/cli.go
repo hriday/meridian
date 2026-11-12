@@ -107,6 +107,9 @@ usage:
   meridian-cli snmpbrute <device> --authorized [--communities a,b,c | --list <file>] [--json]
   meridian-cli pingmon <host> [--interval 1s] [--timeout 1s] [--json]   (Ctrl-C to stop)
   meridian-cli speedtest <iperf3-host> [--port 5201] [--dir download|upload|bidir] [--duration 10s] [--udp] [--json]
+  meridian-cli syslog [--port 514] [--json]    (receiver; Ctrl-C to stop)
+  meridian-cli traps [--port 162] [--json]     (SNMP trap receiver; Ctrl-C to stop)
+  meridian-cli netflow [--port 2055] [--json]  (NetFlow v5 receiver; Ctrl-C to stop)
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -197,6 +200,12 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPingMon(args[1:], stdout, stderr)
 	case "speedtest":
 		return runSpeedTest(args[1:], stdout, stderr)
+	case "syslog":
+		return runSyslog(args[1:], stdout, stderr)
+	case "traps":
+		return runTraps(args[1:], stdout, stderr)
+	case "netflow":
+		return runNetflow(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
