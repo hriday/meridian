@@ -62,6 +62,10 @@ export function Blocklist(arg1, arg2) {
   return window['go']['app']['App']['Blocklist'](arg1, arg2);
 }
 
+export function CLIInfo() {
+  return window['go']['app']['App']['CLIInfo']();
+}
+
 export function CTSubdomains(arg1) {
   return window['go']['app']['App']['CTSubdomains'](arg1);
 }
@@ -256,6 +260,10 @@ export function IPSpaceUnlock(arg1) {
 
 export function IdentifyHash(arg1) {
   return window['go']['app']['App']['IdentifyHash'](arg1);
+}
+
+export function InstallCLI() {
+  return window['go']['app']['App']['InstallCLI']();
 }
 
 export function Interfaces() {

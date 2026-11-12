@@ -66,6 +66,14 @@ jobs:
         if: runner.os == 'Linux'
         run: wails build -clean -platform ${{ matrix.platform }} -tags webkit2_41 -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}"
 
+      - name: Bundle meridian-cli into the .app
+        if: runner.os == 'macOS'
+        run: |
+          # Ship the command-line tool inside the bundle so the GUI can symlink
+          # it onto PATH (App.InstallCLI). It rides along in the DMG below.
+          go build -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}" \
+            -o build/bin/meridian.app/Contents/MacOS/meridian-cli ./cmd/meridian-cli
+
       - name: Package macOS DMG
         if: runner.os == 'macOS'
         run: |
