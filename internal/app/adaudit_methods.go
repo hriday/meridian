@@ -3,11 +3,14 @@ package app
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/hriday/meridian/internal/hibp"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/wordlist"
 )
@@ -65,6 +68,31 @@ func (a *App) ADAuditRun(accounts []pwaudit.Account, wordlistPath string, rules 
 	}
 	a.adReport = &rep
 	return rep, nil
+}
+
+// ADAuditCheckPwned checks each audited account's NT hash against Have I Been
+// Pwned (Pwned Passwords, NTLM mode). It uses k-anonymity — only the 5-character
+// prefix of each hash leaves the machine — and works on every account, including
+// ones hashcat couldn't crack, since the NT hash is enough. Returns a map from NT
+// hash to the number of breaches it appears in, for the UI to show next to each
+// account. This is an explicit, user-initiated network call; it never runs as
+// part of the audit, so an offline audit stays offline unless you ask for it.
+func (a *App) ADAuditCheckPwned() (map[string]int, error) {
+	if a.adReport == nil {
+		return nil, errors.New("run an audit first")
+	}
+	seen := map[string]bool{}
+	var hashes []string
+	for _, r := range a.adReport.Results {
+		h := r.Account.NTHash
+		if h == "" || seen[h] {
+			continue
+		}
+		seen[h] = true
+		hashes = append(hashes, h)
+	}
+	client := &http.Client{Timeout: 20 * time.Second}
+	return hibp.CheckNTLM(a.lookupCtx(), client, hashes)
 }
 
 // ADAuditSave writes the last run's report to path, passphrase-encrypted.
