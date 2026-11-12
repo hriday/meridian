@@ -8,6 +8,7 @@ import {webconf} from '../models';
 import {app} from '../models';
 import {atlas} from '../models';
 import {dnsbl} from '../models';
+import {ctlog} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
 import {dnsaudit} from '../models';
@@ -61,6 +62,8 @@ export function AtlasPing(arg1:string,arg2:number):Promise<atlas.Report>;
 export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
 
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
+
+export function CTSubdomains(arg1:string):Promise<Array<ctlog.Subdomain>>;
 
 export function CheckForUpdate():Promise<update.Result>;
 
