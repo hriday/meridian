@@ -122,8 +122,32 @@ export function IPSpaceHistory() {
   return window['go']['app']['App']['IPSpaceHistory']();
 }
 
+export function IPSpaceImportApplyMerge(arg1) {
+  return window['go']['app']['App']['IPSpaceImportApplyMerge'](arg1);
+}
+
+export function IPSpaceImportAsNew(arg1, arg2) {
+  return window['go']['app']['App']['IPSpaceImportAsNew'](arg1, arg2);
+}
+
 export function IPSpaceImportCSV(arg1) {
   return window['go']['app']['App']['IPSpaceImportCSV'](arg1);
+}
+
+export function IPSpaceImportCancel() {
+  return window['go']['app']['App']['IPSpaceImportCancel']();
+}
+
+export function IPSpaceImportOpen(arg1) {
+  return window['go']['app']['App']['IPSpaceImportOpen'](arg1);
+}
+
+export function IPSpaceImportPreviewMerge(arg1) {
+  return window['go']['app']['App']['IPSpaceImportPreviewMerge'](arg1);
+}
+
+export function IPSpaceImportTree() {
+  return window['go']['app']['App']['IPSpaceImportTree']();
 }
 
 export function IPSpaceList() {

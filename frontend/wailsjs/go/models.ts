@@ -28,6 +28,24 @@ export namespace app {
 	        this.unlocked = source["unlocked"];
 	    }
 	}
+	export class ImportInfo {
+	    name: string;
+	    mode: string;
+	    count: number;
+	    hasSync: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.mode = source["mode"];
+	        this.count = source["count"];
+	        this.hasSync = source["hasSync"];
+	    }
+	}
 	export class InvInfo {
 	    id: string;
 	    name: string;

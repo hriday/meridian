@@ -91,7 +91,19 @@ export function IPSpaceExportHandoff(arg1:string,arg2:string):Promise<string>;
 
 export function IPSpaceHistory():Promise<Array<ipspace.Event>>;
 
+export function IPSpaceImportApplyMerge(arg1:string):Promise<app.SyncResult>;
+
+export function IPSpaceImportAsNew(arg1:string,arg2:string):Promise<void>;
+
 export function IPSpaceImportCSV(arg1:string):Promise<ipspace.ImportReport>;
+
+export function IPSpaceImportCancel():Promise<void>;
+
+export function IPSpaceImportOpen(arg1:string):Promise<app.ImportInfo>;
+
+export function IPSpaceImportPreviewMerge(arg1:string):Promise<app.SyncResult>;
+
+export function IPSpaceImportTree():Promise<Array<ipspace.TreeNode>>;
 
 export function IPSpaceList():Promise<Array<app.InvInfo>>;
 
