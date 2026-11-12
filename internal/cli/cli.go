@@ -96,6 +96,10 @@ usage:
   meridian-cli cve <id|keyword> [--json]
   meridian-cli hashid <hash> [--json]
   meridian-cli threatintel <ip>... [--json]
+  meridian-cli ciscopw [<config-file>] [--decode <type7>] [--json]   (reads stdin if no file)
+  meridian-cli tfexposure [<hcl-or-plan-file>] [--source hcl|plan] [--json]   (reads stdin if no file)
+  meridian-cli cfgdiff <old-file> <new-file> [--json]
+  meridian-cli breaches <email> [--json]   (or: breaches --latest)
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -164,6 +168,14 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runHashID(args[1:], stdout, stderr)
 	case "threatintel":
 		return runThreatIntel(args[1:], stdout, stderr)
+	case "ciscopw":
+		return runCiscoPW(args[1:], stdout, stderr)
+	case "tfexposure":
+		return runTFExposure(args[1:], stdout, stderr)
+	case "cfgdiff":
+		return runCfgDiff(args[1:], stdout, stderr)
+	case "breaches":
+		return runBreaches(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
