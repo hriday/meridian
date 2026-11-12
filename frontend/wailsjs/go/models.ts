@@ -2845,6 +2845,41 @@ export namespace tftp {
 
 }
 
+export namespace threatintel {
+	
+	export class Hit {
+	    ip: string;
+	    listed: boolean;
+	    malware?: string;
+	    status?: string;
+	    country?: string;
+	    asNumber?: number;
+	    asName?: string;
+	    port?: number;
+	    firstSeen?: string;
+	    lastOnline?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Hit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.listed = source["listed"];
+	        this.malware = source["malware"];
+	        this.status = source["status"];
+	        this.country = source["country"];
+	        this.asNumber = source["asNumber"];
+	        this.asName = source["asName"];
+	        this.port = source["port"];
+	        this.firstSeen = source["firstSeen"];
+	        this.lastOnline = source["lastOnline"];
+	    }
+	}
+
+}
+
 export namespace tlscheck {
 	
 	export class CertReport {
