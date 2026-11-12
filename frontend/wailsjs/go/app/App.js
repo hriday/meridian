@@ -90,6 +90,10 @@ export function DiffConfigs(arg1, arg2) {
   return window['go']['app']['App']['DiffConfigs'](arg1, arg2);
 }
 
+export function EmailBreachCheck(arg1) {
+  return window['go']['app']['App']['EmailBreachCheck'](arg1);
+}
+
 export function HIBPBreaches() {
   return window['go']['app']['App']['HIBPBreaches']();
 }

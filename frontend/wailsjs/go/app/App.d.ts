@@ -76,6 +76,8 @@ export function DNSSystem():Promise<sysconf.Found>;
 
 export function DiffConfigs(arg1:string,arg2:string):Promise<configdiff.Result>;
 
+export function EmailBreachCheck(arg1:string):Promise<Array<string>>;
+
 export function HIBPBreaches():Promise<Array<hibp.Breach>>;
 
 export function HIBPLatestBreach():Promise<hibp.Breach>;
