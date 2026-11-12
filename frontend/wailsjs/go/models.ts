@@ -689,6 +689,39 @@ export namespace ctlog {
 
 }
 
+export namespace cve {
+	
+	export class CVE {
+	    id: string;
+	    published: string;
+	    description: string;
+	    cvss: number;
+	    severity: string;
+	    vector: string;
+	    cwe: string[];
+	    kev: boolean;
+	    references: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new CVE(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.published = source["published"];
+	        this.description = source["description"];
+	        this.cvss = source["cvss"];
+	        this.severity = source["severity"];
+	        this.vector = source["vector"];
+	        this.cwe = source["cwe"];
+	        this.kev = source["kev"];
+	        this.references = source["references"];
+	    }
+	}
+
+}
+
 export namespace dnsaudit {
 	
 	export class Check {

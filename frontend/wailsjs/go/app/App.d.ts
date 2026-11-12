@@ -9,6 +9,7 @@ import {app} from '../models';
 import {atlas} from '../models';
 import {dnsbl} from '../models';
 import {ctlog} from '../models';
+import {cve} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
 import {dnsaudit} from '../models';
@@ -65,6 +66,12 @@ export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
 
 export function CTSubdomains(arg1:string):Promise<Array<ctlog.Subdomain>>;
+
+export function CVEIsID(arg1:string):Promise<boolean>;
+
+export function CVELookup(arg1:string):Promise<cve.CVE>;
+
+export function CVESearch(arg1:string):Promise<Array<cve.CVE>>;
 
 export function CheckForUpdate():Promise<update.Result>;
 

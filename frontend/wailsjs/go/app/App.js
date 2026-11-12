@@ -66,6 +66,18 @@ export function CTSubdomains(arg1) {
   return window['go']['app']['App']['CTSubdomains'](arg1);
 }
 
+export function CVEIsID(arg1) {
+  return window['go']['app']['App']['CVEIsID'](arg1);
+}
+
+export function CVELookup(arg1) {
+  return window['go']['app']['App']['CVELookup'](arg1);
+}
+
+export function CVESearch(arg1) {
+  return window['go']['app']['App']['CVESearch'](arg1);
+}
+
 export function CheckForUpdate() {
   return window['go']['app']['App']['CheckForUpdate']();
 }
