@@ -68,6 +68,8 @@ export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
 
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
 
+export function CLIInfo():Promise<app.CLIInfo>;
+
 export function CTSubdomains(arg1:string):Promise<Array<ctlog.Subdomain>>;
 
 export function CVEIsID(arg1:string):Promise<boolean>;
@@ -165,6 +167,8 @@ export function IPSpaceUndo():Promise<void>;
 export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function IdentifyHash(arg1:string):Promise<Array<hashid.Candidate>>;
+
+export function InstallCLI():Promise<app.CLIInfo>;
 
 export function Interfaces():Promise<Array<netif.Iface>>;
 

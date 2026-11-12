@@ -47,7 +47,7 @@
   import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
   import { requestedTool } from "./nav";
-  import { AppVersion, CheckForUpdate } from "../../wailsjs/go/app/App.js";
+  import { AppVersion, CheckForUpdate, CLIInfo, InstallCLI } from "../../wailsjs/go/app/App.js";
   import { BrowserOpenURL } from "../../wailsjs/runtime/runtime.js";
 
   type Tool = { id: string; name: string; group: string; ready: boolean };
@@ -133,6 +133,27 @@
   // Version + an explicitly user-initiated update check (no background polling).
   let appVersion = "";
   AppVersion().then((v) => (appVersion = v)).catch(() => {});
+
+  // Command-line tool: only surfaces when this build bundles meridian-cli
+  // (i.e. a packaged .app), so it stays invisible in dev and unsupported OSes.
+  let cli: any = { available: false, installed: false, onPath: true, supported: false, linkPath: "", path: "" };
+  let cliBusy = false;
+  let cliMsg = "";
+  CLIInfo().then((c) => (cli = c)).catch(() => {});
+  async function installCLI() {
+    cliBusy = true;
+    cliMsg = "";
+    try {
+      cli = await InstallCLI();
+      cliMsg = cli.onPath
+        ? `Installed. Run “meridian-cli” in any terminal.`
+        : `Installed to ${cli.linkPath}, but that folder isn't on your PATH — add it to use “meridian-cli”.`;
+    } catch (e: any) {
+      cliMsg = String(e?.message ?? e);
+    } finally {
+      cliBusy = false;
+    }
+  }
 
   let upState: "idle" | "checking" | "latest" | "available" | "error" = "idle";
   let upLatest = "", upURL = "", upMsg = "", upNotes = "", upDownload = "", upOS = "", upAsset = "";
@@ -247,6 +268,16 @@
               {upState === "checking" ? "Checking…" : "Check for updates"}
             </button>
           {/if}
+          {#if cli.available}
+            {#if cli.installed}
+              <span class="upd ok" title={cli.path}>✓ CLI installed</span>
+            {:else if cli.supported}
+              <button class="upd link" on:click={installCLI} disabled={cliBusy} title="Symlink meridian-cli onto your PATH">
+                {cliBusy ? "Installing…" : "Install command-line tool"}
+              </button>
+            {/if}
+            {#if cliMsg}<span class="climsg" title={cliMsg}>{cliMsg}</span>{/if}
+          {/if}
         </div>
       </nav>
     {/if}
@@ -350,6 +381,7 @@
   .upd.avail:hover { text-decoration: underline; }
   .upd.ok { color: var(--good, #3fb950); cursor: default; }
   .upd:disabled { color: var(--text-faint); cursor: default; }
+  .climsg { font-size: 0.66rem; color: var(--text-faint); line-height: 1.3; }
   .grp {
     display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
     background: none; border: none; cursor: pointer;

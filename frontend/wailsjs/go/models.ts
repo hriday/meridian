@@ -14,6 +14,30 @@ export namespace app {
 	        this.hint = source["hint"];
 	    }
 	}
+	export class CLIInfo {
+	    os: string;
+	    available: boolean;
+	    path: string;
+	    installed: boolean;
+	    linkPath: string;
+	    onPath: boolean;
+	    supported: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new CLIInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.os = source["os"];
+	        this.available = source["available"];
+	        this.path = source["path"];
+	        this.installed = source["installed"];
+	        this.linkPath = source["linkPath"];
+	        this.onPath = source["onPath"];
+	        this.supported = source["supported"];
+	    }
+	}
 	export class IPSpaceState {
 	    exists: boolean;
 	    unlocked: boolean;
