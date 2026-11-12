@@ -60,6 +60,27 @@ func Catalog() []Entry {
 			SHA256: "68782d6a4a19a4768d5f15dd66bd534e7a33055cc755411e33f16d18c50fdcce",
 			Size:   73026,
 		},
+		{
+			Name:   "probable-top-12000.txt",
+			Desc:   "SecLists — 12,000 most probable passwords (fast, high-hit)",
+			URL:    seclistsURL("Passwords/Common-Credentials/probable-v2_top-12000.txt"),
+			SHA256: "ea4c906ebb0b26790c549a047962573f72ccc26f42212b83d70165d9c03fb72b",
+			Size:   100206,
+		},
+		{
+			Name:   "ncsc-top-100000.txt",
+			Desc:   "SecLists — NCSC's 100,000 most-used passwords",
+			URL:    seclistsURL("Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt"),
+			SHA256: "c2e5696882c603b76bb67a47ee970897e5a76fc4c3f5547abe3d0ca340c576e0",
+			Size:   835538,
+		},
+		{
+			Name:   "xato-top-1000000.txt",
+			Desc:   "SecLists — xato 1,000,000 real-world passwords (thorough)",
+			URL:    seclistsURL("Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt"),
+			SHA256: "424a3e03a17df0a2bc2b3ca749d81b04e79d59cb7aeec8876a5a3f308d0caf51",
+			Size:   8557632,
+		},
 	}
 }
 
