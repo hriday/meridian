@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import {
     IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
     IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory, IPSpaceExportHandoff,
+    IPSpaceImportOpen, IPSpaceImportPreviewMerge, IPSpaceImportApplyMerge, IPSpaceImportAsNew, IPSpaceImportTree, IPSpaceImportCancel,
     IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
@@ -49,8 +50,9 @@
   }
 
   async function switchTo(id: string) {
-    if (id === activeId || syncBusy) return;
+    if (id === activeId || syncBusy || importBusy) return;
     gateErr = ""; pass = ""; creatingInv = false; renaming = false; confirmingDelete = false;
+    if (showImport) { try { await IPSpaceImportCancel(); } catch (e) {} showImport = false; resetImport(); } // drop any open import (and its decrypted data)
     try { await IPSpaceSetActive(id); selected = null; }
     catch (e) { gateErr = String(e); }
     finally { await loadList(); } // always resync the UI to the backend's actual active
@@ -87,6 +89,55 @@
     catch (e) { invErr = String(e); }
   }
   function activeName(): string { return (invList.find((i) => i.id === activeId) || {}).name || ""; }
+
+  // Import a hand-off file → preview → choose destination.
+  let showImport = false, importStep: "open" | "choose" | "merge" | "new" | "look" = "open";
+  let importPass = "", importInfo: any = null, importErr = "", importBusy = false, importMsg = "";
+  let importTargetId = "", importDiff: any = null, lookTree: any[] = [];
+  let newImpName = "", newImpPass = "", newImpPass2 = "";
+  function resetImport() { importStep = "open"; importPass = ""; importInfo = null; importErr = ""; importMsg = ""; importDiff = null; lookTree = []; newImpName = ""; newImpPass = ""; newImpPass2 = ""; }
+  function openImportPanel() { showImport = true; resetImport(); }
+  async function closeImport() { try { await IPSpaceImportCancel(); } catch (e) {} showImport = false; resetImport(); }
+  async function doImportOpen() {
+    importErr = ""; if (!importPass.trim()) { importErr = "Enter the file's hand-off password."; return; }
+    importBusy = true;
+    try { const r = await IPSpaceImportOpen(importPass); if (r && r.opened) { importInfo = r; importStep = "choose"; } } // r.opened is false if the file picker was cancelled
+    catch (e) { importErr = String(e); }
+    finally { importBusy = false; }
+  }
+  $: mergeTargets = invList.filter((i) => i.unlocked);
+  async function chooseMerge(id: string) {
+    importErr = ""; importTargetId = id; importBusy = true;
+    try { importDiff = await IPSpaceImportPreviewMerge(id); importStep = "merge"; }
+    catch (e) { importErr = String(e); }
+    finally { importBusy = false; }
+  }
+  async function applyImportMerge() {
+    importErr = ""; importBusy = true;
+    try {
+      const r = await IPSpaceImportApplyMerge(importTargetId);
+      if (r.applied) { showImport = false; resetImport(); await loadList(); }
+      else { importDiff = r; } // conflicts
+    } catch (e) { importErr = String(e); }
+    finally { importBusy = false; }
+  }
+  async function chooseLook() {
+    importErr = ""; importBusy = true;
+    try { lookTree = flatten(await IPSpaceImportTree()); importStep = "look"; }
+    catch (e) { importErr = String(e); }
+    finally { importBusy = false; }
+  }
+  async function applyImportNew() {
+    importErr = "";
+    if (!newImpName.trim()) { importErr = "Name the new inventory."; return; }
+    if (newImpPass.length < 6) { importErr = "Use a passphrase of at least 6 characters."; return; }
+    if (newImpPass !== newImpPass2) { importErr = "The passphrases don't match."; return; }
+    importBusy = true;
+    try { await IPSpaceImportAsNew(newImpName.trim(), newImpPass); showImport = false; resetImport(); await loadList(); }
+    catch (e) { importErr = String(e); }
+    finally { importBusy = false; }
+  }
+  function impLabel(c: any): string { return changeLabel(c); }
 
   // Export (park / share) to an encrypted file.
   let showExport = false, exportMode: "park" | "share" = "share", exportPass = "", exportMsg = "", exportErr = "", exportBusy = false;
@@ -203,6 +254,9 @@
   }
 
   onMount(init);
+  // Leaving the tool with an import open discards its decrypted data (a park file
+  // holds backend credentials in memory until then).
+  onDestroy(() => { if (showImport) { try { IPSpaceImportCancel(); } catch (e) {} } });
 </script>
 
 <div class="tool">
@@ -257,6 +311,7 @@
       <button class="btn ghost" on:click={openExport}>CSV…</button>
       <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
       <button class="btn ghost" class:on={showExport} on:click={() => { showExport = !showExport; exportErr = ''; exportMsg = ''; }}>Export…</button>
+      <button class="btn ghost" class:on={showImport} on:click={() => showImport ? closeImport() : openImportPanel()}>Import…</button>
       <button class="btn ghost" on:click={startRename} title="Rename this inventory">Rename</button>
       <button class="btn ghost" on:click={() => { confirmingDelete = true; renaming = false; invErr = ''; }} title="Delete this inventory">Delete</button>
       <span class="lock">🔓 {activeName()} · encrypted at rest</span>
@@ -302,6 +357,82 @@
         </div>
         {#if exportErr}<div class="err" style="margin-top:10px">{exportErr}</div>{/if}
         {#if exportMsg}<div class="ok" style="margin-top:10px">{exportMsg}</div>{/if}
+      </div>
+    {/if}
+
+    {#if showImport}
+      <div class="card synccard">
+        <div class="chead"><h3>Import an inventory file</h3><button class="x" on:click={closeImport}>✕</button></div>
+
+        {#if importStep === "open"}
+          <p class="hint" style="margin:0 0 10px">Open a <span class="mono">.enc</span> file someone handed you (or one you parked). It stays encrypted until you enter its hand-off password; nothing is saved until you pick a destination.</p>
+          <label class="auth" style="display:flex;flex-direction:column;align-items:stretch;gap:5px;max-width:420px">
+            <span class="k0" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)">Hand-off password</span>
+            <input class="field" type="password" bind:value={importPass} placeholder="password the sender set" autocomplete="off" on:keydown={(e) => e.key === "Enter" && doImportOpen()} />
+          </label>
+          <div class="formbtns"><button class="btn" on:click={doImportOpen} disabled={importBusy || !importPass.trim()}>{importBusy ? "Opening…" : "Choose file & open…"}</button></div>
+
+        {:else if importStep === "choose"}
+          <div class="previewcard card" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+            <span class="exp mono" style="font-size:1.3rem;font-weight:700;color:var(--accent)">{importInfo.count}</span>
+            <div><div style="font-weight:600">{importInfo.name}</div><div class="hint mono">{importInfo.count} record{importInfo.count === 1 ? "" : "s"} · {importInfo.mode} file{importInfo.hasSync ? " · carries sync settings" : " · no credentials"}</div></div>
+          </div>
+          <p class="lbl">Where should this go?</p>
+          <div class="dest">
+            {#each mergeTargets as t}
+              <button class="destopt" on:click={() => chooseMerge(t.id)} disabled={importBusy}><span class="ichip" style={`background:${chipColor(t.id)}`}></span> Merge into <b>{t.name}</b></button>
+            {/each}
+            {#if invList.length < 3}
+              <button class="destopt" on:click={() => (importStep = "new")} disabled={importBusy}>🆕 New inventory</button>
+            {/if}
+            <button class="destopt" on:click={chooseLook} disabled={importBusy}>👁 Just look (nothing saved)</button>
+          </div>
+
+        {:else if importStep === "merge"}
+          <p class="lbl">Merging into <b>{(invList.find((i) => i.id === importTargetId) || {}).name}</b> — review, nothing written yet.</p>
+          {#if importDiff && importDiff.conflicts?.length}
+            <div class="conflict">{importDiff.conflicts.length} record{importDiff.conflicts.length === 1 ? "" : "s"} changed on both sides — resolve those first (edit one side to match), then try again.</div>
+          {/if}
+          {#if importDiff && importDiff.duplicatePrefixes?.length}
+            <div class="dup">Heads up: {importDiff.duplicatePrefixes.length} prefix(es) are recorded by more than one entry after this merge.</div>
+          {/if}
+          <div class="diffcols">
+            <div><p class="lbl">Incoming ({importDiff?.incoming?.length || 0}) — from the file</p>{#if importDiff?.incoming?.length}<ul class="difflist">{#each importDiff.incoming as c}<li class="mono i-{c.kind}">{impLabel(c)}</li>{/each}</ul>{:else}<p class="muted">None.</p>{/if}</div>
+            <div><p class="lbl">Already there ({importDiff?.outgoing?.length || 0})</p>{#if importDiff?.outgoing?.length}<ul class="difflist">{#each importDiff.outgoing as c}<li class="mono i-{c.kind}">{impLabel(c)}</li>{/each}</ul>{:else}<p class="muted">None.</p>{/if}</div>
+          </div>
+          <div class="formbtns">
+            <button class="btn ghost" on:click={() => { importStep = "choose"; importDiff = null; }}>Back</button>
+            <button class="btn" on:click={applyImportMerge} disabled={importBusy || (importDiff && importDiff.conflicts?.length)}>{importBusy ? "Merging…" : "Apply merge"}</button>
+          </div>
+
+        {:else if importStep === "new"}
+          <p class="lbl">Land <b>{importInfo.name}</b> as a new, separate inventory. Set its own passphrase (its on-disk encryption).</p>
+          <div class="form" style="max-width:420px">
+            <label>Name<input class="field" bind:value={newImpName} placeholder={importInfo.name} /></label>
+            <label>Passphrase (≥ 6)<input class="field" type="password" bind:value={newImpPass} autocomplete="off" /></label>
+            <label>Confirm<input class="field" type="password" bind:value={newImpPass2} autocomplete="off" /></label>
+          </div>
+          <div class="formbtns">
+            <button class="btn ghost" on:click={() => (importStep = "choose")}>Back</button>
+            <button class="btn" on:click={applyImportNew} disabled={importBusy}>Create inventory</button>
+          </div>
+
+        {:else if importStep === "look"}
+          <div class="banner look" style="margin-bottom:10px"><span>👁 Read-only view of <b>{importInfo.name}</b> — nothing is saved.</span></div>
+          <div class="tree">
+            {#each lookTree as r}
+              <div class="node" style={`padding-left:${6 + r.depth * 18}px;cursor:default`}>
+                <span class="cidr mono">{r.rec.prefix}</span><span class="nm">{r.rec.name}</span><span class="st pill {r.rec.status}">{r.rec.status}</span>
+              </div>
+            {/each}
+          </div>
+          <div class="formbtns">
+            <button class="btn ghost" on:click={() => (importStep = "choose")}>Back</button>
+            <button class="btn ghost" on:click={closeImport}>Done (discard)</button>
+          </div>
+        {/if}
+
+        {#if importErr}<div class="err" style="margin-top:10px">{importErr}</div>{/if}
       </div>
     {/if}
 
@@ -528,6 +659,11 @@
   .inlinebar .field { flex: 1 1 200px; min-width: 0; }
   .inlinebar.danger { border-color: color-mix(in srgb, var(--bad, #ff6b6b) 45%, var(--border)); }
   .btn.bad { background: var(--bad, #ff6b6b); border-color: transparent; color: #fff; }
+  .dest { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+  .destopt { display: inline-flex; align-items: center; gap: 9px; text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 10px 13px; cursor: pointer; font: inherit; font-size: 0.86rem; color: var(--text); }
+  .destopt:hover { border-color: var(--accent); }
+  .destopt .ichip { width: 9px; height: 9px; border-radius: 50%; }
+  .destopt:disabled { opacity: .55; cursor: default; }
   h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; color: var(--text-strong); }
   .sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 12px; }
   .muted { color: var(--text-dim); font-size: 0.85rem; }

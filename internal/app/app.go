@@ -57,6 +57,8 @@ type App struct {
 	activeID string
 	invLive  map[string]*invLive
 	invLoaded bool
+	// a hand-off file opened for import, awaiting a destination choice.
+	pendingImport *handoffFile
 	// test seam: build a sync backend from config; nil uses the real backends.
 	ipMakeBackend func(cfg syncConfig) (ipspace.Backend, bool)
 	// test seam: probe an SFTP server for its host key; nil uses the real dialer.

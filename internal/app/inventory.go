@@ -256,6 +256,12 @@ func (a *App) IPSpaceCreateInventory(name, passphrase string) error {
 	a.ipMu.Lock()
 	defer a.ipMu.Unlock()
 	a.ensureInv()
+	return a.createInventory(name, passphrase)
+}
+
+// createInventory adds a new, empty inventory and makes it active + unlocked.
+// Assumes the lock is held and ensureInv has run.
+func (a *App) createInventory(name, passphrase string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("give the inventory a name")
