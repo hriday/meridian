@@ -664,6 +664,31 @@ export namespace configdiff {
 
 }
 
+export namespace ctlog {
+	
+	export class Subdomain {
+	    name: string;
+	    wildcard: boolean;
+	    certs: number;
+	    firstSeen: string;
+	    lastSeen: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Subdomain(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.wildcard = source["wildcard"];
+	        this.certs = source["certs"];
+	        this.firstSeen = source["firstSeen"];
+	        this.lastSeen = source["lastSeen"];
+	    }
+	}
+
+}
+
 export namespace dnsaudit {
 	
 	export class Check {
