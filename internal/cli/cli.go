@@ -90,6 +90,12 @@ usage:
   meridian-cli dnsaudit <domain> [--resolver <ip>] [--timeout 8s] [--json]
   meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
   meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
+  meridian-cli sechdr <url> [--json]
+  meridian-cli subdomains <domain> [--json]
+  meridian-cli certexpiry <host[:port]>... [--json]
+  meridian-cli cve <id|keyword> [--json]
+  meridian-cli hashid <hash> [--json]
+  meridian-cli threatintel <ip>... [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -146,6 +152,18 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
 		return runIPSpace(args[1:], stdout, stderr)
+	case "sechdr":
+		return runSecHeaders(args[1:], stdout, stderr)
+	case "subdomains":
+		return runSubdomains(args[1:], stdout, stderr)
+	case "certexpiry":
+		return runCertExpiry(args[1:], stdout, stderr)
+	case "cve":
+		return runCVE(args[1:], stdout, stderr)
+	case "hashid":
+		return runHashID(args[1:], stdout, stderr)
+	case "threatintel":
+		return runThreatIntel(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
