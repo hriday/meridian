@@ -63,6 +63,23 @@ func Catalog() []Entry {
 	}
 }
 
+// RulesCatalog returns downloadable hashcat rule files, each pinned to an
+// immutable commit + SHA256. These transform each wordlist candidate into many
+// (case, leet, appends), cracking far more than a plain wordlist.
+func RulesCatalog() []Entry {
+	return []Entry{
+		{
+			Name: "OneRuleToRuleThemStill.rule",
+			// Credit: OneRuleToRuleThemStill by stealthsploit (Sam Croley), a
+			// heavily-optimised single rule. https://github.com/stealthsploit/OneRuleToRuleThemStill
+			Desc:   "OneRuleToRuleThemStill — ~48k optimised hashcat rules, by stealthsploit. One of the most effective general-purpose rule sets.",
+			URL:    "https://raw.githubusercontent.com/stealthsploit/OneRuleToRuleThemStill/4bfb7322e189305b5f35bb7fcd4e9cc233c3d3c6/OneRuleToRuleThemStill.rule",
+			SHA256: "3c807cc550fa7d2380dcd58f1950c480f7dddb83ef7fee86a54711a10fd83023",
+			Size:   486474,
+		},
+	}
+}
+
 // Installed lists the wordlist filenames present in dir.
 func Installed(dir string) ([]string, error) {
 	des, err := os.ReadDir(dir)

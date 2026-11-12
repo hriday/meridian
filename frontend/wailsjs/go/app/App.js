@@ -318,6 +318,22 @@ export function PortScan(arg1, arg2) {
   return window['go']['app']['App']['PortScan'](arg1, arg2);
 }
 
+export function RulesCatalog() {
+  return window['go']['app']['App']['RulesCatalog']();
+}
+
+export function RulesDir() {
+  return window['go']['app']['App']['RulesDir']();
+}
+
+export function RulesDownload(arg1) {
+  return window['go']['app']['App']['RulesDownload'](arg1);
+}
+
+export function RulesInstalled() {
+  return window['go']['app']['App']['RulesInstalled']();
+}
+
 export function ScanCommonPorts() {
   return window['go']['app']['App']['ScanCommonPorts']();
 }
