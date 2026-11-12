@@ -105,7 +105,11 @@ export function IPSpaceImportPreviewMerge(arg1:string):Promise<app.SyncResult>;
 
 export function IPSpaceImportTree():Promise<Array<ipspace.TreeNode>>;
 
+export function IPSpaceInventoryTree(arg1:string):Promise<Array<ipspace.TreeNode>>;
+
 export function IPSpaceList():Promise<Array<app.InvInfo>>;
+
+export function IPSpacePullRecords(arg1:string,arg2:Array<string>):Promise<app.PullReport>;
 
 export function IPSpaceRemoveInventory(arg1:string):Promise<void>;
 
