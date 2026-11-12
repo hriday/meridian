@@ -33,6 +33,7 @@ import {secheaders} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tlscheck} from '../models';
+import {threatintel} from '../models';
 import {trace} from '../models';
 import {whois} from '../models';
 
@@ -271,6 +272,8 @@ export function TftpSave(arg1:number):Promise<string>;
 export function TftpStart(arg1:number):Promise<void>;
 
 export function TftpStop():Promise<void>;
+
+export function ThreatIntelCheck(arg1:string):Promise<Array<threatintel.Hit>>;
 
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
 
