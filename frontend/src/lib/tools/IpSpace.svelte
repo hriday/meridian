@@ -3,7 +3,7 @@
   import {
     IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
-    IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory,
+    IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory, IPSpaceExportHandoff,
     IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
@@ -87,6 +87,19 @@
     catch (e) { invErr = String(e); }
   }
   function activeName(): string { return (invList.find((i) => i.id === activeId) || {}).name || ""; }
+
+  // Export (park / share) to an encrypted file.
+  let showExport = false, exportMode: "park" | "share" = "share", exportPass = "", exportMsg = "", exportErr = "", exportBusy = false;
+  async function doExport() {
+    exportErr = ""; exportMsg = "";
+    if (!exportPass.trim()) { exportErr = "Set a password to seal the file."; return; }
+    exportBusy = true;
+    try {
+      const path = await IPSpaceExportHandoff(exportMode, exportPass);
+      if (path) { exportMsg = `Saved to ${path}. Share the password separately.`; exportPass = ""; }
+    } catch (e) { exportErr = String(e); }
+    finally { exportBusy = false; }
+  }
   const CHIPS = ["var(--accent)", "#a78bfa", "#f0a85a"];
   function chipColor(id: string): string { const i = invList.findIndex((x) => x.id === id); return CHIPS[i % CHIPS.length]; }
   async function refresh() {
@@ -243,6 +256,7 @@
       <button class="btn ghost" on:click={undo} disabled={!history.length}>Undo</button>
       <button class="btn ghost" on:click={openExport}>CSV…</button>
       <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
+      <button class="btn ghost" class:on={showExport} on:click={() => { showExport = !showExport; exportErr = ''; exportMsg = ''; }}>Export…</button>
       <button class="btn ghost" on:click={startRename} title="Rename this inventory">Rename</button>
       <button class="btn ghost" on:click={() => { confirmingDelete = true; renaming = false; invErr = ''; }} title="Delete this inventory">Delete</button>
       <span class="lock">🔓 {activeName()} · encrypted at rest</span>
@@ -264,6 +278,32 @@
       </div>
     {/if}
     {#if invErr}<div class="err" style="margin-bottom:12px">{invErr}</div>{/if}
+
+    {#if showExport}
+      <div class="card synccard">
+        <div class="chead"><h3>Export {activeName()} to a file</h3><button class="x" on:click={() => (showExport = false)}>✕</button></div>
+        <div class="segs">
+          <button class="seg" class:on={exportMode === "share"} on:click={() => (exportMode = "share")}>Share with someone</button>
+          <button class="seg" class:on={exportMode === "park"} on:click={() => (exportMode = "park")}>Park / back-up</button>
+        </div>
+        <p class="hint" style="margin:0 0 10px">
+          {#if exportMode === "share"}
+            Inventory data only — <b>no credentials</b>. Sealed with a hand-off password you set and pass to the other person (separately from the file). They import it into their own space.
+          {:else}
+            The full inventory <b>including its sync settings</b>, so re-importing restores it fully wired to its backend. For your own back-up or to free a slot. Keep the password safe.
+          {/if}
+        </p>
+        <label class="auth" style="display:flex;flex-direction:column;align-items:stretch;gap:5px;max-width:420px">
+          <span class="k0" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim)">Hand-off password</span>
+          <input class="field" type="password" bind:value={exportPass} placeholder="password to seal this file" autocomplete="off" />
+        </label>
+        <div class="formbtns">
+          <button class="btn" on:click={doExport} disabled={exportBusy || !exportPass.trim()}>{exportBusy ? "Saving…" : "Export to file…"}</button>
+        </div>
+        {#if exportErr}<div class="err" style="margin-top:10px">{exportErr}</div>{/if}
+        {#if exportMsg}<div class="ok" style="margin-top:10px">{exportMsg}</div>{/if}
+      </div>
+    {/if}
 
     {#if showSync}
       <div class="card synccard">

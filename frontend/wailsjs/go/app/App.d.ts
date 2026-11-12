@@ -87,6 +87,8 @@ export function IPSpaceEdit(arg1:string,arg2:string,arg3:string,arg4:Array<strin
 
 export function IPSpaceExportCSV():Promise<string>;
 
+export function IPSpaceExportHandoff(arg1:string,arg2:string):Promise<string>;
+
 export function IPSpaceHistory():Promise<Array<ipspace.Event>>;
 
 export function IPSpaceImportCSV(arg1:string):Promise<ipspace.ImportReport>;
