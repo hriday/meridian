@@ -13,28 +13,18 @@ type IPSpaceState struct {
 	Unlocked bool `json:"unlocked"`
 }
 
-// IPSpaceStatus reports the store's existence and unlocked state.
+// IPSpaceStatus reports the active inventory's existence and unlocked state.
 func (a *App) IPSpaceStatus() IPSpaceState {
-	return IPSpaceState{Exists: ipspace.Exists(a.ipPath), Unlocked: a.ipUnlocked}
+	a.ensureInv()
+	return IPSpaceState{Exists: a.activeID != "" && ipspace.Exists(a.ipPath), Unlocked: a.ipUnlocked}
 }
 
-// IPSpaceCreate initializes a new encrypted store with the given passphrase.
-func (a *App) IPSpaceCreate(passphrase string) error {
-	if ipspace.Exists(a.ipPath) {
-		return fmt.Errorf("an IP-space store already exists")
-	}
-	if err := ipspace.Create(a.ipPath, passphrase); err != nil {
-		return err
-	}
-	a.ipStore = ipspace.NewStore(ipspace.Actor())
-	a.ipPass = passphrase
-	a.ipUnlocked = true
-	a.ipSyncCfgLoaded = false
-	return nil
-}
-
-// IPSpaceUnlock decrypts the store with the passphrase.
+// IPSpaceUnlock decrypts the active inventory's store with the passphrase.
 func (a *App) IPSpaceUnlock(passphrase string) error {
+	a.ensureInv()
+	if a.activeID == "" {
+		return fmt.Errorf("no inventory is selected")
+	}
 	events, err := ipspace.Load(a.ipPath, passphrase)
 	if err != nil {
 		return err

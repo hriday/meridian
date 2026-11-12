@@ -28,6 +28,26 @@ export namespace app {
 	        this.unlocked = source["unlocked"];
 	    }
 	}
+	export class InvInfo {
+	    id: string;
+	    name: string;
+	    active: boolean;
+	    unlocked: boolean;
+	    hasSync: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new InvInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.active = source["active"];
+	        this.unlocked = source["unlocked"];
+	        this.hasSync = source["hasSync"];
+	    }
+	}
 	export class NetflowView {
 	    running: boolean;
 	    port: number;

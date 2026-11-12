@@ -1,13 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import {
-    IPSpaceStatus, IPSpaceCreate, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
+    IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
     IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
+    IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory,
     IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
 
   let phase: "loading" | "create" | "locked" | "ready" = "loading";
+  let invList: any[] = [], activeId = "", creatingInv = false, newName = "";
   let pass = "", pass2 = "", gateErr = "";
   let tree: any[] = [], history: any[] = [];
   let selected: any = null;
@@ -35,22 +37,54 @@
   }
   $: rows = flatten(tree);
 
-  async function init() {
+  async function init() { await loadList(); }
+
+  async function loadList() {
+    invList = await IPSpaceList();
+    activeId = await IPSpaceActive();
+    if (invList.length === 0) { phase = "create"; creatingInv = false; return; }
     const s = await IPSpaceStatus();
-    phase = s.exists ? "locked" : "create";
+    if (s.unlocked) { phase = "ready"; await refresh(); }
+    else { phase = "locked"; selected = null; tree = []; history = []; }
   }
+
+  async function switchTo(id: string) {
+    if (id === activeId) return;
+    gateErr = ""; pass = "";
+    try { await IPSpaceSetActive(id); selected = null; await loadList(); }
+    catch (e) { gateErr = String(e); }
+  }
+
   async function create() {
     gateErr = "";
+    if (!newName.trim()) { gateErr = "Give the inventory a name."; return; }
     if (pass.length < 6) { gateErr = "Use a passphrase of at least 6 characters."; return; }
     if (pass !== pass2) { gateErr = "The passphrases don't match."; return; }
-    try { await IPSpaceCreate(pass); pass = pass2 = ""; phase = "ready"; await refresh(); }
-    catch (e) { gateErr = String(e); }
+    try {
+      await IPSpaceCreateInventory(newName.trim(), pass);
+      newName = ""; pass = pass2 = ""; creatingInv = false;
+      await loadList();
+    } catch (e) { gateErr = String(e); }
   }
+
   async function unlock() {
     gateErr = "";
-    try { await IPSpaceUnlock(pass); pass = ""; phase = "ready"; await refresh(); }
+    try { await IPSpaceUnlock(pass); pass = ""; await loadList(); }
     catch (e) { gateErr = String(e); }
   }
+
+  async function renameActive() {
+    const name = prompt("Rename inventory", activeName());
+    if (!name || !name.trim()) return;
+    try { await IPSpaceRenameInventory(activeId, name.trim()); await loadList(); } catch (e) { gateErr = String(e); }
+  }
+  async function removeActive() {
+    if (!confirm(`Delete “${activeName()}” and all its records? This can't be undone.`)) return;
+    try { await IPSpaceRemoveInventory(activeId); await loadList(); } catch (e) { gateErr = String(e); }
+  }
+  function activeName(): string { return (invList.find((i) => i.id === activeId) || {}).name || ""; }
+  const CHIPS = ["var(--accent)", "#a78bfa", "#f0a85a"];
+  function chipColor(id: string): string { const i = invList.findIndex((x) => x.id === id); return CHIPS[i % CHIPS.length]; }
   async function refresh() {
     tree = await IPSpaceTree();
     history = (await IPSpaceHistory()).slice().reverse();
@@ -158,32 +192,56 @@
   {#if phase === "loading"}
     <p class="muted">Loading…</p>
 
-  {:else if phase === "create"}
-    <div class="gate">
-      <h2>Create your IP-space store</h2>
-      <p class="sub">It's encrypted on disk with this passphrase. <b>There's no recovery</b> — if you lose it, the records are gone.</p>
-      <input class="field" type="password" placeholder="Passphrase (≥ 6 chars)" bind:value={pass} />
-      <input class="field" type="password" placeholder="Confirm passphrase" bind:value={pass2} on:keydown={(e) => e.key === "Enter" && create()} />
-      {#if gateErr}<div class="err">{gateErr}</div>{/if}
-      <button class="btn" on:click={create}>Create store</button>
-    </div>
-
-  {:else if phase === "locked"}
-    <div class="gate">
-      <h2>Unlock IP space</h2>
-      <p class="sub">Enter the passphrase for your encrypted store.</p>
-      <input class="field" type="password" placeholder="Passphrase" bind:value={pass} on:keydown={(e) => e.key === "Enter" && unlock()} />
-      {#if gateErr}<div class="err">{gateErr}</div>{/if}
-      <button class="btn" on:click={unlock}>Unlock</button>
-    </div>
-
   {:else}
+    {#if invList.length > 0}
+      <div class="invbar">
+        {#each invList as inv (inv.id)}
+          <button class="invtab" class:on={inv.id === activeId} on:click={() => switchTo(inv.id)}>
+            <span class="ichip" style={`background:${chipColor(inv.id)}`}></span>
+            <span class="iname">{inv.name}</span>
+            <span class="ilock">{inv.unlocked ? "🔓" : "🔒"}</span>
+          </button>
+        {/each}
+        {#if invList.length < 3}
+          <button class="invtab add" on:click={() => { creatingInv = true; gateErr = ''; newName = ''; pass = ''; pass2 = ''; }}>+ inventory</button>
+        {:else}
+          <span class="slotnote">3 of 3 slots</span>
+        {/if}
+      </div>
+    {/if}
+
+    {#if creatingInv || phase === "create"}
+      <div class="gate">
+        <h2>{invList.length === 0 ? "Create your first inventory" : "New inventory"}</h2>
+        <p class="sub">A separate, isolated IP space — e.g. one company's. Encrypted on disk with its own passphrase. <b>There's no recovery</b> if you lose it.</p>
+        <input class="field" placeholder="Name (e.g. Acme Corp)" bind:value={newName} />
+        <input class="field" type="password" placeholder="Passphrase (≥ 6 chars)" bind:value={pass} />
+        <input class="field" type="password" placeholder="Confirm passphrase" bind:value={pass2} on:keydown={(e) => e.key === "Enter" && create()} />
+        {#if gateErr}<div class="err">{gateErr}</div>{/if}
+        <div class="formbtns">
+          <button class="btn" on:click={create}>Create inventory</button>
+          {#if invList.length > 0}<button class="btn ghost" on:click={() => { creatingInv = false; gateErr = ''; }}>Cancel</button>{/if}
+        </div>
+      </div>
+
+    {:else if phase === "locked"}
+      <div class="gate">
+        <h2>Unlock {activeName()}</h2>
+        <p class="sub">Enter this inventory's passphrase.</p>
+        <input class="field" type="password" placeholder="Passphrase" bind:value={pass} on:keydown={(e) => e.key === "Enter" && unlock()} />
+        {#if gateErr}<div class="err">{gateErr}</div>{/if}
+        <button class="btn" on:click={unlock}>Unlock</button>
+      </div>
+
+    {:else}
     <div class="toolbar">
       <button class="btn" on:click={() => { showAdd = !showAdd; addErr = ""; addMsg = ""; }}>+ Add block</button>
       <button class="btn ghost" on:click={undo} disabled={!history.length}>Undo</button>
       <button class="btn ghost" on:click={openExport}>CSV…</button>
       <button class="btn ghost" class:on={showSync} on:click={() => { showSync = !showSync; syncErr = ""; }}>Sync…{#if syncInfo.configured}<span class="dot"></span>{/if}</button>
-      <span class="lock">🔓 Unlocked · encrypted at rest</span>
+      <button class="btn ghost" on:click={renameActive} title="Rename this inventory">Rename</button>
+      <button class="btn ghost" on:click={removeActive} title="Delete this inventory">Delete</button>
+      <span class="lock">🔓 {activeName()} · encrypted at rest</span>
     </div>
 
     {#if showSync}
@@ -389,11 +447,21 @@
         </div>
       </div>
     </div>
+    {/if}
   {/if}
 </div>
 
 <style>
   .tool { padding: 14px 18px 40px; }
+  .invbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .invtab { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 6px 11px; cursor: pointer; font: inherit; font-size: 0.84rem; color: var(--text-dim); }
+  .invtab:hover { border-color: var(--field-border); }
+  .invtab.on { color: var(--text-strong); background: var(--active); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .invtab .ichip { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .invtab .iname { font-weight: 600; }
+  .invtab .ilock { font-size: 0.74rem; }
+  .invtab.add { border-style: dashed; color: var(--text-faint); }
+  .slotnote { font-size: 0.72rem; color: var(--text-faint); }
   h2 { margin: 0 0 4px; font-size: 1.15rem; font-weight: 600; color: var(--text-strong); }
   .sub { color: var(--text-dim); font-size: 0.85rem; margin: 0 0 12px; }
   .muted { color: var(--text-dim); font-size: 0.85rem; }

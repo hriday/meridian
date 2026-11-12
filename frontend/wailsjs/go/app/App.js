@@ -90,12 +90,16 @@ export function HTTPCheck(arg1) {
   return window['go']['app']['App']['HTTPCheck'](arg1);
 }
 
+export function IPSpaceActive() {
+  return window['go']['app']['App']['IPSpaceActive']();
+}
+
 export function IPSpaceAdd(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['IPSpaceAdd'](arg1, arg2, arg3, arg4, arg5);
 }
 
-export function IPSpaceCreate(arg1) {
-  return window['go']['app']['App']['IPSpaceCreate'](arg1);
+export function IPSpaceCreateInventory(arg1, arg2) {
+  return window['go']['app']['App']['IPSpaceCreateInventory'](arg1, arg2);
 }
 
 export function IPSpaceDelete(arg1) {
@@ -116,6 +120,22 @@ export function IPSpaceHistory() {
 
 export function IPSpaceImportCSV(arg1) {
   return window['go']['app']['App']['IPSpaceImportCSV'](arg1);
+}
+
+export function IPSpaceList() {
+  return window['go']['app']['App']['IPSpaceList']();
+}
+
+export function IPSpaceRemoveInventory(arg1) {
+  return window['go']['app']['App']['IPSpaceRemoveInventory'](arg1);
+}
+
+export function IPSpaceRenameInventory(arg1, arg2) {
+  return window['go']['app']['App']['IPSpaceRenameInventory'](arg1, arg2);
+}
+
+export function IPSpaceSetActive(arg1) {
+  return window['go']['app']['App']['IPSpaceSetActive'](arg1);
 }
 
 export function IPSpaceStatus() {
