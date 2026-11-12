@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { HIBPBreaches, HIBPLatestBreach } from "../../../wailsjs/go/app/App.js";
+  import { HIBPBreaches, HIBPLatestBreach, EmailBreachCheck } from "../../../wailsjs/go/app/App.js";
 
   let breaches: any[] = [];
   let latest: any = null;
@@ -16,6 +16,22 @@
       try { latest = await HIBPLatestBreach(); } catch (e) { latest = null; }
     } catch (e) { err = String(e); }
     finally { loading = false; }
+  }
+
+  // Email breach check (XposedOrNot — the email IS sent to the service).
+  let email = "", emailChecked = false, emailBusy = false, emailErr = "", emailHits: string[] = [];
+  async function checkEmail() {
+    emailErr = ""; emailChecked = false; emailHits = [];
+    if (!email.trim() || !email.includes("@")) { emailErr = "Enter an email address."; return; }
+    emailBusy = true;
+    try { emailHits = (await EmailBreachCheck(email.trim())) || []; emailChecked = true; }
+    catch (e) { emailErr = String(e); }
+    finally { emailBusy = false; }
+  }
+  // Enrich a breach name from the loaded catalogue (date, data classes) when it matches.
+  function detail(name: string): any {
+    const lc = name.toLowerCase();
+    return breaches.find((b) => b.name?.toLowerCase() === lc || b.title?.toLowerCase() === lc) || null;
   }
 
   function fmt(n: number): string { return (n || 0).toLocaleString(); }
@@ -34,9 +50,37 @@
     accounts, and what data was exposed. Search by name or <strong>domain</strong> (e.g. <span class="mono">adobe.com</span>)
     to see the breaches that hit a company. This is free and keyless.
   </p>
+  <!-- Check a specific email (XposedOrNot, free) -->
+  <div class="emailbox">
+    <div class="eb-title">Check an email address</div>
+    <div class="eb-row">
+      <input class="field mono" bind:value={email} placeholder="name@example.com" spellcheck="false" autocomplete="off" type="email" on:keydown={(e) => e.key === "Enter" && checkEmail()} />
+      <button class="btn" on:click={checkEmail} disabled={emailBusy || !email.trim()}>{emailBusy ? "Checking…" : "Check"}</button>
+    </div>
+    <div class="eb-note">Uses <a href="https://xposedornot.com" target="_blank" rel="noreferrer">XposedOrNot</a>'s free breach database. Unlike the password check, <strong>the address is sent to that service</strong> — there's no way to check an email privately. HIBP's own email search needs a paid key and isn't used here.</div>
+    {#if emailErr}<div class="banner bad" style="margin-top:8px"><span>{emailErr}</span></div>{/if}
+    {#if emailChecked}
+      {#if emailHits.length}
+        <div class="ebverdict bad">Found in <b>{emailHits.length}</b> breach{emailHits.length === 1 ? "" : "es"} — change any reused passwords, and turn on 2FA where you can.</div>
+        <div class="ebhits">
+          {#each emailHits as h}
+            {@const d = detail(h)}
+            <div class="ebhit">
+              <span class="ebname">{d?.title || h}</span>
+              {#if d}<span class="dim sm mono">{d.domain || ""} · {d.breachDate || ""}</span>{/if}
+              {#if d?.dataClasses?.length}<span class="dim sm"> · {d.dataClasses.slice(0, 4).join(", ")}{d.dataClasses.length > 4 ? "…" : ""}</span>{/if}
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="ebverdict ok">Good news — <b>{email.trim()}</b> isn't in any breach XposedOrNot knows about. (That's not a guarantee it's never been exposed.)</div>
+      {/if}
+    {/if}
+  </div>
+
   <div class="note">
-    Checking whether a <em>specific email address</em> appears in these breaches is a separate, paid HIBP feature and
-    isn't included. For passwords, use the <strong>AD Password Audit</strong> — it checks hashes against breaches for free.
+    Below is the breach <em>catalogue</em> — which sites were breached and what leaked. For <em>passwords</em>, the
+    <strong>AD Password Audit</strong> checks hashes against breaches for free.
   </div>
 
   <div class="searchrow">
@@ -119,4 +163,18 @@
   .classes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
   .cls { font-size: 0.68rem; color: var(--text-dim); background: var(--well); border-radius: 6px; padding: 2px 7px; }
   .bdesc { font-size: 0.79rem; color: var(--text-dim); line-height: 1.5; margin: 8px 0 0; overflow-wrap: anywhere; }
+
+  .emailbox { max-width: 820px; background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 13px 15px; margin-bottom: 14px; }
+  .eb-title { font-weight: 650; color: var(--text-strong, var(--text)); font-size: 0.92rem; margin-bottom: 9px; }
+  .eb-row { display: flex; gap: 9px; align-items: center; }
+  .eb-row .field { flex: 1 1 auto; }
+  .btn { background: var(--accent); color: var(--on-accent, #052e2b); border: 1px solid transparent; border-radius: 8px; padding: 9px 16px; font: inherit; font-size: 0.86rem; font-weight: 550; cursor: pointer; white-space: nowrap; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .eb-note { font-size: 0.74rem; color: var(--text-faint, var(--text-dim)); margin-top: 8px; line-height: 1.5; }
+  .ebverdict { margin-top: 10px; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; }
+  .ebverdict.bad { background: color-mix(in srgb, var(--bad, #f0616a) 12%, transparent); border: 1px solid color-mix(in srgb, var(--bad, #f0616a) 40%, var(--border)); color: var(--text); }
+  .ebverdict.ok { background: color-mix(in srgb, var(--good, #3fb950) 12%, transparent); border: 1px solid color-mix(in srgb, var(--good, #3fb950) 40%, var(--border)); color: var(--text); }
+  .ebhits { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+  .ebhit { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 0.82rem; padding: 3px 0; border-bottom: 1px solid var(--border-soft, var(--border)); }
+  .ebname { font-weight: 600; color: var(--text); }
 </style>
