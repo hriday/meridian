@@ -19,6 +19,7 @@ import {configdiff} from '../models';
 import {hibp} from '../models';
 import {httpcheck} from '../models';
 import {ipspace} from '../models';
+import {hashid} from '../models';
 import {netif} from '../models';
 import {snmp} from '../models';
 import {lookup} from '../models';
@@ -158,6 +159,8 @@ export function IPSpaceTree():Promise<Array<ipspace.TreeNode>>;
 export function IPSpaceUndo():Promise<void>;
 
 export function IPSpaceUnlock(arg1:string):Promise<void>;
+
+export function IdentifyHash(arg1:string):Promise<Array<hashid.Candidate>>;
 
 export function Interfaces():Promise<Array<netif.Iface>>;
 
