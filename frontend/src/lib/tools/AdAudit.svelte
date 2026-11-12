@@ -182,6 +182,11 @@
         <button class="go ghost" on:click={pickWordlist}>Browse…</button>
         {#if customWordlist}<button class="link" on:click={() => (customWordlist = "")}>clear</button>{/if}
       </div>
+      <div class="cap">
+        Tip: a wordlist built from the target's <em>own</em> site and docs cracks far more than a generic one —
+        generate one with <a href="https://github.com/digininja/CeWL" target="_blank" rel="noreferrer">CeWL</a>,
+        then run it here with the OneRule rule.
+      </div>
     </div>
   </div>
 
