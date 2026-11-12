@@ -105,6 +105,8 @@ usage:
   meridian-cli swport <device> [--community public] [--timeout 2s] [--json]
   meridian-cli mib <device> [--root <oid>] [--max 500] [--community public] [--json]
   meridian-cli snmpbrute <device> --authorized [--communities a,b,c | --list <file>] [--json]
+  meridian-cli pingmon <host> [--interval 1s] [--timeout 1s] [--json]   (Ctrl-C to stop)
+  meridian-cli speedtest <iperf3-host> [--port 5201] [--dir download|upload|bidir] [--duration 10s] [--udp] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -191,6 +193,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runMIB(args[1:], stdout, stderr)
 	case "snmpbrute":
 		return runSNMPBrute(args[1:], stdout, stderr)
+	case "pingmon":
+		return runPingMon(args[1:], stdout, stderr)
+	case "speedtest":
+		return runSpeedTest(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
