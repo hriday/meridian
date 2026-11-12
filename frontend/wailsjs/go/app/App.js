@@ -90,6 +90,14 @@ export function DiffConfigs(arg1, arg2) {
   return window['go']['app']['App']['DiffConfigs'](arg1, arg2);
 }
 
+export function HIBPBreaches() {
+  return window['go']['app']['App']['HIBPBreaches']();
+}
+
+export function HIBPLatestBreach() {
+  return window['go']['app']['App']['HIBPLatestBreach']();
+}
+
 export function HTTPCheck(arg1) {
   return window['go']['app']['App']['HTTPCheck'](arg1);
 }

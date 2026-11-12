@@ -1059,6 +1059,41 @@ export namespace fwconfig {
 
 }
 
+export namespace hibp {
+	
+	export class Breach {
+	    name: string;
+	    title: string;
+	    domain: string;
+	    breachDate: string;
+	    pwnCount: number;
+	    description: string;
+	    dataClasses: string[];
+	    verified: boolean;
+	    sensitive: boolean;
+	    malware: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Breach(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.title = source["title"];
+	        this.domain = source["domain"];
+	        this.breachDate = source["breachDate"];
+	        this.pwnCount = source["pwnCount"];
+	        this.description = source["description"];
+	        this.dataClasses = source["dataClasses"];
+	        this.verified = source["verified"];
+	        this.sensitive = source["sensitive"];
+	        this.malware = source["malware"];
+	    }
+	}
+
+}
+
 export namespace httpcheck {
 	
 	export class Hop {
