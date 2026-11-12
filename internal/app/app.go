@@ -39,10 +39,24 @@ type App struct {
 	traceCancel context.CancelFunc
 	traceGen    int
 
+	// ipMu serializes every IP-space binding call. Wails dispatches each JS→Go
+	// call on its own goroutine, so without this a sync in flight (up to 30s on
+	// the network) could race an inventory switch and write one inventory's
+	// records into another's store, or crash on the invLive map. Public IPSpace*
+	// methods take it; unexported helpers assume it is already held.
+	ipMu sync.Mutex
+	// Active inventory live state. ip* always reflects the active inventory; other
+	// unlocked inventories are parked in invLive (see inventory.go).
 	ipPath     string
 	ipPass     string
 	ipStore    *ipspace.Store
 	ipUnlocked bool
+	// Multi-inventory registry.
+	invRoot  string
+	invs     []invMeta
+	activeID string
+	invLive  map[string]*invLive
+	invLoaded bool
 	// test seam: build a sync backend from config; nil uses the real backends.
 	ipMakeBackend func(cfg syncConfig) (ipspace.Backend, bool)
 	// test seam: probe an SFTP server for its host key; nil uses the real dialer.
@@ -79,7 +93,7 @@ func New() *App {
 	nfParser := netflow.NewParser() // stateful: per-exporter v9/IPFIX template cache
 	return &App{
 		lookup:      lookup.NewClient(&http.Client{Timeout: 10 * time.Second}, 10*time.Minute),
-		ipPath:      ipspace.DefaultPath(),
+		invRoot:     defaultInvRoot(),
 		adCracker:   pwaudit.NewHashcatCracker(),
 		wordlistDir: defaultWordlistDir(),
 		newPinger:   func() scan.Pinger { return scan.NewICMPPinger() },

@@ -175,6 +175,8 @@ func (a *App) buildBackend(cfg syncConfig) (ipspace.Backend, error) {
 // IPSpaceSyncInfo reports whether a sync backend is configured and where. It
 // never includes credentials, and builds no network client (just a label).
 func (a *App) IPSpaceSyncInfo() SyncInfo {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	cfg, ok := a.loadSyncConfig()
 	if !ok {
 		return SyncInfo{}
@@ -206,6 +208,8 @@ func describeConfig(cfg syncConfig) string {
 // IPSpaceSyncConfigureLocal points sync at a shared file path (a mounted share,
 // a synced folder, a USB drive).
 func (a *App) IPSpaceSyncConfigureLocal(path string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -220,6 +224,8 @@ func (a *App) IPSpaceSyncConfigureLocal(path string) error {
 // (AWS S3, Cloudflare R2, Backblaze B2, MinIO). Credentials are sealed with the
 // store passphrase, never written in the clear.
 func (a *App) IPSpaceSyncConfigureS3(endpoint, region, bucket, key, accessKey, secret string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -257,6 +263,8 @@ func (a *App) IPSpaceSyncConfigureS3(endpoint, region, bucket, key, accessKey, s
 // first connect the server's host key is pinned (trust-on-first-use); a later
 // change is refused. Credentials are sealed with the store passphrase.
 func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, keyPassphrase, path string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -308,6 +316,8 @@ func (a *App) IPSpaceSyncConfigureSFTP(host, port, user, password, privateKey, k
 // kept). Auth is an HTTPS access token, sealed with the store passphrase. The
 // repo must already exist with an initial commit.
 func (a *App) IPSpaceSyncConfigureGit(url, branch, path, username, token string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -379,6 +389,8 @@ func (a *App) merge() (res ipspace.MergeResult, b ipspace.Backend, version strin
 
 // IPSpaceSyncPreview pulls the remote and shows the diff without writing anything.
 func (a *App) IPSpaceSyncPreview() (SyncResult, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	res, _, _, err := a.merge()
 	if err != nil {
 		return SyncResult{}, err
@@ -393,6 +405,8 @@ func (a *App) IPSpaceSyncPreview() (SyncResult, error) {
 // If someone else pushed between this pull and push, the backend refuses the
 // write (ErrRemoteChanged) and nothing local is touched — the user reviews again.
 func (a *App) IPSpaceSyncApply() (SyncResult, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	res, b, version, err := a.merge()
 	if err != nil {
 		return SyncResult{}, err

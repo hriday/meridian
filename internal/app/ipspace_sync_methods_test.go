@@ -13,22 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newUnlockedStore returns a controller with a fresh, unlocked store at its own
-// path, all sharing one remote blob and one team passphrase.
-func newUnlockedStore(t *testing.T, storePath, pass string) *App {
+// newUnlockedStore returns a controller with a fresh, unlocked inventory in its
+// own registry root. Several of these can share one remote blob + team passphrase.
+func newUnlockedStore(t *testing.T, pass string) *App {
 	t.Helper()
 	a := New()
-	a.ipPath = storePath
-	require.NoError(t, a.IPSpaceCreate(pass))
+	a.invRoot = t.TempDir()
+	require.NoError(t, a.IPSpaceCreateInventory("Test", pass))
+	return a
+}
+
+// reopen loads an existing registry root in a fresh controller and unlocks its
+// active inventory — the "restart" case.
+func reopen(t *testing.T, invRoot, pass string) *App {
+	t.Helper()
+	a := New()
+	a.invRoot = invRoot
+	a.IPSpaceList() // load registry + active
+	require.NoError(t, a.IPSpaceUnlock(pass))
 	return a
 }
 
 func TestSyncConfigurePersistsAcrossRestart(t *testing.T) {
 	dir := t.TempDir()
-	store := filepath.Join(dir, "store.enc")
 	remote := filepath.Join(dir, "remote.enc")
 
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	require.False(t, a.IPSpaceSyncInfo().Configured)
 	require.NoError(t, a.IPSpaceSyncConfigureLocal(remote))
 
@@ -37,21 +47,17 @@ func TestSyncConfigurePersistsAcrossRestart(t *testing.T) {
 	require.Contains(t, info.Location, remote)
 
 	// A fresh controller on the same store sees the configured backend.
-	b := New()
-	b.ipPath = store
-	require.NoError(t, b.IPSpaceUnlock("team"))
+	b := reopen(t, a.invRoot, "team")
 	require.True(t, b.IPSpaceSyncInfo().Configured)
 }
 
 func TestSyncConfigureRejectsEmptyPath(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	require.Error(t, a.IPSpaceSyncConfigureLocal("   "))
 }
 
 func TestSyncPreviewRequiresConfig(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	_, err := a.IPSpaceSyncPreview()
 	require.Error(t, err)
 }
@@ -62,8 +68,8 @@ func TestSyncTwoPersonRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	remote := filepath.Join(dir, "remote.enc")
 
-	alice := newUnlockedStore(t, filepath.Join(dir, "alice.enc"), "team")
-	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
+	alice := newUnlockedStore(t, "team")
+	bob := newUnlockedStore(t, "team")
 	require.NoError(t, alice.IPSpaceSyncConfigureLocal(remote))
 	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote))
 
@@ -106,8 +112,8 @@ func TestSyncConflictBlocksApply(t *testing.T) {
 	dir := t.TempDir()
 	remote := filepath.Join(dir, "remote.enc")
 
-	alice := newUnlockedStore(t, filepath.Join(dir, "alice.enc"), "team")
-	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
+	alice := newUnlockedStore(t, "team")
+	bob := newUnlockedStore(t, "team")
 	require.NoError(t, alice.IPSpaceSyncConfigureLocal(remote))
 	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote))
 
@@ -143,9 +149,7 @@ func TestSyncConflictBlocksApply(t *testing.T) {
 }
 
 func TestSyncConfigureS3SealsCredentials(t *testing.T) {
-	dir := t.TempDir()
-	store := filepath.Join(dir, "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	// Route the configure-time probe through an in-memory backend so the test
 	// doesn't reach the network; we're verifying the config is sealed, not S3.
 	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true }
@@ -162,23 +166,20 @@ func TestSyncConfigureS3SealsCredentials(t *testing.T) {
 
 	// The config is sealed: an encrypted sidecar exists, no plaintext one, and the
 	// secret does not appear in the bytes on disk.
-	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	encRaw, err := os.ReadFile(sidecarPath(a.ipPath, ".sync.enc"))
 	require.NoError(t, err)
 	require.NotContains(t, string(encRaw), secret)
 	require.NotContains(t, string(encRaw), "AKID")
-	require.NoFileExists(t, sidecarPath(store, ".sync.json"))
+	require.NoFileExists(t, sidecarPath(a.ipPath, ".sync.json"))
 
 	// A fresh controller unlocks and sees the S3 backend configured.
-	b := New()
-	b.ipPath = store
-	require.NoError(t, b.IPSpaceUnlock("team"))
+	b := reopen(t, a.invRoot, "team")
 	require.True(t, b.IPSpaceSyncInfo().Configured)
 	require.Equal(t, "s3", b.IPSpaceSyncInfo().Kind)
 }
 
 func TestSyncConfigureSFTPSealsAndPinsHostKey(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
 		return "ssh-ed25519 AAAApinnedkey", nil
 	}
@@ -193,28 +194,24 @@ func TestSyncConfigureSFTPSealsAndPinsHostKey(t *testing.T) {
 	require.Contains(t, info.Location, "sftp.example.com")
 	require.NotContains(t, info.Location, password)
 
-	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	encRaw, err := os.ReadFile(sidecarPath(a.ipPath, ".sync.enc"))
 	require.NoError(t, err)
 	require.NotContains(t, string(encRaw), password, "the SFTP password must not be on disk in the clear")
 
 	// The host key captured at configure is pinned in the sealed config.
-	b := New()
-	b.ipPath = store
-	require.NoError(t, b.IPSpaceUnlock("team"))
+	b := reopen(t, a.invRoot, "team")
 	require.Equal(t, "sftp", b.IPSpaceSyncInfo().Kind)
 }
 
 func TestSyncConfigureSFTPRequiresAuth(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	err := a.IPSpaceSyncConfigureSFTP("h", "22", "u", "", "", "", "/p")
 	require.Error(t, err, "no password and no key must be rejected")
 	require.False(t, a.IPSpaceSyncInfo().Configured)
 }
 
 func TestSyncConfigureSFTPRejectsEmptyHostKey(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
 		return "", nil // no host key captured — must not be saved as a blank pin
 	}
@@ -224,8 +221,7 @@ func TestSyncConfigureSFTPRejectsEmptyHostKey(t *testing.T) {
 }
 
 func TestSyncConfigureSFTPSurfacesProbeError(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	a.ipProbeSFTP = func(ctx context.Context, cfg ipspace.SFTPConfig) (string, error) {
 		return "", fmt.Errorf("auth failed")
 	}
@@ -235,8 +231,7 @@ func TestSyncConfigureSFTPSurfacesProbeError(t *testing.T) {
 }
 
 func TestSyncConfigureGitSealsToken(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return &raceBackend{}, true } // Verify offline
 
 	const token = "ghp_secrettoken12345"
@@ -248,14 +243,13 @@ func TestSyncConfigureGitSealsToken(t *testing.T) {
 	require.Contains(t, info.Location, "acme/ipam")
 	require.NotContains(t, info.Location, token)
 
-	encRaw, err := os.ReadFile(sidecarPath(store, ".sync.enc"))
+	encRaw, err := os.ReadFile(sidecarPath(a.ipPath, ".sync.enc"))
 	require.NoError(t, err)
 	require.NotContains(t, string(encRaw), token, "the git token must not be on disk in the clear")
 }
 
 func TestSyncConfigureGitRequiresAuth(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	err := a.IPSpaceSyncConfigureGit("https://x/y.git", "main", "ipspace.enc", "", "")
 	require.Error(t, err)
 	require.False(t, a.IPSpaceSyncInfo().Configured)
@@ -264,8 +258,7 @@ func TestSyncConfigureGitRequiresAuth(t *testing.T) {
 // A bucket that fails the conditional-write check is rejected at configure, and
 // no config is saved — so an unsafe backend never becomes the sync target.
 func TestSyncConfigureS3RejectsUnsafeProvider(t *testing.T) {
-	store := filepath.Join(t.TempDir(), "store.enc")
-	a := newUnlockedStore(t, store, "team")
+	a := newUnlockedStore(t, "team")
 	a.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) {
 		return &raceBackend{verifyErr: ipspace.ErrRemoteChanged}, true // stand-in for "ignores conditional writes"
 	}
@@ -314,10 +307,9 @@ func (b *raceBackend) Describe() string                 { return "race backend" 
 // guard: Apply refuses, writes nothing locally, and surfaces ErrRemoteChanged —
 // instead of silently clobbering the other person's push.
 func TestSyncApplyRefusesLostUpdate(t *testing.T) {
-	dir := t.TempDir()
 	remote := &raceBackend{}
 
-	bob := newUnlockedStore(t, filepath.Join(dir, "bob.enc"), "team")
+	bob := newUnlockedStore(t, "team")
 	bob.ipMakeBackend = func(cfg syncConfig) (ipspace.Backend, bool) { return remote, true }
 	require.NoError(t, bob.IPSpaceSyncConfigureLocal(remote.Describe()))
 

@@ -75,9 +75,11 @@ export function DiffConfigs(arg1:string,arg2:string):Promise<configdiff.Result>;
 
 export function HTTPCheck(arg1:string):Promise<httpcheck.Result>;
 
+export function IPSpaceActive():Promise<string>;
+
 export function IPSpaceAdd(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<ipspace.Record>;
 
-export function IPSpaceCreate(arg1:string):Promise<void>;
+export function IPSpaceCreateInventory(arg1:string,arg2:string):Promise<void>;
 
 export function IPSpaceDelete(arg1:string):Promise<void>;
 
@@ -88,6 +90,14 @@ export function IPSpaceExportCSV():Promise<string>;
 export function IPSpaceHistory():Promise<Array<ipspace.Event>>;
 
 export function IPSpaceImportCSV(arg1:string):Promise<ipspace.ImportReport>;
+
+export function IPSpaceList():Promise<Array<app.InvInfo>>;
+
+export function IPSpaceRemoveInventory(arg1:string):Promise<void>;
+
+export function IPSpaceRenameInventory(arg1:string,arg2:string):Promise<void>;
+
+export function IPSpaceSetActive(arg1:string):Promise<void>;
 
 export function IPSpaceStatus():Promise<app.IPSpaceState>;
 

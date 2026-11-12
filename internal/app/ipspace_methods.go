@@ -13,28 +13,22 @@ type IPSpaceState struct {
 	Unlocked bool `json:"unlocked"`
 }
 
-// IPSpaceStatus reports the store's existence and unlocked state.
+// IPSpaceStatus reports the active inventory's existence and unlocked state.
 func (a *App) IPSpaceStatus() IPSpaceState {
-	return IPSpaceState{Exists: ipspace.Exists(a.ipPath), Unlocked: a.ipUnlocked}
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
+	a.ensureInv()
+	return IPSpaceState{Exists: a.activeID != "" && ipspace.Exists(a.ipPath), Unlocked: a.ipUnlocked}
 }
 
-// IPSpaceCreate initializes a new encrypted store with the given passphrase.
-func (a *App) IPSpaceCreate(passphrase string) error {
-	if ipspace.Exists(a.ipPath) {
-		return fmt.Errorf("an IP-space store already exists")
-	}
-	if err := ipspace.Create(a.ipPath, passphrase); err != nil {
-		return err
-	}
-	a.ipStore = ipspace.NewStore(ipspace.Actor())
-	a.ipPass = passphrase
-	a.ipUnlocked = true
-	a.ipSyncCfgLoaded = false
-	return nil
-}
-
-// IPSpaceUnlock decrypts the store with the passphrase.
+// IPSpaceUnlock decrypts the active inventory's store with the passphrase.
 func (a *App) IPSpaceUnlock(passphrase string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
+	a.ensureInv()
+	if a.activeID == "" {
+		return fmt.Errorf("no inventory is selected")
+	}
 	events, err := ipspace.Load(a.ipPath, passphrase)
 	if err != nil {
 		return err
@@ -59,6 +53,8 @@ func (a *App) ipSave() error {
 
 // IPSpaceTree returns the nested record tree (empty when locked).
 func (a *App) IPSpaceTree() []ipspace.TreeNode {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if a.requireUnlocked() != nil {
 		return nil
 	}
@@ -67,6 +63,8 @@ func (a *App) IPSpaceTree() []ipspace.TreeNode {
 
 // IPSpaceHistory returns the change log.
 func (a *App) IPSpaceHistory() []ipspace.Event {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if a.requireUnlocked() != nil {
 		return nil
 	}
@@ -75,6 +73,8 @@ func (a *App) IPSpaceHistory() []ipspace.Event {
 
 // IPSpaceAdd records a new block or address and persists.
 func (a *App) IPSpaceAdd(prefix, name, status string, tags []string, notes string) (ipspace.Record, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return ipspace.Record{}, err
 	}
@@ -87,6 +87,8 @@ func (a *App) IPSpaceAdd(prefix, name, status string, tags []string, notes strin
 
 // IPSpaceEdit updates a record and persists.
 func (a *App) IPSpaceEdit(id, name, status string, tags []string, notes string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -98,6 +100,8 @@ func (a *App) IPSpaceEdit(id, name, status string, tags []string, notes string) 
 
 // IPSpaceDelete removes a record and persists.
 func (a *App) IPSpaceDelete(id string) error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -109,6 +113,8 @@ func (a *App) IPSpaceDelete(id string) error {
 
 // IPSpaceUndo reverts the last change and persists.
 func (a *App) IPSpaceUndo() error {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return err
 	}
@@ -120,6 +126,8 @@ func (a *App) IPSpaceUndo() error {
 
 // IPSpaceImportCSV imports records from CSV text and persists.
 func (a *App) IPSpaceImportCSV(text string) (ipspace.ImportReport, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return ipspace.ImportReport{}, err
 	}
@@ -132,6 +140,8 @@ func (a *App) IPSpaceImportCSV(text string) (ipspace.ImportReport, error) {
 
 // IPSpaceExportCSV returns the records as CSV text.
 func (a *App) IPSpaceExportCSV() (string, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return "", err
 	}
