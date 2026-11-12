@@ -2812,6 +2812,9 @@ export namespace update {
 	    newer: boolean;
 	    url: string;
 	    notes: string;
+	    downloadUrl: string;
+	    assetName: string;
+	    osLabel: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Result(source);
@@ -2824,6 +2827,9 @@ export namespace update {
 	        this.newer = source["newer"];
 	        this.url = source["url"];
 	        this.notes = source["notes"];
+	        this.downloadUrl = source["downloadUrl"];
+	        this.assetName = source["assetName"];
+	        this.osLabel = source["osLabel"];
 	    }
 	}
 
