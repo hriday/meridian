@@ -27,6 +27,7 @@ import {netcat} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
 import {wordlist} from '../models';
+import {secheaders} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tlscheck} from '../models';
@@ -206,6 +207,8 @@ export function RulesInstalled():Promise<Array<string>>;
 export function ScanCommonPorts():Promise<Array<number>>;
 
 export function ScanStop():Promise<void>;
+
+export function SecurityHeaders(arg1:string):Promise<secheaders.Report>;
 
 export function SetAtlasKey(arg1:string):Promise<void>;
 

@@ -350,6 +350,10 @@ export function ScanStop() {
   return window['go']['app']['App']['ScanStop']();
 }
 
+export function SecurityHeaders(arg1) {
+  return window['go']['app']['App']['SecurityHeaders'](arg1);
+}
+
 export function SetAtlasKey(arg1) {
   return window['go']['app']['App']['SetAtlasKey'](arg1);
 }
