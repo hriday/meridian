@@ -10,6 +10,7 @@ import {atlas} from '../models';
 import {dnsbl} from '../models';
 import {ctlog} from '../models';
 import {cve} from '../models';
+import {certexpiry} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
 import {dnsaudit} from '../models';
@@ -74,6 +75,8 @@ export function CVEIsID(arg1:string):Promise<boolean>;
 export function CVELookup(arg1:string):Promise<cve.CVE>;
 
 export function CVESearch(arg1:string):Promise<Array<cve.CVE>>;
+
+export function CertExpiryCheck(arg1:string):Promise<Array<certexpiry.Result>>;
 
 export function CheckForUpdate():Promise<update.Result>;
 
