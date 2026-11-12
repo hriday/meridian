@@ -100,6 +100,11 @@ usage:
   meridian-cli tfexposure [<hcl-or-plan-file>] [--source hcl|plan] [--json]   (reads stdin if no file)
   meridian-cli cfgdiff <old-file> <new-file> [--json]
   meridian-cli breaches <email> [--json]   (or: breaches --latest)
+  meridian-cli snmpsweep <cidr> [--community public] [--timeout 2s] [--concurrency 64] [--json]
+  meridian-cli devhealth <device> [--community public] [--timeout 2s] [--json]
+  meridian-cli swport <device> [--community public] [--timeout 2s] [--json]
+  meridian-cli mib <device> [--root <oid>] [--max 500] [--community public] [--json]
+  meridian-cli snmpbrute <device> --authorized [--communities a,b,c | --list <file>] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -176,6 +181,16 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCfgDiff(args[1:], stdout, stderr)
 	case "breaches":
 		return runBreaches(args[1:], stdout, stderr)
+	case "snmpsweep":
+		return runSNMPSweep(args[1:], stdout, stderr)
+	case "devhealth":
+		return runDevHealth(args[1:], stdout, stderr)
+	case "swport":
+		return runSwitchPort(args[1:], stdout, stderr)
+	case "mib":
+		return runMIB(args[1:], stdout, stderr)
+	case "snmpbrute":
+		return runSNMPBrute(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
