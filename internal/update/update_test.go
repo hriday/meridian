@@ -53,6 +53,50 @@ func TestCheckLatestNewer(t *testing.T) {
 	}
 }
 
+func TestPickAsset(t *testing.T) {
+	assets := []asset{
+		{Name: "Meridian-v1.2.0-linux-x86_64.AppImage", URL: "l"},
+		{Name: "Meridian-v1.2.0-macos-universal.dmg", URL: "m"},
+		{Name: "Meridian-v1.2.0-windows-amd64.exe", URL: "w"},
+	}
+	for _, c := range []struct{ goos, url, label string }{
+		{"darwin", "m", "macOS"},
+		{"windows", "w", "Windows"},
+		{"linux", "l", "Linux"},
+	} {
+		url, name, label := pickAsset(assets, c.goos)
+		if url != c.url || label != c.label || name == "" {
+			t.Errorf("pickAsset(%s) = (%q,%q,%q), want url=%q label=%q", c.goos, url, name, label, c.url, c.label)
+		}
+	}
+	// No matching asset → empty URL but still a label.
+	if url, _, label := pickAsset(nil, "darwin"); url != "" || label != "macOS" {
+		t.Errorf("empty assets: got url=%q label=%q", url, label)
+	}
+}
+
+func TestCheckLatestParsesDownloadURL(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"tag_name":"v0.2.0","html_url":"u","body":"Notes","assets":[
+			{"name":"Meridian-v0.2.0-macos-universal.dmg","browser_download_url":"https://x/m.dmg"},
+			{"name":"Meridian-v0.2.0-windows-amd64.exe","browser_download_url":"https://x/w.exe"}]}`))
+	}))
+	defer srv.Close()
+	res, err := checkLatest(context.Background(), "v0.1.0", srv.URL)
+	if err != nil {
+		t.Fatalf("checkLatest: %v", err)
+	}
+	// The chosen asset depends on the test host's OS; just assert it matched one
+	// of the two offered and set a label.
+	if res.OSLabel == "" {
+		t.Error("want an OS label")
+	}
+	if (res.OSLabel == "macOS" && res.DownloadURL != "https://x/m.dmg") ||
+		(res.OSLabel == "Windows" && res.DownloadURL != "https://x/w.exe") {
+		t.Errorf("download url %q doesn't match OS %q", res.DownloadURL, res.OSLabel)
+	}
+}
+
 func TestCheckLatestUpToDate(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"tag_name":"v0.1.0","html_url":"u","body":""}`))

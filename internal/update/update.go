@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -21,11 +22,14 @@ const (
 
 // Result is the outcome of a version check.
 type Result struct {
-	Current string `json:"current"` // the running build's version
-	Latest  string `json:"latest"`  // the latest released tag, or "" on failure
-	Newer   bool   `json:"newer"`   // a newer release is available
-	URL     string `json:"url"`     // the release page
-	Notes   string `json:"notes"`   // release notes (truncated)
+	Current     string `json:"current"`     // the running build's version
+	Latest      string `json:"latest"`      // the latest released tag, or "" on failure
+	Newer       bool   `json:"newer"`       // a newer release is available
+	URL         string `json:"url"`         // the release page
+	Notes       string `json:"notes"`       // release notes (truncated)
+	DownloadURL string `json:"downloadUrl"` // direct link to the installer for this OS, "" if none
+	AssetName   string `json:"assetName"`   // the installer's filename
+	OSLabel     string `json:"osLabel"`     // "macOS" | "Windows" | "Linux" for the button
 }
 
 var client = &http.Client{Timeout: 12 * time.Second}
@@ -61,6 +65,10 @@ func checkLatest(ctx context.Context, current, url string) (Result, error) {
 		TagName string `json:"tag_name"`
 		HTMLURL string `json:"html_url"`
 		Body    string `json:"body"`
+		Assets  []struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		} `json:"assets"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&gr); err != nil {
 		return res, fmt.Errorf("couldn't read the release info")
@@ -68,9 +76,38 @@ func checkLatest(ctx context.Context, current, url string) (Result, error) {
 
 	res.Latest = strings.TrimSpace(gr.TagName)
 	res.URL = gr.HTMLURL
-	res.Notes = truncate(strings.TrimSpace(gr.Body), 600)
+	res.Notes = truncate(strings.TrimSpace(gr.Body), 1200)
 	res.Newer = isNewer(current, res.Latest)
+	assets := make([]asset, len(gr.Assets))
+	for i, a := range gr.Assets {
+		assets[i] = asset{Name: a.Name, URL: a.URL}
+	}
+	res.DownloadURL, res.AssetName, res.OSLabel = pickAsset(assets, runtime.GOOS)
 	return res, nil
+}
+
+type asset struct{ Name, URL string }
+
+// pickAsset chooses the release asset for the running OS by filename suffix
+// (…-macos-universal.dmg / …-windows-amd64.exe / …-linux-x86_64.AppImage).
+func pickAsset(assets []asset, goos string) (url, name, osLabel string) {
+	var suffix string
+	switch goos {
+	case "darwin":
+		suffix, osLabel = ".dmg", "macOS"
+	case "windows":
+		suffix, osLabel = ".exe", "Windows"
+	case "linux":
+		suffix, osLabel = ".appimage", "Linux"
+	default:
+		return "", "", ""
+	}
+	for _, a := range assets {
+		if strings.HasSuffix(strings.ToLower(a.Name), suffix) {
+			return a.URL, a.Name, osLabel
+		}
+	}
+	return "", "", osLabel
 }
 
 // isNewer reports whether latest is a newer semantic version than current. A

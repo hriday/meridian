@@ -121,18 +121,18 @@
   AppVersion().then((v) => (appVersion = v)).catch(() => {});
 
   let upState: "idle" | "checking" | "latest" | "available" | "error" = "idle";
-  let upLatest = "";
-  let upURL = "";
-  let upMsg = "";
+  let upLatest = "", upURL = "", upMsg = "", upNotes = "", upDownload = "", upOS = "", upAsset = "";
+  let showUpdate = false;
   async function checkUpdates() {
     if (upState === "checking") return;
     upState = "checking";
     upMsg = "";
     try {
       const r = await CheckForUpdate();
-      upLatest = r.latest;
-      upURL = r.url;
+      upLatest = r.latest; upURL = r.url; upNotes = r.notes || "";
+      upDownload = r.downloadUrl || ""; upOS = r.osLabel || ""; upAsset = r.assetName || "";
       upState = r.newer ? "available" : "latest";
+      if (r.newer) showUpdate = true; // surface it in-app rather than bouncing to GitHub
     } catch (e) {
       upState = "error";
       upMsg = String(e);
@@ -221,8 +221,8 @@
         <div class="sidefoot">
           <span class="ver mono">Meridian {appVersion || "…"}</span>
           {#if upState === "available"}
-            <button class="upd avail" on:click={() => BrowserOpenURL(upURL)} title="Open the release page">
-              {upLatest} available ↗
+            <button class="upd avail" on:click={() => (showUpdate = true)} title="See what's new">
+              {upLatest} available
             </button>
           {:else if upState === "latest"}
             <span class="upd ok">✓ Up to date</span>
@@ -244,7 +244,48 @@
   </div>
 </div>
 
+{#if showUpdate}
+  <div class="updov" on:click={(e) => { if (e.currentTarget === e.target) showUpdate = false; }}>
+    <div class="updmodal">
+      <div class="updhead">
+        <div>
+          <div class="updtitle">Meridian {upLatest} is available</div>
+          <div class="updsub">You're on {appVersion}</div>
+        </div>
+        <button class="updx" on:click={() => (showUpdate = false)} aria-label="Close">✕</button>
+      </div>
+      {#if upNotes}
+        <div class="updnotes"><div class="updlbl">What's new</div><pre>{upNotes}</pre></div>
+      {/if}
+      <div class="updactions">
+        {#if upDownload}
+          <button class="updbtn primary" on:click={() => BrowserOpenURL(upDownload)}>Download for {upOS}</button>
+        {/if}
+        <button class="updbtn" on:click={() => BrowserOpenURL(upURL)}>All releases ↗</button>
+      </div>
+      {#if upDownload}
+        <p class="updnote">Downloads <span class="mono">{upAsset}</span>. Meridian isn't code-signed, so the first launch needs the one-time step in the README (right-click → Open on macOS; "More info → Run anyway" on Windows).</p>
+      {/if}
+    </div>
+  </div>
+{/if}
+
 <style>
+  .updov { position: fixed; inset: 0; background: rgba(5,8,12,.55); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 200; }
+  .updmodal { background: var(--panel, var(--card)); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 520px; box-shadow: 0 24px 60px rgba(0,0,0,.4); padding: 18px 20px 20px; }
+  .updhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .updtitle { font-size: 1.05rem; font-weight: 650; color: var(--text-strong, var(--text)); }
+  .updsub { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; }
+  .updx { background: none; border: 0; color: var(--text-dim); cursor: pointer; font-size: 1.05rem; line-height: 1; }
+  .updnotes { background: var(--well); border: 1px solid var(--border-soft, var(--border)); border-radius: 9px; padding: 10px 12px; max-height: 300px; overflow: auto; margin-bottom: 14px; }
+  .updlbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); margin-bottom: 6px; }
+  .updnotes pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 0.84rem; color: var(--text); line-height: 1.5; }
+  .updactions { display: flex; gap: 9px; flex-wrap: wrap; }
+  .updbtn { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 15px; font: inherit; font-size: 0.86rem; cursor: pointer; }
+  .updbtn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent, #fff); font-weight: 550; }
+  .updbtn:hover { filter: brightness(1.05); }
+  .updnote { font-size: 0.74rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; line-height: 1.5; }
+  .updnote .mono { font-family: var(--font-mono, monospace); }
   .wb { display: flex; flex-direction: column; height: 100vh; }
   .bar {
     display: flex; align-items: center; gap: 10px; padding: 8px 12px;
