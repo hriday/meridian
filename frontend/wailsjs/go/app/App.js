@@ -114,6 +114,10 @@ export function IPSpaceExportCSV() {
   return window['go']['app']['App']['IPSpaceExportCSV']();
 }
 
+export function IPSpaceExportHandoff(arg1, arg2) {
+  return window['go']['app']['App']['IPSpaceExportHandoff'](arg1, arg2);
+}
+
 export function IPSpaceHistory() {
   return window['go']['app']['App']['IPSpaceHistory']();
 }
