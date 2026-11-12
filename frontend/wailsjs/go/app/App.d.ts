@@ -31,6 +31,8 @@ import {trace} from '../models';
 import {whois} from '../models';
 import {wordlist} from '../models';
 
+export function ADAuditCheckPwned():Promise<Record<string, number>>;
+
 export function ADAuditDetect():Promise<pwaudit.CrackerInfo>;
 
 export function ADAuditParseFile(arg1:string):Promise<Array<pwaudit.Account>>;

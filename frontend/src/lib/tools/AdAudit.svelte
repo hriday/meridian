@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import {
-    ADAuditDetect, ADAuditParseText, ADAuditParseFile, ADAuditRun, ADAuditSave,
+    ADAuditDetect, ADAuditParseText, ADAuditParseFile, ADAuditRun, ADAuditSave, ADAuditCheckPwned,
     WordlistCatalog, WordlistInstalled, WordlistDir, WordlistDownload, PickFile,
   } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
@@ -28,6 +28,20 @@
   let savePath = "";
   let savePass = "";
   let saveMsg = "";
+
+  // Have I Been Pwned (Pwned Passwords, NTLM, k-anonymity) — user-initiated.
+  let pwned: Record<string, number> = {};
+  let pwnedChecked = false, pwnedBusy = false, pwnedErr = "";
+  async function checkPwned() {
+    pwnedErr = ""; pwnedBusy = true;
+    try { pwned = (await ADAuditCheckPwned()) || {}; pwnedChecked = true; }
+    catch (e) { pwnedErr = String(e); }
+    finally { pwnedBusy = false; }
+  }
+  function pwnedOf(r: any): number { return pwned[r.account?.ntHash] || 0; }
+  $: pwnedRows = report
+    ? report.results.filter((r: any) => pwnedOf(r) > 0).sort((a: any, b: any) => pwnedOf(b) - pwnedOf(a))
+    : [];
 
   let downloading = "";
 
@@ -86,7 +100,7 @@
   $: wordlistPath = customWordlist || (selectedWordlist ? (dir ? `${dir}/${selectedWordlist}` : selectedWordlist) : "");
 
   async function run() {
-    runErr = ""; report = null;
+    runErr = ""; report = null; pwned = {}; pwnedChecked = false; pwnedErr = "";
     if (!wordlistPath) { runErr = "Pick a wordlist first (download one, or Browse to your own)."; return; }
     running = true;
     progress = { recovered: 0, total: 0, percent: 0 };
@@ -235,6 +249,34 @@
     </div>
 
     <div class="card span">
+      <div class="line between">
+        <div class="k">Breached passwords (Have I Been Pwned)</div>
+        <button class="go ghost sm" on:click={checkPwned} disabled={pwnedBusy}>{pwnedBusy ? "Checking…" : pwnedChecked ? "Re-check" : "Check against Have I Been Pwned"}</button>
+      </div>
+      <div class="cap">Checks every account's NT hash — <b>including ones that weren't cracked</b> — against the Pwned Passwords breach corpus. Only the first 5 characters of each hash leave your machine (k-anonymity); the password is never sent.</div>
+      {#if pwnedErr}<div class="cap err">{pwnedErr}</div>{/if}
+      {#if pwnedChecked}
+        {#if pwnedRows.length}
+          <div class="verdict bad" style="margin-top:8px">{pwnedRows.length} of {report.total} account{report.total === 1 ? "" : "s"} use a password found in known breaches — change these now.</div>
+          <table class="results">
+            <tbody>
+              {#each pwnedRows as r}
+                <tr>
+                  <td class="mono">{r.account.name || "(unknown)"}</td>
+                  <td>{#if r.cracked}<span class="pill {pillClass(r.strength)}">{r.strength}</span>{:else}<span class="pill soon">not cracked</span>{/if}</td>
+                  <td class="mono pw">{reveal && r.cracked ? r.plaintext : "••••••"}</td>
+                  <td class="dim" style="text-align:right;white-space:nowrap">seen <b style="color:var(--bad,#ff6b6b)">{pwnedOf(r).toLocaleString()}</b>×</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+          <div class="verdict" style="margin-top:8px">None of the audited passwords appear in Pwned Passwords. Good — but that only means they're not in a known breach, not that they're strong.</div>
+        {/if}
+      {/if}
+    </div>
+
+    <div class="card span">
       <div class="k">Save (encrypted)</div>
       <div class="cap">The report contains plaintext passwords — saving encrypts it with a passphrase (no recovery if lost).</div>
       <div class="line">
@@ -271,6 +313,8 @@
   select.field { min-width: 240px; }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 7px 14px; font: inherit; font-size: 0.85rem; cursor: pointer; white-space: nowrap; }
   .go.ghost { background: transparent; color: var(--accent); }
+  .go.sm { padding: 4px 11px; font-size: 0.78rem; }
+  .cap.err { color: var(--bad, #ff6b6b); }
   .go:disabled { opacity: .5; cursor: default; }
   .chip { font-family: var(--font-mono); font-size: 0.76rem; background: var(--well); color: var(--accent); border: 1px solid var(--field-border); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
   .chip:disabled { opacity: .6; }
