@@ -7,8 +7,7 @@ cask "meridian" do
   version "1.4.2"
   sha256 "89f530ae408c17fc23042d57fec7b5b80fe6787b0e4cd9f9e3a8befa6494d4a6"
 
-  url "https://github.com/hriday/meridian/releases/download/v#{version}/Meridian-v#{version}-macos-universal.dmg",
-      verified: "github.com/hriday/meridian/"
+  url "https://github.com/hriday/meridian/releases/download/v#{version}/Meridian-v#{version}-macos-universal.dmg"
   name "Meridian"
   desc "Cross-platform network engineer's toolkit"
   homepage "https://github.com/hriday/meridian"
