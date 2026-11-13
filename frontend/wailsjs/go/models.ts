@@ -2366,6 +2366,25 @@ export namespace ping {
 
 }
 
+export namespace ptrsweep {
+	
+	export class Entry {
+	    ip: string;
+	    names: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Entry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.names = source["names"];
+	    }
+	}
+
+}
+
 export namespace pwaudit {
 	
 	export class Account {

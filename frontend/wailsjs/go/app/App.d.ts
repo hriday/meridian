@@ -28,6 +28,7 @@ import {lookup} from '../models';
 import {macvendor} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
+import {ptrsweep} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
 import {wordlist} from '../models';
@@ -209,6 +210,8 @@ export function NetflowStart(arg1:number):Promise<void>;
 export function NetflowStop():Promise<void>;
 
 export function NetflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
+
+export function PTRSweep(arg1:string):Promise<Array<ptrsweep.Entry>>;
 
 export function PickFile(arg1:string):Promise<string>;
 
