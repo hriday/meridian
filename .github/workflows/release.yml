@@ -28,6 +28,10 @@ jobs:
           - os: ubuntu-latest
             platform: linux/amd64
     runs-on: ${{ matrix.os }}
+    # Signing/notarization steps below run only once the macOS signing secrets
+    # exist, so releases keep working unsigned until they're added.
+    env:
+      MACOS_SIGN: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -74,6 +78,29 @@ jobs:
           go build -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}" \
             -o build/bin/meridian.app/Contents/MacOS/meridian-cli ./cmd/meridian-cli
 
+      - name: Import signing certificate (macOS)
+        if: runner.os == 'macOS' && env.MACOS_SIGN == 'true'
+        uses: apple-actions/import-codesign-certs@63fff01cd422d4b7b855d40ca1e9d34d2de9427d # v3
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+
+      - name: Codesign the app (macOS)
+        if: runner.os == 'macOS' && env.MACOS_SIGN == 'true'
+        env:
+          IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          set -euo pipefail
+          APP=build/bin/meridian.app
+          # Sign inner-out: the embedded CLI first, then the bundle, both with a
+          # secure timestamp and the hardened runtime (required for notarization).
+          codesign --force --timestamp --options runtime \
+            --sign "$IDENTITY" "$APP/Contents/MacOS/meridian-cli"
+          codesign --force --timestamp --options runtime \
+            --entitlements build/darwin/entitlements.plist \
+            --sign "$IDENTITY" "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
       - name: Package macOS DMG
         if: runner.os == 'macOS'
         run: |
@@ -86,6 +113,25 @@ jobs:
           ln -s /Applications dmg-staging/Applications
           hdiutil create -volname "Meridian" -srcfolder dmg-staging \
             -ov -format UDZO "dist/Meridian-${VERSION}-macos-universal.dmg"
+
+      - name: Notarize and staple the DMG (macOS)
+        if: runner.os == 'macOS' && env.MACOS_SIGN == 'true'
+        env:
+          APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+          TEAM_ID: ${{ secrets.MACOS_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          DMG="dist/Meridian-${VERSION}-macos-universal.dmg"
+          # Submit to Apple's notary service and block until it returns a verdict.
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" \
+            --password "$NOTARY_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait
+          # Staple the ticket so Gatekeeper passes offline, on first launch.
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
 
       - name: Package Windows exe
         if: runner.os == 'Windows'
