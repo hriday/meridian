@@ -173,6 +173,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTraps(args[1:], stdout, stderr)
 	case "netflow":
 		return runNetflow(args[1:], stdout, stderr)
+	case "tftp":
+		return runTFTP(args[1:], stdout, stderr)
 	case "emailauth":
 		return runEmailAuth(args[1:], stdout, stderr)
 	case "cipherscan":
