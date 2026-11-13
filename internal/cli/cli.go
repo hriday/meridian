@@ -110,6 +110,7 @@ usage:
   meridian-cli syslog [--port 514] [--json]    (receiver; Ctrl-C to stop)
   meridian-cli traps [--port 162] [--json]     (SNMP trap receiver; Ctrl-C to stop)
   meridian-cli netflow [--port 2055] [--json]  (NetFlow v5 receiver; Ctrl-C to stop)
+  meridian-cli emailauth <domain> [--selectors a,b,c] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -206,6 +207,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTraps(args[1:], stdout, stderr)
 	case "netflow":
 		return runNetflow(args[1:], stdout, stderr)
+	case "emailauth":
+		return runEmailAuth(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0

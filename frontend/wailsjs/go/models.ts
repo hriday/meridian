@@ -980,6 +980,107 @@ export namespace dnsx {
 
 }
 
+export namespace emailauth {
+	
+	export class DKIMResult {
+	    selector: string;
+	    found: boolean;
+	    record: string;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DKIMResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.selector = source["selector"];
+	        this.found = source["found"];
+	        this.record = source["record"];
+	        this.note = source["note"];
+	    }
+	}
+	export class DMARCResult {
+	    status: string;
+	    record: string;
+	    policy: string;
+	    pct: string;
+	    rua: string;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DMARCResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.record = source["record"];
+	        this.policy = source["policy"];
+	        this.pct = source["pct"];
+	        this.rua = source["rua"];
+	        this.note = source["note"];
+	    }
+	}
+	export class SPFResult {
+	    status: string;
+	    record: string;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SPFResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.record = source["record"];
+	        this.note = source["note"];
+	    }
+	}
+	export class Report {
+	    domain: string;
+	    spf: SPFResult;
+	    dmarc: DMARCResult;
+	    dkim: DKIMResult[];
+	    dkimFound: boolean;
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.domain = source["domain"];
+	        this.spf = this.convertValues(source["spf"], SPFResult);
+	        this.dmarc = this.convertValues(source["dmarc"], DMARCResult);
+	        this.dkim = this.convertValues(source["dkim"], DKIMResult);
+	        this.dkimFound = source["dkimFound"];
+	        this.summary = source["summary"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace fwconfig {
 	
 	export class Address {
