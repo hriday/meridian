@@ -110,7 +110,9 @@
     --accent-ring: rgba(51, 255, 102, 0.22);
     --btn: #0d2e16;
     --btn-border: #1f7a3c;
-    --on-accent: #8affb0;
+    /* Dark text on the bright-green accent — a light on-accent was invisible
+       (light-on-light) on every primary button in terminal mode. */
+    --on-accent: #021407;
     --ghost-bg: #0a2110;
     --ghost-border: #155a2c;
     --warn-bg: #1a1400;
