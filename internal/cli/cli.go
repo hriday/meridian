@@ -112,6 +112,7 @@ usage:
   meridian-cli netflow [--port 2055] [--json]  (NetFlow v5 receiver; Ctrl-C to stop)
   meridian-cli emailauth <domain> [--selectors a,b,c] [--json]
   meridian-cli cipherscan <host[:port]> [--json]
+  meridian-cli ptrsweep <cidr> [--concurrency 64] [--json]
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -212,6 +213,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runEmailAuth(args[1:], stdout, stderr)
 	case "cipherscan":
 		return runCipherScan(args[1:], stdout, stderr)
+	case "ptrsweep":
+		return runPTRSweep(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, usage)
 		return 0
