@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/hriday/meridian/internal/certexpiry"
 	"github.com/hriday/meridian/internal/ctlog"
 	"github.com/hriday/meridian/internal/cve"
+	"github.com/hriday/meridian/internal/emailauth"
 	"github.com/hriday/meridian/internal/hashid"
 	"github.com/hriday/meridian/internal/secheaders"
 	"github.com/hriday/meridian/internal/threatintel"
@@ -310,6 +312,70 @@ func printSubdomains(stdout io.Writer, subs []ctlog.Subdomain) {
 		}
 		fmt.Fprintf(stdout, "%-40s %3d certs  (%s → %s)\n", name, s.Certs, s.FirstSeen, s.LastSeen)
 	}
+}
+
+// ---- emailauth -------------------------------------------------------------
+
+func runEmailAuth(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("emailauth", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	selectors := fs.String("selectors", "", "comma-separated DKIM selectors (default: a built-in set)")
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "emailauth needs exactly one domain\n%s", usage)
+		return 2
+	}
+	var sels []string
+	for _, s := range strings.Split(*selectors, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			sels = append(sels, s)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	lookup := func(ctx context.Context, name string) ([]string, error) {
+		return net.DefaultResolver.LookupTXT(ctx, name)
+	}
+	rep := emailauth.Check(ctx, lookup, pos[0], sels)
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printEmailAuth(stdout, rep)
+	return 0
+}
+
+func printEmailAuth(stdout io.Writer, r emailauth.Report) {
+	reportRow(stdout, "Domain", r.Domain)
+	reportRow(stdout, "Summary", r.Summary)
+	fmt.Fprintln(stdout)
+	fmt.Fprintf(stdout, "SPF   [%-4s] %s\n", strings.ToUpper(string(r.SPF.Status)), r.SPF.Note)
+	if r.SPF.Record != "" {
+		fmt.Fprintf(stdout, "        %s\n", r.SPF.Record)
+	}
+	fmt.Fprintf(stdout, "DMARC [%-4s] %s\n", strings.ToUpper(string(r.DMARC.Status)), r.DMARC.Note)
+	fmt.Fprintf(stdout, "DKIM  [%-4s] ", upperBool(r.DKIMFound))
+	if r.DKIMFound {
+		var found []string
+		for _, d := range r.DKIM {
+			if d.Found {
+				found = append(found, d.Selector)
+			}
+		}
+		fmt.Fprintf(stdout, "selectors with a key: %s\n", strings.Join(found, ", "))
+	} else {
+		fmt.Fprintf(stdout, "no key found among %d probed selectors\n", len(r.DKIM))
+	}
+}
+
+func upperBool(b bool) string {
+	if b {
+		return "PASS"
+	}
+	return "WARN"
 }
 
 // ---- small shared formatting helpers ---------------------------------------

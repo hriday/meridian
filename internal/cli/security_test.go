@@ -8,6 +8,7 @@ import (
 	"github.com/hriday/meridian/internal/certexpiry"
 	"github.com/hriday/meridian/internal/ctlog"
 	"github.com/hriday/meridian/internal/cve"
+	"github.com/hriday/meridian/internal/emailauth"
 	"github.com/hriday/meridian/internal/hashid"
 	"github.com/hriday/meridian/internal/secheaders"
 	"github.com/hriday/meridian/internal/threatintel"
@@ -116,6 +117,23 @@ func TestPrintSubdomains(t *testing.T) {
 	}
 }
 
+func TestPrintEmailAuth(t *testing.T) {
+	var buf bytes.Buffer
+	printEmailAuth(&buf, emailauth.Report{
+		Domain: "example.com", Summary: "SPF pass · DMARC pass · DKIM found",
+		SPF:   emailauth.SPFResult{Status: emailauth.StatusPass, Record: "v=spf1 -all", Note: "hard fail"},
+		DMARC: emailauth.DMARCResult{Status: emailauth.StatusPass, Policy: "reject", Note: "p=reject"},
+		DKIM:  []emailauth.DKIMResult{{Selector: "google", Found: true}, {Selector: "s1", Found: false}},
+		DKIMFound: true,
+	})
+	out := buf.String()
+	for _, want := range []string{"example.com", "SPF", "PASS", "v=spf1 -all", "DMARC", "DKIM", "google"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("printEmailAuth missing %q\n%s", want, out)
+		}
+	}
+}
+
 // Each command exits 2 (usage error) when given no positional argument.
 func TestSecurityCommandsMissingArg(t *testing.T) {
 	cases := map[string]func([]string) int{
@@ -125,6 +143,7 @@ func TestSecurityCommandsMissingArg(t *testing.T) {
 		"certexpiry":  func(a []string) int { var o, e bytes.Buffer; return runCertExpiry(a, &o, &e) },
 		"sechdr":      func(a []string) int { var o, e bytes.Buffer; return runSecHeaders(a, &o, &e) },
 		"subdomains":  func(a []string) int { var o, e bytes.Buffer; return runSubdomains(a, &o, &e) },
+		"emailauth":   func(a []string) int { var o, e bytes.Buffer; return runEmailAuth(a, &o, &e) },
 	}
 	for name, fn := range cases {
 		if code := fn(nil); code != 2 {
