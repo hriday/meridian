@@ -98,6 +98,46 @@ The cask installs the universal `.dmg` from the latest release. Because the app
 isn't code-signed yet, follow the macOS first-launch steps above (the cask
 repeats them). Upgrade with `brew upgrade --cask meridian`.
 
+## Command line (`meridian-cli`)
+
+Every tool in Meridian is also a command-line subcommand, sharing the exact same
+engine as the desktop app — so anything you can do in the GUI, you can script,
+pipe, or run headless over SSH. Most commands take `--json` for machine-readable
+output; the streaming ones (receivers, live monitors) run until **Ctrl-C**.
+
+**Get it:**
+
+- **macOS** — the CLI ships *inside* the app. Open Meridian and click
+  **"Install command-line tool"** in the sidebar footer; it symlinks
+  `meridian-cli` onto your `PATH`.
+- **Any platform** — build it from the repo:
+  ```bash
+  go build -o ~/.local/bin/meridian-cli ./cmd/meridian-cli   # or: go run ./cmd/meridian-cli <command>
+  ```
+
+**Discover the commands:**
+
+```bash
+meridian-cli help              # every command, grouped by area (Internet, Security, SNMP, …)
+meridian-cli <command>         # run with no/bad args to see that command's usage
+```
+
+**Examples:**
+
+```bash
+meridian-cli lookup 8.8.8.8                   # IP / ASN intelligence
+meridian-cli emailauth stripe.com             # SPF / DKIM / DMARC
+meridian-cli cipherscan github.com            # TLS protocols + ciphers, graded
+meridian-cli certexpiry github.com google.com # bulk cert days-to-expiry
+meridian-cli ptrsweep 10.0.0.0/24             # reverse-DNS sweep
+meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
+meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
+```
+
+Receivers on privileged ports (`syslog` 514, `traps` 162) need `sudo` or a high
+`--port`. The SNMP community audit (`snmpbrute`) requires an explicit
+`--authorized` flag, and community strings are never printed or logged.
+
 ## Build from source
 
 ### Prerequisites
