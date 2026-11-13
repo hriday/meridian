@@ -18,6 +18,10 @@ OUT="$DIST/Meridian-${VERSION}-linux-x86_64.AppImage"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$DIST"
 cp "$BIN" "$APPDIR/usr/bin/meridian"
+# Bundle the command-line tool beside the GUI binary (if it was built), so the
+# app's "Install command-line tool" action can copy it onto the user's PATH.
+CLI_BIN="$ROOT/build/bin/meridian-cli"
+[ -f "$CLI_BIN" ] && cp "$CLI_BIN" "$APPDIR/usr/bin/meridian-cli"
 cp "$ICON" "$APPDIR/meridian.png"
 cp "$DESKTOP" "$APPDIR/meridian.desktop"
 ln -sf usr/bin/meridian "$APPDIR/AppRun"

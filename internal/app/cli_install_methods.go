@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -29,9 +30,12 @@ type CLIInfo struct {
 	Supported bool   `json:"supported"` // GUI install works on this OS
 }
 
+// guiInstallSupported is the set of OSes where the one-click installer works.
+func guiInstallSupported() bool { return runtime.GOOS == "darwin" || runtime.GOOS == "linux" }
+
 // CLIInfo reports the state of the bundled command-line tool.
 func (a *App) CLIInfo() CLIInfo {
-	info := CLIInfo{OS: runtime.GOOS, Supported: runtime.GOOS == "darwin"}
+	info := CLIInfo{OS: runtime.GOOS, Supported: guiInstallSupported()}
 	exeDir, err := appExeDir()
 	if err != nil {
 		return info
@@ -45,17 +49,24 @@ func (a *App) CLIInfo() CLIInfo {
 
 	dir := cliLinkDir()
 	info.LinkPath = filepath.Join(dir, "meridian-cli")
-	info.Installed = isLinkedTo(info.LinkPath, bin)
+	// macOS links (its .app is at a stable path); Linux copies (the AppImage
+	// mount is ephemeral), so "installed" means a regular file is present.
+	if runtime.GOOS == "darwin" {
+		info.Installed = isLinkedTo(info.LinkPath, bin)
+	} else {
+		info.Installed = isRegularFile(info.LinkPath)
+	}
 	info.OnPath = dirOnPATH(dir, os.Getenv("PATH"))
 	return info
 }
 
-// InstallCLI symlinks the bundled meridian-cli into a PATH directory so it can
-// be run as `meridian-cli` from any terminal. macOS only for now (its .app sits
-// at a stable path, so a symlink stays valid); other platforms return guidance.
+// InstallCLI puts the bundled meridian-cli on the user's PATH so it runs as
+// `meridian-cli` from any terminal. macOS symlinks the in-bundle binary (the
+// .app sits at a stable path); Linux copies it out (an AppImage mounts at an
+// ephemeral path, so a symlink would break on exit). Windows returns guidance.
 func (a *App) InstallCLI() (CLIInfo, error) {
-	if runtime.GOOS != "darwin" {
-		return a.CLIInfo(), fmt.Errorf("the one-click install is macOS-only for now; on %s add the folder holding meridian-cli to your PATH", runtime.GOOS)
+	if !guiInstallSupported() {
+		return a.CLIInfo(), fmt.Errorf("one-click install isn't available on %s yet; add the folder holding meridian-cli to your PATH", runtime.GOOS)
 	}
 	exeDir, err := appExeDir()
 	if err != nil {
@@ -65,10 +76,54 @@ func (a *App) InstallCLI() (CLIInfo, error) {
 	if !ok {
 		return a.CLIInfo(), fmt.Errorf("this build doesn't bundle the command-line tool")
 	}
-	if _, err := linkCLI(bin, cliLinkDir()); err != nil {
+	dir := cliLinkDir()
+	if runtime.GOOS == "darwin" {
+		_, err = linkCLI(bin, dir)
+	} else {
+		_, err = installCopy(bin, dir)
+	}
+	if err != nil {
 		return a.CLIInfo(), err
 	}
 	return a.CLIInfo(), nil
+}
+
+// installCopy copies bin to <dir>/meridian-cli (executable), via a temp file and
+// rename so a concurrent run never sees a half-written binary.
+func installCopy(bin, dir string) (string, error) {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("couldn't create %s: %w", dir, err)
+	}
+	dst := filepath.Join(dir, "meridian-cli")
+	in, err := os.Open(bin)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+	tmp := dst + ".tmp"
+	out, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		os.Remove(tmp)
+		return "", err
+	}
+	if err := out.Close(); err != nil {
+		os.Remove(tmp)
+		return "", err
+	}
+	if err := os.Rename(tmp, dst); err != nil {
+		os.Remove(tmp)
+		return "", err
+	}
+	return dst, nil
+}
+
+func isRegularFile(p string) bool {
+	fi, err := os.Lstat(p)
+	return err == nil && fi.Mode().IsRegular()
 }
 
 // appExeDir is the directory of the running executable, symlinks resolved. On
