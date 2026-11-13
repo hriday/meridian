@@ -6,7 +6,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/hriday/meridian/internal/cli"
 )
+
+// CLICommands returns the full command-line reference, grouped by area — the
+// same catalog that drives `meridian-cli help`, so the GUI reference page and
+// the CLI can't drift apart.
+func (a *App) CLICommands() []cli.CommandGroup {
+	return cli.Catalog()
+}
 
 // CLIInfo describes the bundled meridian-cli: whether this build ships it, and
 // whether it's been linked onto the user's PATH.
