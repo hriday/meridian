@@ -64,55 +64,85 @@ var (
 	dnsQuery = dnsx.Query
 )
 
-const usage = `meridian-cli — network info toolkit
+// usage is the short message shown on a usage error or with no command — it
+// names the problem and points at the full list rather than dumping it.
+const usage = `meridian-cli — Meridian's network toolkit on the command line
 
-usage:
-  meridian-cli classify <value> [--json]
-  meridian-cli subnet <cidr> [--split <prefixlen>] [--json]
-  meridian-cli lookup <ip|asn> [--json]
-  meridian-cli ntp <server> [--json]
-  meridian-cli dns <name> [--type A] [--server <ip>] [--json]
-  meridian-cli trace <host> [--6] [--json]
-  meridian-cli ping <host> [--count 5] [--interval 500ms] [--timeout 1s] [--json]
-  meridian-cli pingsweep <cidr> [--ports 22,80,443] [--timeout 1s] [--concurrency 64] [--json]
-  meridian-cli portscan <host> <ports|--common> [--timeout 1s] [--concurrency 128] [--json]
-  meridian-cli wol <mac> [--bcast 255.255.255.255] [--port 9]
-  meridian-cli macvendor <mac|oui> [--json]
-  meridian-cli fwanalyze [<config-file>] [--json]   (reads stdin if no file)
-  meridian-cli webanalyze [<nginx -T file>] [--server nginx] [--json]   (reads stdin if no file)
-  meridian-cli interfaces [--json]
-  meridian-cli nc <host> <port> [--udp] [--tls] [--insecure] [--listen]
-  meridian-cli bgp <prefix|ip> [--json]
-  meridian-cli tls <host[:port]> [--timeout 8s] [--json]
-  meridian-cli http <url> [--timeout 15s] [--json]
-  meridian-cli whois <domain|ip|asn> [--json]
-  meridian-cli blocklist <ip> [--resolver <ip>] [--timeout 8s] [--json]
-  meridian-cli dnsaudit <domain> [--resolver <ip>] [--timeout 8s] [--json]
-  meridian-cli adaudit --dump <file> [--wordlist <path>] [--rules <path>] [--show] [--json]
-  meridian-cli ipspace list|export [--file <path>] [--passphrase <pw>]
-  meridian-cli sechdr <url> [--json]
-  meridian-cli subdomains <domain> [--json]
-  meridian-cli certexpiry <host[:port]>... [--json]
-  meridian-cli cve <id|keyword> [--json]
-  meridian-cli hashid <hash> [--json]
-  meridian-cli threatintel <ip>... [--json]
-  meridian-cli ciscopw [<config-file>] [--decode <type7>] [--json]   (reads stdin if no file)
-  meridian-cli tfexposure [<hcl-or-plan-file>] [--source hcl|plan] [--json]   (reads stdin if no file)
-  meridian-cli cfgdiff <old-file> <new-file> [--json]
-  meridian-cli breaches <email> [--json]   (or: breaches --latest)
-  meridian-cli snmpsweep <cidr> [--community public] [--timeout 2s] [--concurrency 64] [--json]
-  meridian-cli devhealth <device> [--community public] [--timeout 2s] [--json]
-  meridian-cli swport <device> [--community public] [--timeout 2s] [--json]
-  meridian-cli mib <device> [--root <oid>] [--max 500] [--community public] [--json]
-  meridian-cli snmpbrute <device> --authorized [--communities a,b,c | --list <file>] [--json]
-  meridian-cli pingmon <host> [--interval 1s] [--timeout 1s] [--json]   (Ctrl-C to stop)
-  meridian-cli speedtest <iperf3-host> [--port 5201] [--dir download|upload|bidir] [--duration 10s] [--udp] [--json]
-  meridian-cli syslog [--port 514] [--json]    (receiver; Ctrl-C to stop)
-  meridian-cli traps [--port 162] [--json]     (SNMP trap receiver; Ctrl-C to stop)
-  meridian-cli netflow [--port 2055] [--json]  (NetFlow v5 receiver; Ctrl-C to stop)
-  meridian-cli emailauth <domain> [--selectors a,b,c] [--json]
-  meridian-cli cipherscan <host[:port]> [--json]
-  meridian-cli ptrsweep <cidr> [--concurrency 64] [--json]
+  meridian-cli <command> [args] [--json]
+
+Run 'meridian-cli help' for all commands grouped by area, or
+'meridian-cli <command>' with no/bad args to see that command's usage.
+Most commands accept --json for machine-readable output.
+`
+
+// fullHelp is the complete, grouped command reference shown by 'help'/--help.
+// Groups mirror the desktop app's tool groups so the two surfaces line up.
+const fullHelp = `meridian-cli — Meridian's network toolkit on the command line
+
+Every command is a thin wrapper over the same engine the desktop app uses.
+Most accept --json. Streaming commands run until Ctrl-C.
+
+Internet
+  lookup <ip|asn> [--json]                          IP / ASN intelligence
+  trace <host> [--6] [--json]                       traceroute with AS lookups
+  bgp <prefix|ip> [--json]                          BGP looking glass
+  tls <host[:port]> [--timeout 8s] [--json]         inspect a server's certificate
+  cipherscan <host[:port]> [--json]                 TLS versions + cipher suites, graded
+  http <url> [--timeout 15s] [--json]               HTTP(S) check
+  sechdr <url> [--json]                             security headers (OWASP-mapped)
+  whois <domain|ip|asn> [--json]                    whois
+  subdomains <domain> [--json]                      subdomains via Certificate Transparency
+  blocklist <ip> [--resolver <ip>] [--json]         DNS blocklist (DNSBL) check
+  dnsaudit <domain> [--resolver <ip>] [--json]      DNS posture audit (SPF/DMARC/DNSSEC)
+  emailauth <domain> [--selectors a,b,c] [--json]   SPF / DKIM / DMARC
+  certexpiry <host[:port]>... [--json]              bulk TLS cert days-to-expiry
+
+Addressing
+  subnet <cidr> [--split <prefixlen>] [--json]      subnet calculator
+  classify <value> [--json]                         classify an address/value
+  ipspace list|export [--file <path>] [--passphrase <pw>]   IP-space inventory
+
+Local / environment
+  ntp <server> [--json]                             query an NTP server
+  dns <name> [--type A] [--server <ip>] [--json]    DNS lookup
+  interfaces [--json]                               local network interfaces
+
+Local network
+  ping <host> [--count 5] [--interval 500ms] [--json]            ping
+  pingmon <host> [--interval 1s] [--json]                        live ping (Ctrl-C)
+  pingsweep <cidr> [--ports 22,80,443] [--json]                  ping/TCP sweep
+  portscan <host> <ports|--common> [--json]                      port scan
+  ptrsweep <cidr> [--concurrency 64] [--json]                    reverse-DNS sweep
+  wol <mac> [--bcast 255.255.255.255] [--port 9]                 wake-on-LAN
+  macvendor <mac|oui> [--json]                                   MAC vendor lookup
+  speedtest <iperf3-host> [--dir download|upload|bidir] [--json] throughput test
+
+SNMP & monitoring
+  snmpsweep <cidr> [--community public] [--json]    find SNMP responders
+  devhealth <device> [--community public] [--json]  device health snapshot
+  swport <device> [--community public] [--json]     MAC-to-port table
+  mib <device> [--root <oid>] [--max 500] [--json]  SNMP walk
+
+Collectors (receivers; Ctrl-C to stop)
+  syslog [--port 514] [--json]                      syslog receiver
+  traps [--port 162] [--json]                       SNMP trap receiver
+  netflow [--port 2055] [--json]                    NetFlow v5 receiver
+
+Security
+  nc <host> <port> [--udp] [--tls] [--listen]       netcat
+  adaudit --dump <file> [--wordlist <path>] [--json]   AD password audit
+  ciscopw [<config-file>] [--decode <type7>] [--json]  Cisco password analysis
+  hashid <hash> [--json]                            identify a hash type
+  snmpbrute <device> --authorized [--communities a,b,c]   SNMP community audit
+  breaches <email> [--json]   (or --latest)         breach lookup
+  cve <id|keyword> [--json]                         CVE lookup (NVD)
+  threatintel <ip>... [--json]                      botnet C2 check (abuse.ch)
+
+Config insight
+  fwanalyze [<config-file>] [--json]                firewall config analysis (stdin ok)
+  webanalyze [<file>] [--server nginx] [--json]     web-server config analysis (stdin ok)
+  tfexposure [<file>] [--source hcl|plan] [--json]  Terraform exposure scan (stdin ok)
+  cfgdiff <old-file> <new-file> [--json]            section-aware config diff
 `
 
 // Run dispatches args (without the program name), writing to stdout/stderr,
@@ -216,7 +246,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "ptrsweep":
 		return runPTRSweep(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
-		fmt.Fprint(stdout, usage)
+		fmt.Fprint(stdout, fullHelp)
 		return 0
 	default:
 		fmt.Fprintf(stderr, "unknown command %q\n%s", args[0], usage)
