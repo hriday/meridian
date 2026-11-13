@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"github.com/hriday/meridian/internal/hashid"
 	"github.com/hriday/meridian/internal/secheaders"
 	"github.com/hriday/meridian/internal/threatintel"
+	"github.com/hriday/meridian/internal/tlsscan"
 )
 
 // ---- cve -------------------------------------------------------------------
@@ -376,6 +378,76 @@ func upperBool(b bool) string {
 		return "PASS"
 	}
 	return "WARN"
+}
+
+// ---- cipherscan ------------------------------------------------------------
+
+func runCipherScan(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("cipherscan", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 1 {
+		fmt.Fprintf(stderr, "cipherscan needs exactly one host\n%s", usage)
+		return 2
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	rep, err := tlsscan.Scan(ctx, tlsDial, pos[0])
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, rep)
+	}
+	printCipherScan(stdout, rep)
+	return 0
+}
+
+// tlsDial is the CLI's real handshaker (mirrors the app's).
+func tlsDial(ctx context.Context, hostport string, cfg *tls.Config) (tls.ConnectionState, error) {
+	d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 6 * time.Second}, Config: cfg}
+	conn, err := d.DialContext(ctx, "tcp", hostport)
+	if err != nil {
+		return tls.ConnectionState{}, err
+	}
+	defer conn.Close()
+	return conn.(*tls.Conn).ConnectionState(), nil
+}
+
+func printCipherScan(stdout io.Writer, r tlsscan.Report) {
+	reportRow(stdout, "Host", r.Host)
+	reportRow(stdout, "Grade", r.Grade)
+	fmt.Fprintln(stdout, "\nProtocols:")
+	for _, p := range r.Protocols {
+		mark := "✗"
+		if p.Supported {
+			mark = "✓"
+		}
+		tag := ""
+		if p.Supported && p.Legacy {
+			tag = "  (legacy — disable)"
+		}
+		fmt.Fprintf(stdout, "  %s %s%s\n", mark, p.Name, tag)
+	}
+	fmt.Fprintln(stdout, "\nCipher suites:")
+	for _, c := range r.Ciphers {
+		sec := "secure"
+		if !c.Secure {
+			sec = "WEAK"
+		}
+		fmt.Fprintf(stdout, "  [%-6s] %-10s %s\n", sec, c.Version, c.Name)
+	}
+	if len(r.Findings) > 0 {
+		fmt.Fprintln(stdout, "\nFindings:")
+		for _, f := range r.Findings {
+			fmt.Fprintf(stdout, "  • %s\n", f)
+		}
+	}
 }
 
 // ---- small shared formatting helpers ---------------------------------------

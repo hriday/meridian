@@ -470,6 +470,10 @@ export function TLSCheck(arg1) {
   return window['go']['app']['App']['TLSCheck'](arg1);
 }
 
+export function TLSScan(arg1) {
+  return window['go']['app']['App']['TLSScan'](arg1);
+}
+
 export function TftpList() {
   return window['go']['app']['App']['TftpList']();
 }

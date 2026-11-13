@@ -35,6 +35,7 @@ import {secheaders} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tlscheck} from '../models';
+import {tlsscan} from '../models';
 import {threatintel} from '../models';
 import {trace} from '../models';
 import {whois} from '../models';
@@ -272,6 +273,8 @@ export function SyslogStart(arg1:number):Promise<void>;
 export function SyslogStop():Promise<void>;
 
 export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
+
+export function TLSScan(arg1:string):Promise<tlsscan.Report>;
 
 export function TftpList():Promise<app.TftpView>;
 

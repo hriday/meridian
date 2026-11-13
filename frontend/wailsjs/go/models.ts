@@ -3111,6 +3111,87 @@ export namespace tlscheck {
 
 }
 
+export namespace tlsscan {
+	
+	export class Cipher {
+	    id: number;
+	    name: string;
+	    secure: boolean;
+	    version: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Cipher(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.secure = source["secure"];
+	        this.version = source["version"];
+	    }
+	}
+	export class Protocol {
+	    name: string;
+	    version: number;
+	    supported: boolean;
+	    legacy: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Protocol(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.supported = source["supported"];
+	        this.legacy = source["legacy"];
+	    }
+	}
+	export class Report {
+	    host: string;
+	    protocols: Protocol[];
+	    ciphers: Cipher[];
+	    grade: string;
+	    findings: string[];
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.protocols = this.convertValues(source["protocols"], Protocol);
+	        this.ciphers = this.convertValues(source["ciphers"], Cipher);
+	        this.grade = source["grade"];
+	        this.findings = source["findings"];
+	        this.summary = source["summary"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace trace {
 	
 	export class Hop {

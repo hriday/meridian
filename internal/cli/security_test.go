@@ -12,6 +12,7 @@ import (
 	"github.com/hriday/meridian/internal/hashid"
 	"github.com/hriday/meridian/internal/secheaders"
 	"github.com/hriday/meridian/internal/threatintel"
+	"github.com/hriday/meridian/internal/tlsscan"
 )
 
 func TestPrintCVE(t *testing.T) {
@@ -134,6 +135,28 @@ func TestPrintEmailAuth(t *testing.T) {
 	}
 }
 
+func TestPrintCipherScan(t *testing.T) {
+	var buf bytes.Buffer
+	printCipherScan(&buf, tlsscan.Report{
+		Host: "example.com:443", Grade: "F",
+		Protocols: []tlsscan.Protocol{
+			{Name: "TLS 1.0", Supported: true, Legacy: true},
+			{Name: "TLS 1.3", Supported: true},
+		},
+		Ciphers: []tlsscan.Cipher{
+			{Name: "TLS_RSA_WITH_RC4_128_SHA", Secure: false, Version: "TLS 1.2"},
+			{Name: "TLS_AES_128_GCM_SHA256", Secure: true, Version: "TLS 1.3"},
+		},
+		Findings: []string{"TLS 1.0 is enabled", "Weak cipher negotiable: TLS_RSA_WITH_RC4_128_SHA"},
+	})
+	out := buf.String()
+	for _, want := range []string{"example.com:443", "Grade", "F", "TLS 1.0", "legacy", "WEAK", "RC4", "TLS 1.3", "Findings"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("printCipherScan missing %q\n%s", want, out)
+		}
+	}
+}
+
 // Each command exits 2 (usage error) when given no positional argument.
 func TestSecurityCommandsMissingArg(t *testing.T) {
 	cases := map[string]func([]string) int{
@@ -144,6 +167,7 @@ func TestSecurityCommandsMissingArg(t *testing.T) {
 		"sechdr":      func(a []string) int { var o, e bytes.Buffer; return runSecHeaders(a, &o, &e) },
 		"subdomains":  func(a []string) int { var o, e bytes.Buffer; return runSubdomains(a, &o, &e) },
 		"emailauth":   func(a []string) int { var o, e bytes.Buffer; return runEmailAuth(a, &o, &e) },
+		"cipherscan":  func(a []string) int { var o, e bytes.Buffer; return runCipherScan(a, &o, &e) },
 	}
 	for name, fn := range cases {
 		if code := fn(nil); code != 2 {
