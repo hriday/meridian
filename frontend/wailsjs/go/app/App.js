@@ -62,6 +62,10 @@ export function Blocklist(arg1, arg2) {
   return window['go']['app']['App']['Blocklist'](arg1, arg2);
 }
 
+export function CLICommands() {
+  return window['go']['app']['App']['CLICommands']();
+}
+
 export function CLIInfo() {
   return window['go']['app']['App']['CLIInfo']();
 }

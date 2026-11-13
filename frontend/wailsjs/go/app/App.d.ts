@@ -8,6 +8,7 @@ import {webconf} from '../models';
 import {app} from '../models';
 import {atlas} from '../models';
 import {dnsbl} from '../models';
+import {cli} from '../models';
 import {ctlog} from '../models';
 import {cve} from '../models';
 import {certexpiry} from '../models';
@@ -70,6 +71,8 @@ export function AtlasPing(arg1:string,arg2:number):Promise<atlas.Report>;
 export function AtlasTrace(arg1:string,arg2:number):Promise<atlas.TraceReport>;
 
 export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
+
+export function CLICommands():Promise<Array<cli.CommandGroup>>;
 
 export function CLIInfo():Promise<app.CLIInfo>;
 
