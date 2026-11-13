@@ -280,7 +280,7 @@
             {#if cli.installed}
               <span class="upd ok" title={cli.path}>✓ CLI installed</span>
             {:else if cli.supported}
-              <button class="upd link" on:click={installCLI} disabled={cliBusy} title="Symlink meridian-cli onto your PATH">
+              <button class="upd link" on:click={installCLI} disabled={cliBusy} title="Add meridian-cli to your PATH">
                 {cliBusy ? "Installing…" : "Install command-line tool"}
               </button>
             {/if}

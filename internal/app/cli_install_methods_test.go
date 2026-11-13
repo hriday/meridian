@@ -56,6 +56,39 @@ func TestLinkCLIAndIsLinkedTo(t *testing.T) {
 	}
 }
 
+func TestInstallCopy(t *testing.T) {
+	src := t.TempDir()
+	bin := filepath.Join(src, "meridian-cli")
+	if err := os.WriteFile(bin, []byte("binary-bytes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(t.TempDir(), "bin") // doesn't exist yet
+	dst, err := installCopy(bin, dir)
+	if err != nil {
+		t.Fatalf("installCopy: %v", err)
+	}
+	b, err := os.ReadFile(dst)
+	if err != nil || string(b) != "binary-bytes" {
+		t.Errorf("copied content wrong: %q err=%v", b, err)
+	}
+	if !isRegularFile(dst) {
+		t.Error("destination should be a regular file (a real copy, not a symlink)")
+	}
+	if runtime.GOOS != "windows" {
+		if fi, _ := os.Stat(dst); fi.Mode()&0o100 == 0 {
+			t.Error("copied binary should be executable")
+		}
+	}
+	// No stray temp file left behind.
+	if _, err := os.Stat(dst + ".tmp"); !os.IsNotExist(err) {
+		t.Error("temp file should be gone after rename")
+	}
+	// Re-copy is idempotent.
+	if _, err := installCopy(bin, dir); err != nil {
+		t.Errorf("re-copy should succeed: %v", err)
+	}
+}
+
 func TestDirOnPATH(t *testing.T) {
 	sep := string(os.PathListSeparator)
 	path := "/usr/bin" + sep + "/usr/local/bin" + sep + "/opt/x/"

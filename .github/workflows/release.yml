@@ -93,6 +93,14 @@ jobs:
           mkdir -p dist
           cp build/bin/meridian.exe "dist/Meridian-${VERSION}-windows-amd64.exe"
 
+      - name: Build meridian-cli (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Built beside the GUI binary so the AppImage bundles it; the app's
+          # "Install command-line tool" action copies it onto the user's PATH.
+          go build -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}" \
+            -o build/bin/meridian-cli ./cmd/meridian-cli
+
       - name: Package Linux AppImage
         if: runner.os == 'Linux'
         run: bash build/appimage/build-appimage.sh "${VERSION}"
