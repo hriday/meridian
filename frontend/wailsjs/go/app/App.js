@@ -326,6 +326,10 @@ export function MIBWalk(arg1, arg2, arg3) {
   return window['go']['app']['App']['MIBWalk'](arg1, arg2, arg3);
 }
 
+export function MTUSupported() {
+  return window['go']['app']['App']['MTUSupported']();
+}
+
 export function NTPQuery(arg1) {
   return window['go']['app']['App']['NTPQuery'](arg1);
 }
@@ -364,6 +368,10 @@ export function NetflowTop(arg1, arg2) {
 
 export function PTRSweep(arg1) {
   return window['go']['app']['App']['PTRSweep'](arg1);
+}
+
+export function PathMTU(arg1) {
+  return window['go']['app']['App']['PathMTU'](arg1);
 }
 
 export function PickFile(arg1) {
