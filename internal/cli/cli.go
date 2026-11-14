@@ -193,6 +193,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runSMTP(args[1:], stdout, stderr)
 	case "jwt":
 		return runJWT(args[1:], stdout, stderr)
+	case "certinfo":
+		return runCertInfo(args[1:], stdout, stderr)
 	case "cipherscan":
 		return runCipherScan(args[1:], stdout, stderr)
 	case "ptrsweep":

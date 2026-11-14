@@ -12,6 +12,7 @@ import {dnsbl} from '../models';
 import {cli} from '../models';
 import {ctlog} from '../models';
 import {cve} from '../models';
+import {certinfo} from '../models';
 import {certexpiry} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
@@ -99,6 +100,8 @@ export function CVESearch(arg1:string):Promise<Array<cve.CVE>>;
 export function CertBegin(arg1:string,arg2:string,arg3:boolean):Promise<app.CertBeginResult>;
 
 export function CertCancel(arg1:string):Promise<void>;
+
+export function CertDecode(arg1:string):Promise<certinfo.Result>;
 
 export function CertExpiryCheck(arg1:string):Promise<Array<certexpiry.Result>>;
 
