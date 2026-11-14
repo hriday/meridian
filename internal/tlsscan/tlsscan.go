@@ -39,13 +39,23 @@ type Cipher struct {
 	Version string `json:"version"` // "TLS 1.2" | "TLS 1.3"
 }
 
+// PQStatus describes whether the server negotiates a post-quantum hybrid key
+// exchange — the defense against "harvest now, decrypt later".
+type PQStatus struct {
+	Supported bool   `json:"supported"`
+	Group     string `json:"group"` // e.g. X25519MLKEM768
+	Verdict   string `json:"verdict"`
+}
+
 type Report struct {
-	Host      string     `json:"host"`
-	Protocols []Protocol `json:"protocols"`
-	Ciphers   []Cipher   `json:"ciphers"`
-	Grade     string     `json:"grade"` // A–F
-	Findings  []string   `json:"findings"`
-	Summary   string     `json:"summary"`
+	Host          string     `json:"host"`
+	Protocols     []Protocol `json:"protocols"`
+	Ciphers       []Cipher   `json:"ciphers"`
+	PQ            PQStatus   `json:"pq"`
+	CertSignature string     `json:"certSignature"` // leaf cert signature algorithm (classical today)
+	Grade         string     `json:"grade"`         // A–F
+	Findings      []string   `json:"findings"`
+	Summary       string     `json:"summary"`
 }
 
 var probeVersions = []Protocol{
@@ -100,19 +110,56 @@ func Scan(ctx context.Context, hs Handshaker, host string) (Report, error) {
 			}
 		}
 	}
-	// TLS 1.3 negotiates its own (always-strong) suite; record what it picks.
+	// TLS 1.3 negotiates its own (always-strong) suite; record what it picks,
+	// and the leaf certificate's signature algorithm (classical today).
 	if supported(r.Protocols, tls.VersionTLS13) {
 		cfg := &tls.Config{ServerName: sni, InsecureSkipVerify: true, MinVersion: tls.VersionTLS13, MaxVersion: tls.VersionTLS13} //nolint:gosec
-		if st, err := hs(ctx, hostport, cfg); err == nil && st.CipherSuite != 0 {
-			r.Ciphers = append(r.Ciphers, Cipher{
-				ID: st.CipherSuite, Name: tls.CipherSuiteName(st.CipherSuite), Secure: true, Version: "TLS 1.3",
-			})
+		if st, err := hs(ctx, hostport, cfg); err == nil {
+			if st.CipherSuite != 0 {
+				r.Ciphers = append(r.Ciphers, Cipher{
+					ID: st.CipherSuite, Name: tls.CipherSuiteName(st.CipherSuite), Secure: true, Version: "TLS 1.3",
+				})
+			}
+			if len(st.PeerCertificates) > 0 {
+				r.CertSignature = st.PeerCertificates[0].SignatureAlgorithm.String()
+			}
 		}
+		r.PQ = probePQ(ctx, hs, sni, hostport)
 	}
 
 	r.Grade, r.Findings = grade(r.Protocols, r.Ciphers)
+	// PQ readiness is reported and (when absent) noted, but it does not fail the
+	// letter grade: unlike SSH, post-quantum TLS is still early in deployment,
+	// so a modern TLS 1.3 + strong-cipher server is legitimately an A today.
+	if supported(r.Protocols, tls.VersionTLS13) && !r.PQ.Supported {
+		r.Findings = append(r.Findings, "No post-quantum key exchange — recorded traffic is exposed to harvest-now-decrypt-later. TLS PQ (X25519MLKEM768) is still rolling out, so this is common today; enable it when your stack supports it.")
+	}
 	r.Summary = summarize(r)
 	return r, nil
+}
+
+// probePQ actively tests whether the server will negotiate a post-quantum
+// hybrid key-exchange group, by offering only that group: a successful
+// handshake proves support, a failure proves its absence.
+func probePQ(ctx context.Context, hs Handshaker, sni, hostport string) PQStatus {
+	cfg := &tls.Config{
+		ServerName:         sni,
+		InsecureSkipVerify: true, //nolint:gosec // probing the handshake, not trusting the cert
+		MinVersion:         tls.VersionTLS13,
+		MaxVersion:         tls.VersionTLS13,
+		CurvePreferences:   []tls.CurveID{tls.X25519MLKEM768},
+	}
+	if _, err := hs(ctx, hostport, cfg); err == nil {
+		return PQStatus{
+			Supported: true,
+			Group:     "X25519MLKEM768",
+			Verdict:   "The server negotiates a post-quantum hybrid key exchange (X25519MLKEM768) — recorded traffic is protected against harvest-now-decrypt-later.",
+		}
+	}
+	return PQStatus{
+		Supported: false,
+		Verdict:   "No post-quantum key exchange — a recorded session could be decrypted by a future quantum computer. (Still uncommon in TLS today.)",
+	}
 }
 
 // grade returns an A–F grade and the findings behind it.
@@ -161,7 +208,11 @@ func summarize(r Report) string {
 			vers = append(vers, p.Name)
 		}
 	}
-	return fmt.Sprintf("grade %s · %s · %d cipher suite(s)", r.Grade, strings.Join(vers, ", "), len(r.Ciphers))
+	pqMark := "PQ ✗"
+	if r.PQ.Supported {
+		pqMark = "PQ ✓"
+	}
+	return fmt.Sprintf("grade %s · %s · %s · %d cipher suite(s)", r.Grade, strings.Join(vers, ", "), pqMark, len(r.Ciphers))
 }
 
 func supported(protos []Protocol, v uint16) bool {

@@ -22,6 +22,8 @@
   }
 
   const gradeClass = (g: string) => (["A", "B"].includes(g) ? "ok" : g === "C" || g === "D" ? "warn" : "bad");
+  const pqClass = (pq: any) => (pq?.supported ? "ok" : "warn");
+  const pqLabel = (pq: any) => (pq?.supported ? "Quantum-safe" : "Not quantum-safe");
 </script>
 
 <div class="tool">
@@ -44,6 +46,16 @@
       <span class="gletter">{rep.grade}</span>
       <span class="gsum">{rep.summary}</span>
     </div>
+
+    {#if rep.pq}
+      <div class="pq {pqClass(rep.pq)}">
+        <div class="pqhead"><span class="pqbadge">{pqLabel(rep.pq)}</span><span class="pqtitle">Post-quantum key exchange</span></div>
+        <p class="pqbody">{rep.pq.verdict}</p>
+        {#if rep.certSignature}
+          <p class="pqnote">Certificate signature: <code>{rep.certSignature}</code> — classical, as expected; post-quantum signature algorithms aren't fielded in the WebPKI yet, so this isn't a weakness.</p>
+        {/if}
+      </div>
+    {/if}
 
     <div class="cols">
       <div class="col">
@@ -99,6 +111,17 @@
   .grade.warn .gletter { color: #3a2a00; background: var(--warn, #f5a623); }
   .grade.bad .gletter { color: #fff; background: var(--danger, #e5484d); }
   .gsum { font-size: 0.84rem; color: var(--text-dim); }
+  .pq { max-width: 820px; margin-top: 12px; padding: 12px 16px; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 11px; background: var(--card); }
+  .pq.ok { border-left-color: var(--good, #3fb950); }
+  .pq.warn { border-left-color: var(--warn, #f5a623); }
+  .pqhead { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .pqtitle { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); font-weight: 650; }
+  .pqbadge { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+  .pq.ok .pqbadge { background: var(--good, #3fb950); color: #04260f; }
+  .pq.warn .pqbadge { background: var(--warn, #f5a623); color: #3a2a00; }
+  .pqbody { font-size: 0.84rem; color: var(--text); line-height: 1.55; margin: 0; }
+  .pqnote { font-size: 0.76rem; color: var(--text-faint, var(--text-dim)); line-height: 1.55; margin: 8px 0 0; }
+  .pqnote code { font-family: var(--font-mono, ui-monospace, monospace); background: var(--well); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; }
   .cols { display: flex; gap: 14px; max-width: 820px; margin-top: 14px; flex-wrap: wrap; }
   .col { flex: 1 1 300px; min-width: 0; border: 1px solid var(--border); border-radius: 11px; padding: 10px 12px; background: var(--card); }
   .h { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); font-weight: 650; margin-bottom: 8px; }

@@ -11,12 +11,18 @@ import (
 
 // fakeServer accepts a handshake when the single negotiated version is in
 // `versions` and (for <=1.2) the offered cipher list is empty or contains an
-// accepted suite.
-func fakeServer(versions map[uint16]bool, acceptCipher uint16) Handshaker {
+// accepted suite. If the client pins a post-quantum curve, it succeeds only
+// when pqOK is true — modelling a server that does or doesn't support PQ kex.
+func fakeServer(versions map[uint16]bool, acceptCipher uint16, pqOK bool) Handshaker {
 	return func(ctx context.Context, hostport string, cfg *tls.Config) (tls.ConnectionState, error) {
 		v := cfg.MaxVersion // Scan pins Min==Max
 		if !versions[v] {
 			return tls.ConnectionState{}, errors.New("protocol not supported")
+		}
+		for _, c := range cfg.CurvePreferences {
+			if c == tls.X25519MLKEM768 && !pqOK {
+				return tls.ConnectionState{}, errors.New("no mutual key exchange group")
+			}
 		}
 		if v <= tls.VersionTLS12 && len(cfg.CipherSuites) > 0 {
 			ok := false
@@ -37,7 +43,7 @@ func fakeServer(versions map[uint16]bool, acceptCipher uint16) Handshaker {
 func TestScanModernServer(t *testing.T) {
 	hs := fakeServer(map[uint16]bool{
 		tls.VersionTLS12: true, tls.VersionTLS13: true,
-	}, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256)
+	}, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, true)
 
 	r, err := Scan(context.Background(), hs, "example.com")
 	require.NoError(t, err)
@@ -66,7 +72,7 @@ func TestScanLegacyServerFailsGrade(t *testing.T) {
 	// Supports TLS 1.0 and accepts RC4 — both are findings.
 	hs := fakeServer(map[uint16]bool{
 		tls.VersionTLS10: true, tls.VersionTLS12: true,
-	}, tls.TLS_RSA_WITH_RC4_128_SHA)
+	}, tls.TLS_RSA_WITH_RC4_128_SHA, false)
 
 	r, err := Scan(context.Background(), hs, "old.example:443")
 	require.NoError(t, err)
@@ -78,6 +84,30 @@ func TestScanLegacyServerFailsGrade(t *testing.T) {
 	}
 	require.Contains(t, joined, "TLS 1.0")
 	require.Contains(t, joined, "RC4")
+}
+
+func TestScanDetectsPostQuantum(t *testing.T) {
+	hs := fakeServer(map[uint16]bool{tls.VersionTLS13: true},
+		tls.TLS_AES_128_GCM_SHA256, true)
+	r, err := Scan(context.Background(), hs, "pq.example.com")
+	require.NoError(t, err)
+	require.True(t, r.PQ.Supported, "PQ-capable server should be detected")
+	require.Equal(t, "X25519MLKEM768", r.PQ.Group)
+}
+
+func TestScanNoPostQuantumIsFlagged(t *testing.T) {
+	hs := fakeServer(map[uint16]bool{tls.VersionTLS13: true},
+		tls.TLS_AES_128_GCM_SHA256, false)
+	r, err := Scan(context.Background(), hs, "classic.example.com")
+	require.NoError(t, err)
+	require.False(t, r.PQ.Supported)
+	joined := ""
+	for _, f := range r.Findings {
+		joined += f + "\n"
+	}
+	require.Contains(t, joined, "harvest-now-decrypt-later")
+	// PQ absence must NOT fail the letter grade — TLS PQ is still rolling out.
+	require.Contains(t, []string{"A", "B"}, r.Grade)
 }
 
 func TestScanNotATLSServer(t *testing.T) {
