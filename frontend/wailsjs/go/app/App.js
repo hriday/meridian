@@ -114,6 +114,14 @@ export function ClearAtlasKey() {
   return window['go']['app']['App']['ClearAtlasKey']();
 }
 
+export function DHCPDiscover() {
+  return window['go']['app']['App']['DHCPDiscover']();
+}
+
+export function DHCPSupported() {
+  return window['go']['app']['App']['DHCPSupported']();
+}
+
 export function DNSAudit(arg1, arg2) {
   return window['go']['app']['App']['DNSAudit'](arg1, arg2);
 }
