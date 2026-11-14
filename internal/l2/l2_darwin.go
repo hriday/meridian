@@ -1,6 +1,6 @@
 //go:build darwin
 
-package lldp
+package l2
 
 import (
 	"errors"
@@ -13,14 +13,15 @@ import (
 
 const supported = true
 
-// bpfCapture reads raw frames from a /dev/bpf device bound to an interface.
-type bpfCapture struct {
+// Conn is a BPF capture bound to an interface, able to read and write frames.
+type Conn struct {
 	fd      int
 	bufLen  int
 	readBuf []byte
 }
 
-func newCapture(iface string) (capture, error) {
+// Open binds a /dev/bpf device to iface.
+func Open(iface string) (*Conn, error) {
 	var fd int
 	var err error
 	for i := 0; i < 64; i++ {
@@ -31,16 +32,14 @@ func newCapture(iface string) (capture, error) {
 		if errors.Is(err, unix.EACCES) || errors.Is(err, unix.EPERM) {
 			return nil, ErrNeedsPrivilege
 		}
-		// EBUSY: device already in use, try the next one.
+		// EBUSY: device in use, try the next one.
 	}
 	if err != nil {
 		return nil, fmt.Errorf("couldn't open a BPF device: %w", err)
 	}
 
-	// Buffer length must be set before binding the interface; read the value the
-	// kernel settled on.
 	bl := int32(32768)
-	_ = ioctlPtr(fd, unix.BIOCSBLEN, unsafe.Pointer(&bl))
+	_ = ioctlPtr(fd, unix.BIOCSBLEN, unsafe.Pointer(&bl)) // must precede BIOCSETIF
 	if err := ioctlPtr(fd, unix.BIOCGBLEN, unsafe.Pointer(&bl)); err != nil || bl <= 0 {
 		bl = 4096
 	}
@@ -53,25 +52,33 @@ func newCapture(iface string) (capture, error) {
 	}
 
 	one := int32(1)
-	_ = ioctlPtr(fd, unix.BIOCIMMEDIATE, unsafe.Pointer(&one)) // deliver frames promptly
-	tv := unix.Timeval{Sec: 1}                                 // 1s read timeout so Listen can poll
+	_ = ioctlPtr(fd, unix.BIOCIMMEDIATE, unsafe.Pointer(&one))  // deliver frames promptly
+	_ = ioctlPtr(fd, unix.BIOCSHDRCMPLT, unsafe.Pointer(&one))  // we supply the full ethernet header on write
+	tv := unix.Timeval{Sec: 1}                                  // 1s read timeout so callers can poll
 	_ = ioctlPtr(fd, unix.BIOCSRTIMEOUT, unsafe.Pointer(&tv))
 
-	return &bpfCapture{fd: fd, bufLen: int(bl), readBuf: make([]byte, int(bl))}, nil
+	return &Conn{fd: fd, bufLen: int(bl), readBuf: make([]byte, int(bl))}, nil
 }
 
-func (c *bpfCapture) Close() error { return unix.Close(c.fd) }
+func (c *Conn) Close() error { return unix.Close(c.fd) }
 
-func (c *bpfCapture) ReadFrames() ([][]byte, error) {
+// Write sends one complete Ethernet frame.
+func (c *Conn) Write(frame []byte) error {
+	_, err := unix.Write(c.fd, frame)
+	return err
+}
+
+// Read returns the frames available this interval, or ErrReadTimeout if none.
+func (c *Conn) Read() ([][]byte, error) {
 	n, err := unix.Read(c.fd, c.readBuf)
 	if err != nil {
 		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, syscall.EINTR) {
-			return nil, errReadTimeout
+			return nil, ErrReadTimeout
 		}
 		return nil, err
 	}
 	if n == 0 {
-		return nil, errReadTimeout
+		return nil, ErrReadTimeout
 	}
 
 	var frames [][]byte
@@ -89,7 +96,7 @@ func (c *bpfCapture) ReadFrames() ([][]byte, error) {
 		off += bpfWordAlign(int(hdr.Hdrlen) + int(hdr.Caplen))
 	}
 	if len(frames) == 0 {
-		return nil, errReadTimeout
+		return nil, ErrReadTimeout
 	}
 	return frames, nil
 }

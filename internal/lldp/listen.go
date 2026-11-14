@@ -6,28 +6,22 @@ import (
 	"net"
 	"sort"
 	"time"
+
+	"github.com/hriday/meridian/internal/l2"
 )
 
 // DefaultWindow is how long to listen. Switches send LLDP every ~30s and CDP
 // every ~60s, so a short listen can miss the only advertisement.
 const DefaultWindow = 35 * time.Second
 
-// capture is a raw L2 frame source. ReadFrames returns zero or more frames and
-// returns promptly (within its internal read timeout) so Listen can poll the
-// deadline/context.
-type capture interface {
-	ReadFrames() ([][]byte, error)
-	Close() error
-}
-
 // Supported reports whether LLDP/CDP capture is implemented on this OS.
-func Supported() bool { return supported }
+func Supported() bool { return l2.Supported() }
 
 // Listen captures on iface (empty = the egress interface) for up to window and
 // returns the distinct LLDP/CDP neighbors heard. It needs elevated privileges;
 // without them it returns ErrNeedsPrivilege.
 func Listen(ctx context.Context, iface string, window time.Duration) ([]Neighbor, error) {
-	if !supported {
+	if !l2.Supported() {
 		return nil, errors.New("LLDP/CDP capture isn't supported on this operating system yet")
 	}
 	if window <= 0 {
@@ -41,7 +35,7 @@ func Listen(ctx context.Context, iface string, window time.Duration) ([]Neighbor
 		iface = name
 	}
 
-	c, err := newCapture(iface)
+	c, err := l2.Open(iface)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +47,9 @@ func Listen(ctx context.Context, iface string, window time.Duration) ([]Neighbor
 		if ctx.Err() != nil {
 			break
 		}
-		frames, err := c.ReadFrames()
+		frames, err := c.Read()
 		if err != nil {
-			if errors.Is(err, errReadTimeout) {
+			if errors.Is(err, l2.ErrReadTimeout) {
 				continue // no frames this interval; keep waiting
 			}
 			return neighborSlice(seen), err
@@ -82,10 +76,6 @@ func neighborSlice(m map[string]Neighbor) []Neighbor {
 	})
 	return out
 }
-
-// errReadTimeout is what a capture returns when its read window elapsed with no
-// frames — not a real error, just "nothing yet".
-var errReadTimeout = errors.New("read timeout")
 
 // egressIface finds the interface carrying the default route.
 func egressIface() (string, error) {

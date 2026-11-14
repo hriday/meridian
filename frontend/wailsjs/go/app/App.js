@@ -26,6 +26,14 @@ export function ADAuditSave(arg1, arg2) {
   return window['go']['app']['App']['ADAuditSave'](arg1, arg2);
 }
 
+export function ARPScan() {
+  return window['go']['app']['App']['ARPScan']();
+}
+
+export function ARPSupported() {
+  return window['go']['app']['App']['ARPSupported']();
+}
+
 export function AnalyzeCiscoPasswords(arg1) {
   return window['go']['app']['App']['AnalyzeCiscoPasswords'](arg1);
 }
