@@ -1,6 +1,6 @@
 //go:build linux
 
-package lldp
+package l2
 
 import (
 	"errors"
@@ -12,13 +12,15 @@ import (
 
 const supported = true
 
-// afCapture reads raw frames from an AF_PACKET socket bound to an interface.
-type afCapture struct {
-	fd  int
-	buf []byte
+// Conn is an AF_PACKET raw socket bound to an interface.
+type Conn struct {
+	fd      int
+	ifindex int
+	buf     []byte
 }
 
-func newCapture(iface string) (capture, error) {
+// Open binds a raw packet socket to iface.
+func Open(iface string) (*Conn, error) {
 	proto := int(htons(unix.ETH_P_ALL))
 	fd, err := unix.Socket(unix.AF_PACKET, unix.SOCK_RAW, proto)
 	if err != nil {
@@ -36,23 +38,32 @@ func newCapture(iface string) (capture, error) {
 		unix.Close(fd)
 		return nil, err
 	}
-	// Poll with a 1s read timeout so Listen can check its deadline/context.
 	_ = unix.SetsockoptTimeval(fd, unix.SOL_SOCKET, unix.SO_RCVTIMEO, &unix.Timeval{Sec: 1})
-	return &afCapture{fd: fd, buf: make([]byte, 65536)}, nil
+	return &Conn{fd: fd, ifindex: ifi.Index, buf: make([]byte, 65536)}, nil
 }
 
-func (c *afCapture) Close() error { return unix.Close(c.fd) }
+func (c *Conn) Close() error { return unix.Close(c.fd) }
 
-func (c *afCapture) ReadFrames() ([][]byte, error) {
+// Write sends one complete Ethernet frame out the bound interface.
+func (c *Conn) Write(frame []byte) error {
+	sa := &unix.SockaddrLinklayer{Ifindex: c.ifindex, Halen: 6}
+	if len(frame) >= 6 {
+		copy(sa.Addr[:6], frame[:6]) // destination MAC
+	}
+	return unix.Sendto(c.fd, frame, 0, sa)
+}
+
+// Read returns one frame, or ErrReadTimeout if the poll interval elapsed.
+func (c *Conn) Read() ([][]byte, error) {
 	n, _, err := unix.Recvfrom(c.fd, c.buf, 0)
 	if err != nil {
 		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EINTR) {
-			return nil, errReadTimeout
+			return nil, ErrReadTimeout
 		}
 		return nil, err
 	}
 	if n <= 0 {
-		return nil, errReadTimeout
+		return nil, ErrReadTimeout
 	}
 	f := make([]byte, n)
 	copy(f, c.buf[:n])

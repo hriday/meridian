@@ -10,9 +10,10 @@ package lldp
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 	"strings"
+
+	"github.com/hriday/meridian/internal/l2"
 )
 
 // Neighbor is one discovered device.
@@ -280,6 +281,7 @@ func rest(v []byte) []byte {
 	return v[1:]
 }
 
-// ErrNeedsPrivilege is returned by the real capture when the raw-capture device
-// can't be opened without elevated privileges.
-var ErrNeedsPrivilege = fmt.Errorf("LLDP/CDP capture needs elevated privileges (raw packet capture) — run with sudo, or launch Meridian elevated")
+// ErrNeedsPrivilege is returned when the raw-capture device can't be opened
+// without elevated privileges. It aliases the shared l2 sentinel so callers can
+// match on either.
+var ErrNeedsPrivilege = l2.ErrNeedsPrivilege
