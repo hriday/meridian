@@ -450,6 +450,10 @@ export function StartIfMonitor(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['StartIfMonitor'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function StartMTR(arg1, arg2, arg3) {
+  return window['go']['app']['App']['StartMTR'](arg1, arg2, arg3);
+}
+
 export function StartPingMonitor(arg1, arg2) {
   return window['go']['app']['App']['StartPingMonitor'](arg1, arg2);
 }
@@ -460,6 +464,10 @@ export function StopDeviceMonitor(arg1) {
 
 export function StopIfMonitor(arg1) {
   return window['go']['app']['App']['StopIfMonitor'](arg1);
+}
+
+export function StopMTR(arg1) {
+  return window['go']['app']['App']['StopMTR'](arg1);
 }
 
 export function StopPingMonitor(arg1) {
