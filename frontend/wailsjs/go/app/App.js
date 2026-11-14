@@ -310,6 +310,14 @@ export function Interfaces() {
   return window['go']['app']['App']['Interfaces']();
 }
 
+export function JWTDecode(arg1) {
+  return window['go']['app']['App']['JWTDecode'](arg1);
+}
+
+export function JWTVerify(arg1, arg2) {
+  return window['go']['app']['App']['JWTVerify'](arg1, arg2);
+}
+
 export function LLDPDiscover() {
   return window['go']['app']['App']['LLDPDiscover']();
 }

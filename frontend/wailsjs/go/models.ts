@@ -2042,6 +2042,88 @@ export namespace ipspace {
 
 }
 
+export namespace jwtinspect {
+	
+	export class Decoded {
+	    headerJSON: string;
+	    payloadJSON: string;
+	    alg: string;
+	    typ?: string;
+	    kid?: string;
+	    issuer?: string;
+	    subject?: string;
+	    audience?: string[];
+	    jwtID?: string;
+	    // Go type: time
+	    issuedAt?: any;
+	    // Go type: time
+	    notBefore?: any;
+	    // Go type: time
+	    expiresAt?: any;
+	    expired: boolean;
+	    notYetValid: boolean;
+	    warnings?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Decoded(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.headerJSON = source["headerJSON"];
+	        this.payloadJSON = source["payloadJSON"];
+	        this.alg = source["alg"];
+	        this.typ = source["typ"];
+	        this.kid = source["kid"];
+	        this.issuer = source["issuer"];
+	        this.subject = source["subject"];
+	        this.audience = source["audience"];
+	        this.jwtID = source["jwtID"];
+	        this.issuedAt = this.convertValues(source["issuedAt"], null);
+	        this.notBefore = this.convertValues(source["notBefore"], null);
+	        this.expiresAt = this.convertValues(source["expiresAt"], null);
+	        this.expired = source["expired"];
+	        this.notYetValid = source["notYetValid"];
+	        this.warnings = source["warnings"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class VerifyResult {
+	    algorithm: string;
+	    valid: boolean;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new VerifyResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.algorithm = source["algorithm"];
+	        this.valid = source["valid"];
+	        this.reason = source["reason"];
+	    }
+	}
+
+}
+
 export namespace lldp {
 	
 	export class Neighbor {
