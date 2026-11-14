@@ -4047,6 +4047,31 @@ export namespace tlsscan {
 
 }
 
+export namespace totp {
+	
+	export class Code {
+	    code: string;
+	    secondsLeft: number;
+	    period: number;
+	    issuer?: string;
+	    account?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Code(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.secondsLeft = source["secondsLeft"];
+	        this.period = source["period"];
+	        this.issuer = source["issuer"];
+	        this.account = source["account"];
+	    }
+	}
+
+}
+
 export namespace trace {
 	
 	export class Hop {
