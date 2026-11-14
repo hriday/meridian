@@ -15,5 +15,9 @@ var ErrNeedsPrivilege = errors.New("raw packet access needs elevated privileges 
 // frames. It is not a real error — the caller loops.
 var ErrReadTimeout = errors.New("read timeout")
 
+// ErrNeedsNpcap is returned by Open on Windows when the Npcap capture library
+// isn't installed. Raw L2 capture on Windows has no native API; Npcap is free.
+var ErrNeedsNpcap = errors.New("raw packet capture on Windows needs Npcap — install it free from npcap.com, then retry")
+
 // Supported reports whether raw L2 access is implemented on this OS.
 func Supported() bool { return supported }
