@@ -92,6 +92,14 @@ Meridian ships three themes — **dark**, **light**, and a green-on-black
 
 <p align="center"><em>Firewall analyzer — reads an exported firewall config locally and shows the segments, what talks to what, and a flow diagram. Terminal theme.</em></p>
 
+![JWT decoder — header, claims and expiry for a pasted token, decoded entirely on-device](docs/media/jwt.png)
+
+<p align="center"><em>JWT decoder &amp; verifier — paste a token and see its header, claims and expiry, decoded entirely on your machine. Unlike a website, the token (a bearer credential) never leaves the computer.</em></p>
+
+![Connection quality — latency, jitter, packet loss and an estimated MOS verdict with a live latency sparkline](docs/media/quality.png)
+
+<p align="center"><em>Connection quality — live latency, jitter and packet loss with an estimated MOS (Mean Opinion Score), answering "is this link good enough for a voice/video call?" No admin rights needed.</em></p>
+
 ## Install
 
 Builds are attached to each [GitHub Release](../../releases). Meridian is **not
