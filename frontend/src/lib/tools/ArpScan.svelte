@@ -34,10 +34,10 @@
   </p>
 
   {#if !supported}
-    <div class="hint">ARP scanning isn't supported on this operating system yet (macOS and Linux only).</div>
+    <div class="hint">ARP scanning isn't supported on this operating system yet.</div>
   {:else}
     <button class="go" on:click={run} disabled={loading}>{loading ? "Sweeping…" : "Scan the local subnet"}</button>
-    <p class="muted">Broadcasts an ARP request to each address and listens a couple of seconds. Needs raw access — on macOS, ChmodBPF or elevated; on Linux, <span class="mono">sudo</span>.</p>
+    <p class="muted">Broadcasts an ARP request to each address and listens a couple of seconds. On Windows it works without admin; on macOS it needs ChmodBPF or elevated; on Linux, <span class="mono">sudo</span>.</p>
   {/if}
 
   {#if loading}
