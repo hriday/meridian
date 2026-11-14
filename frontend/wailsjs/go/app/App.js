@@ -154,6 +154,10 @@ export function DiffConfigs(arg1, arg2) {
   return window['go']['app']['App']['DiffConfigs'](arg1, arg2);
 }
 
+export function DiscoverLAN(arg1) {
+  return window['go']['app']['App']['DiscoverLAN'](arg1);
+}
+
 export function EmailAuthCheck(arg1, arg2) {
   return window['go']['app']['App']['EmailAuthCheck'](arg1, arg2);
 }

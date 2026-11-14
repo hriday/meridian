@@ -103,6 +103,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPing(args[1:], stdout, stderr)
 	case "tcpping":
 		return runTCPPing(args[1:], stdout, stderr)
+	case "discover":
+		return runDiscover(args[1:], stdout, stderr)
 	case "pingsweep":
 		return runPingSweep(args[1:], stdout, stderr)
 	case "portscan":
