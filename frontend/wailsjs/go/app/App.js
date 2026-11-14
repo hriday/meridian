@@ -406,6 +406,14 @@ export function SecurityHeaders(arg1) {
   return window['go']['app']['App']['SecurityHeaders'](arg1);
 }
 
+export function ServiceStatus(arg1) {
+  return window['go']['app']['App']['ServiceStatus'](arg1);
+}
+
+export function ServiceStatusKnown() {
+  return window['go']['app']['App']['ServiceStatusKnown']();
+}
+
 export function SetAtlasKey(arg1) {
   return window['go']['app']['App']['SetAtlasKey'](arg1);
 }
