@@ -86,8 +86,20 @@ export function CVESearch(arg1) {
   return window['go']['app']['App']['CVESearch'](arg1);
 }
 
+export function CertBegin(arg1, arg2, arg3) {
+  return window['go']['app']['App']['CertBegin'](arg1, arg2, arg3);
+}
+
+export function CertCancel(arg1) {
+  return window['go']['app']['App']['CertCancel'](arg1);
+}
+
 export function CertExpiryCheck(arg1) {
   return window['go']['app']['App']['CertExpiryCheck'](arg1);
+}
+
+export function CertFinalize(arg1) {
+  return window['go']['app']['App']['CertFinalize'](arg1);
 }
 
 export function CheckForUpdate() {

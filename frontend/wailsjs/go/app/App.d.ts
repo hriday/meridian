@@ -84,7 +84,13 @@ export function CVELookup(arg1:string):Promise<cve.CVE>;
 
 export function CVESearch(arg1:string):Promise<Array<cve.CVE>>;
 
+export function CertBegin(arg1:string,arg2:string,arg3:boolean):Promise<app.CertBeginResult>;
+
+export function CertCancel(arg1:string):Promise<void>;
+
 export function CertExpiryCheck(arg1:string):Promise<Array<certexpiry.Result>>;
+
+export function CertFinalize(arg1:string):Promise<app.CertResult>;
 
 export function CheckForUpdate():Promise<update.Result>;
 

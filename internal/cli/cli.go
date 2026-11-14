@@ -181,6 +181,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCipherScan(args[1:], stdout, stderr)
 	case "ptrsweep":
 		return runPTRSweep(args[1:], stdout, stderr)
+	case "certissue":
+		return runCertIssue(args[1:], stdout, stderr)
 	case "-h", "--help", "help":
 		fmt.Fprint(stdout, fullHelp)
 		return 0
