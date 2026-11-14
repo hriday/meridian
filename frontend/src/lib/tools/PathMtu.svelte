@@ -34,7 +34,7 @@
   </p>
 
   {#if !supported}
-    <div class="hint">Path MTU discovery isn't supported on this operating system yet (macOS and Linux only).</div>
+    <div class="hint">Path MTU discovery isn't supported on this operating system yet.</div>
   {:else}
     <form on:submit|preventDefault={run} class="row">
       <input class="field mono" bind:value={target} placeholder="cloudflare.com  or  104.16.123.45" autocomplete="off" spellcheck="false" aria-label="Target host" />

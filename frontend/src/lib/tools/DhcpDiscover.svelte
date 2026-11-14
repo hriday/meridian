@@ -41,10 +41,10 @@
   </p>
 
   {#if !supported}
-    <div class="hint">DHCP discovery isn't supported on this operating system yet (macOS and Linux only).</div>
+    <div class="hint">DHCP discovery isn't supported on this operating system yet.</div>
   {:else}
     <button class="go" on:click={run} disabled={loading}>{loading ? "Listening…" : "Discover DHCP servers"}</button>
-    <p class="muted">Broadcasts a DISCOVER and listens ~5s. Works without admin on macOS; on Linux, binding port 68 may need <span class="mono">sudo</span>.</p>
+    <p class="muted">Broadcasts a DISCOVER and listens ~5s. Works without admin on macOS and Windows; on Linux, binding port 68 may need <span class="mono">sudo</span>.</p>
   {/if}
 
   {#if error}
