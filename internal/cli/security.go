@@ -422,6 +422,10 @@ func tlsDial(ctx context.Context, hostport string, cfg *tls.Config) (tls.Connect
 func printCipherScan(stdout io.Writer, r tlsscan.Report) {
 	reportRow(stdout, "Host", r.Host)
 	reportRow(stdout, "Grade", r.Grade)
+	reportRow(stdout, "Post-quantum kex", r.PQ.Verdict)
+	if r.CertSignature != "" {
+		reportRow(stdout, "Cert signature", r.CertSignature+"  (classical — PQ signatures not yet fielded in the WebPKI)")
+	}
 	fmt.Fprintln(stdout, "\nProtocols:")
 	for _, p := range r.Protocols {
 		mark := "✗"

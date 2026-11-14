@@ -4176,6 +4176,22 @@ export namespace tlsscan {
 	        this.version = source["version"];
 	    }
 	}
+	export class PQStatus {
+	    supported: boolean;
+	    group: string;
+	    verdict: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PQStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.supported = source["supported"];
+	        this.group = source["group"];
+	        this.verdict = source["verdict"];
+	    }
+	}
 	export class Protocol {
 	    name: string;
 	    version: number;
@@ -4198,6 +4214,8 @@ export namespace tlsscan {
 	    host: string;
 	    protocols: Protocol[];
 	    ciphers: Cipher[];
+	    pq: PQStatus;
+	    certSignature: string;
 	    grade: string;
 	    findings: string[];
 	    summary: string;
@@ -4211,6 +4229,8 @@ export namespace tlsscan {
 	        this.host = source["host"];
 	        this.protocols = this.convertValues(source["protocols"], Protocol);
 	        this.ciphers = this.convertValues(source["ciphers"], Cipher);
+	        this.pq = this.convertValues(source["pq"], PQStatus);
+	        this.certSignature = source["certSignature"];
 	        this.grade = source["grade"];
 	        this.findings = source["findings"];
 	        this.summary = source["summary"];
