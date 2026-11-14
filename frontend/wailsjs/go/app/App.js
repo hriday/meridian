@@ -302,6 +302,14 @@ export function Interfaces() {
   return window['go']['app']['App']['Interfaces']();
 }
 
+export function LLDPDiscover() {
+  return window['go']['app']['App']['LLDPDiscover']();
+}
+
+export function LLDPSupported() {
+  return window['go']['app']['App']['LLDPSupported']();
+}
+
 export function ListInterfaces(arg1, arg2) {
   return window['go']['app']['App']['ListInterfaces'](arg1, arg2);
 }

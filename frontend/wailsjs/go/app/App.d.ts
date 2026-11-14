@@ -26,6 +26,7 @@ import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {hashid} from '../models';
 import {netif} from '../models';
+import {lldp} from '../models';
 import {snmp} from '../models';
 import {lookup} from '../models';
 import {macvendor} from '../models';
@@ -196,6 +197,10 @@ export function IdentifyHash(arg1:string):Promise<Array<hashid.Candidate>>;
 export function InstallCLI():Promise<app.CLIInfo>;
 
 export function Interfaces():Promise<Array<netif.Iface>>;
+
+export function LLDPDiscover():Promise<Array<lldp.Neighbor>>;
+
+export function LLDPSupported():Promise<boolean>;
 
 export function ListInterfaces(arg1:string,arg2:string):Promise<Array<snmp.Interface>>;
 

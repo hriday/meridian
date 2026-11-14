@@ -61,6 +61,7 @@ func Catalog() []CommandGroup {
 			{"mtr", "<host> [--interval 1s] [--6] [--json]", "live path + per-hop loss (Ctrl-C to stop)"},
 			{"pathmtu", "<host> [--json]", "discover the path MTU (find MTU bottlenecks)"},
 			{"dhcpdiscover", "[--wait 5s] [--json]", "find DHCP servers / rogues on the LAN"},
+			{"lldp", "[--wait 35s] [--iface en0] [--json]", "LLDP/CDP neighbor — what switch/port (sudo)"},
 			{"pingsweep", "<cidr> [--ports 22,80,443] [--json]", "ping / TCP sweep"},
 			{"portscan", "<host> <ports|--common> [--json]", "port scan"},
 			{"ptrsweep", "<cidr> [--concurrency 64] [--json]", "reverse-DNS sweep"},

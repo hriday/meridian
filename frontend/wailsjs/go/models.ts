@@ -1987,6 +1987,43 @@ export namespace ipspace {
 
 }
 
+export namespace lldp {
+	
+	export class Neighbor {
+	    protocol: string;
+	    systemName: string;
+	    chassisID?: string;
+	    portID: string;
+	    portDesc?: string;
+	    systemDesc?: string;
+	    platform?: string;
+	    mgmtIP?: string;
+	    vlan?: number;
+	    capabilities?: string[];
+	    sourceMAC: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Neighbor(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.protocol = source["protocol"];
+	        this.systemName = source["systemName"];
+	        this.chassisID = source["chassisID"];
+	        this.portID = source["portID"];
+	        this.portDesc = source["portDesc"];
+	        this.systemDesc = source["systemDesc"];
+	        this.platform = source["platform"];
+	        this.mgmtIP = source["mgmtIP"];
+	        this.vlan = source["vlan"];
+	        this.capabilities = source["capabilities"];
+	        this.sourceMAC = source["sourceMAC"];
+	    }
+	}
+
+}
+
 export namespace lookup {
 	
 	export class PeerFac {
