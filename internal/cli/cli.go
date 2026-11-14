@@ -183,6 +183,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTFTP(args[1:], stdout, stderr)
 	case "emailauth":
 		return runEmailAuth(args[1:], stdout, stderr)
+	case "smtp":
+		return runSMTP(args[1:], stdout, stderr)
 	case "cipherscan":
 		return runCipherScan(args[1:], stdout, stderr)
 	case "ptrsweep":

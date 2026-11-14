@@ -35,6 +35,7 @@ import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
 import {wordlist} from '../models';
+import {smtpprobe} from '../models';
 import {secheaders} from '../models';
 import {svcstatus} from '../models';
 import {subnet} from '../models';
@@ -246,6 +247,8 @@ export function RulesDir():Promise<string>;
 export function RulesDownload(arg1:string):Promise<string>;
 
 export function RulesInstalled():Promise<Array<string>>;
+
+export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<smtpprobe.Result>;
 
 export function ScanCommonPorts():Promise<Array<number>>;
 

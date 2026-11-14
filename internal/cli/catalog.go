@@ -40,6 +40,7 @@ func Catalog() []CommandGroup {
 			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/DNSSEC)"},
 			{"dnspropagation", "<name> [--type A] [--json]", "check a record across global resolvers"},
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
+			{"smtp", "<host|domain> [--mx] [--tls] [--port N] [--json]", "SMTP banner / STARTTLS / cert probe"},
 			{"certexpiry", "<host[:port]>... [--json]", "bulk TLS cert days-to-expiry"},
 			{"certissue", "<domain>... [--email x] [--staging] [--out <dir>]", "get a Let's Encrypt cert (DNS-01)"},
 			{"status", "<service|status-url> [--json]", "service outage check (Statuspage)"},
