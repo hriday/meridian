@@ -6,10 +6,8 @@ import (
 	"errors"
 	"net"
 	"sort"
-	"sync"
 	"time"
 
-	"github.com/hriday/meridian/internal/l2"
 	"github.com/hriday/meridian/internal/macvendor"
 )
 
@@ -21,13 +19,13 @@ const (
 )
 
 // Supported reports whether ARP scanning is implemented on this OS.
-func Supported() bool { return l2.Supported() }
+func Supported() bool { return arpSupported }
 
-// Run sweeps the local subnet with ARP requests and returns the hosts that
-// answer (IP + MAC; vendors are added separately). It needs elevated privileges
-// (raw L2); without them it returns l2.ErrNeedsPrivilege.
+// Run sweeps the local subnet with ARP and returns the hosts that answer (IP +
+// MAC; vendors are added separately). The actual ARP mechanism is per-OS: raw
+// L2 on macOS/Linux, the SendARP IP-Helper API on Windows.
 func Run(ctx context.Context, window time.Duration, maxHosts int) (Result, error) {
-	if !l2.Supported() {
+	if !arpSupported {
 		return Result{}, errors.New("ARP scanning isn't supported on this operating system yet")
 	}
 	if window <= 0 {
@@ -40,61 +38,16 @@ func Run(ctx context.Context, window time.Duration, maxHosts int) (Result, error
 	if err != nil {
 		return Result{}, err
 	}
-	c, err := l2.Open(iface)
+
+	found, err := sweepSubnet(ctx, iface, mac, srcIP, ipnet, window, maxHosts)
 	if err != nil {
 		return Result{}, err
 	}
-	defer c.Close()
 
-	found := map[string]string{}
-	var mu sync.Mutex
-	rctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		for rctx.Err() == nil {
-			frames, err := c.Read()
-			if err != nil {
-				if errors.Is(err, l2.ErrReadTimeout) {
-					continue
-				}
-				return
-			}
-			for _, f := range frames {
-				if ip, m, ok := ParseReply(f); ok {
-					mu.Lock()
-					found[ip] = m
-					mu.Unlock()
-				}
-			}
-		}
-	}()
-
-	for _, t := range hostsIn(ipnet, maxHosts) {
-		if t.Equal(srcIP) {
-			continue
-		}
-		_ = c.Write(BuildRequest(mac, srcIP, t))
-		if ctx.Err() != nil {
-			break
-		}
-		time.Sleep(time.Millisecond) // light pacing so we don't flood
-	}
-
-	select {
-	case <-time.After(window):
-	case <-ctx.Done():
-	}
-	cancel()
-	<-done
-
-	mu.Lock()
 	hosts := make([]Host, 0, len(found))
 	for ip, m := range found {
 		hosts = append(hosts, Host{IP: ip, MAC: m})
 	}
-	mu.Unlock()
 	sort.Slice(hosts, func(i, j int) bool { return ipLess(hosts[i].IP, hosts[j].IP) })
 
 	return Result{Interface: iface, Subnet: ipnet.String(), Hosts: hosts}, nil
