@@ -162,42 +162,67 @@ func probePQ(ctx context.Context, hs Handshaker, sni, hostport string) PQStatus 
 	}
 }
 
-// grade returns an A–F grade and the findings behind it.
-func grade(protos []Protocol, ciphers []Cipher) (string, []string) {
-	var findings []string
-	legacy := false
-	for _, p := range protos {
-		if p.Supported && p.Legacy {
-			legacy = true
-			findings = append(findings, p.Name+" is enabled — a legacy protocol with known weaknesses; disable it.")
+// brokenCipher reports whether a suite is cryptographically broken (as opposed
+// to merely legacy): RC4, 3DES/DES, NULL, EXPORT, anonymous, or MD5-based.
+// These fail the grade outright; CBC-mode and RSA-key-exchange suites are
+// "legacy" (discouraged, no forward secrecy) but not broken.
+func brokenCipher(name string) bool {
+	n := strings.ToUpper(name)
+	for _, bad := range []string{"RC4", "3DES", "_DES_", "NULL", "EXPORT", "_ANON", "MD5"} {
+		if strings.Contains(n, bad) {
+			return true
 		}
 	}
-	weak := false
+	return false
+}
+
+// grade returns an A–F grade and the findings behind it. F is reserved for
+// genuinely broken configurations (a broken cipher negotiable, or no modern
+// protocol at all). A deprecated protocol (TLS 1.0/1.1) caps at C; a legacy
+// but unbroken cipher (CBC / no forward secrecy) caps at B — matching the way
+// SSL Labs penalizes rather than fails these.
+func grade(protos []Protocol, ciphers []Cipher) (string, []string) {
+	var findings []string
+	legacyProto := false
+	for _, p := range protos {
+		if p.Supported && p.Legacy {
+			legacyProto = true
+			findings = append(findings, p.Name+" is enabled — a deprecated protocol; disable it (modern clients use TLS 1.2+).")
+		}
+	}
+	broken, legacyCipher := false, false
 	for _, c := range ciphers {
-		if !c.Secure {
-			weak = true
-			findings = append(findings, "Weak cipher negotiable: "+c.Name+" — disable it.")
+		if c.Secure {
+			continue
+		}
+		if brokenCipher(c.Name) {
+			broken = true
+			findings = append(findings, "Broken cipher negotiable: "+c.Name+" — remove it immediately.")
+		} else {
+			legacyCipher = true
+			findings = append(findings, "Legacy cipher negotiable: "+c.Name+" (CBC mode or no forward secrecy) — prefer AEAD suites with ECDHE.")
 		}
 	}
 	tls13 := supported(protos, tls.VersionTLS13)
 	tls12 := supported(protos, tls.VersionTLS12)
 
 	switch {
-	case legacy || weak:
+	case broken:
 		return "F", findings
 	case !tls12 && !tls13:
 		findings = append(findings, "No TLS 1.2 or 1.3 — modern clients may refuse to connect.")
-		return "D", findings
+		return "F", findings
+	case legacyProto:
+		return "C", findings
+	case legacyCipher:
+		return "B", findings
 	case tls13 && tls12:
 		return "A", findings
-	case tls13 || tls12:
-		if !tls13 {
-			findings = append(findings, "TLS 1.3 not offered — enable it for the strongest handshake.")
-			return "B", findings
-		}
-		return "A", findings
+	case tls12 && !tls13:
+		findings = append(findings, "TLS 1.3 not offered — enable it for the strongest handshake.")
+		return "B", findings
 	default:
-		return "C", findings
+		return "A", findings
 	}
 }
 

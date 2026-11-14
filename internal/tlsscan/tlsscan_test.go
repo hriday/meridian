@@ -110,6 +110,36 @@ func TestScanNoPostQuantumIsFlagged(t *testing.T) {
 	require.Contains(t, []string{"A", "B"}, r.Grade)
 }
 
+func TestScanLegacyCipherCapsAtB(t *testing.T) {
+	// A CBC suite (insecure per Go, but not broken) negotiable alongside a
+	// modern TLS 1.3 handshake should cap at B, not fail to F.
+	hs := fakeServer(map[uint16]bool{
+		tls.VersionTLS12: true, tls.VersionTLS13: true,
+	}, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, false)
+	r, err := Scan(context.Background(), hs, "legacy-cipher.example")
+	require.NoError(t, err)
+	require.Equal(t, "B", r.Grade)
+}
+
+func TestScanLegacyProtocolCapsAtC(t *testing.T) {
+	// TLS 1.0 enabled (with a strong cipher, no broken suites) caps at C.
+	hs := fakeServer(map[uint16]bool{
+		tls.VersionTLS10: true, tls.VersionTLS12: true,
+	}, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, false)
+	r, err := Scan(context.Background(), hs, "legacy-proto.example")
+	require.NoError(t, err)
+	require.Equal(t, "C", r.Grade)
+}
+
+func TestScanBrokenCipherIsF(t *testing.T) {
+	// RC4 is broken — a hard F even on TLS 1.2.
+	hs := fakeServer(map[uint16]bool{tls.VersionTLS12: true},
+		tls.TLS_RSA_WITH_RC4_128_SHA, false)
+	r, err := Scan(context.Background(), hs, "rc4.example")
+	require.NoError(t, err)
+	require.Equal(t, "F", r.Grade)
+}
+
 func TestScanNotATLSServer(t *testing.T) {
 	hs := func(ctx context.Context, hostport string, cfg *tls.Config) (tls.ConnectionState, error) {
 		return tls.ConnectionState{}, errors.New("connection refused")
