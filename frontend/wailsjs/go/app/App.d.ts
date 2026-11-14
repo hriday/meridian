@@ -15,6 +15,7 @@ import {certexpiry} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
 import {dnsaudit} from '../models';
+import {dnsprop} from '../models';
 import {dnsx} from '../models';
 import {sysconf} from '../models';
 import {configdiff} from '../models';
@@ -100,6 +101,8 @@ export function Classify(arg1:string):Promise<netinput.Result>;
 export function ClearAtlasKey():Promise<void>;
 
 export function DNSAudit(arg1:string,arg2:string):Promise<dnsaudit.Report>;
+
+export function DNSPropagation(arg1:string,arg2:string):Promise<dnsprop.Report>;
 
 export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Result>;
 

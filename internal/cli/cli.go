@@ -167,6 +167,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPingMon(args[1:], stdout, stderr)
 	case "mtr":
 		return runMTR(args[1:], stdout, stderr)
+	case "dnspropagation", "dnsprop":
+		return runDNSProp(args[1:], stdout, stderr)
 	case "speedtest":
 		return runSpeedTest(args[1:], stdout, stderr)
 	case "syslog":

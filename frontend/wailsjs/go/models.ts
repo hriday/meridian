@@ -1043,6 +1043,129 @@ export namespace dnsbl {
 
 }
 
+export namespace dnsprop {
+	
+	export class Resolver {
+	    name: string;
+	    ip: string;
+	    loc?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Resolver(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.ip = source["ip"];
+	        this.loc = source["loc"];
+	    }
+	}
+	export class Answer {
+	    resolver: Resolver;
+	    values: string[];
+	    ttl: number;
+	    rcode: string;
+	    rttMillis: number;
+	    err?: string;
+	    group: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Answer(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.resolver = this.convertValues(source["resolver"], Resolver);
+	        this.values = source["values"];
+	        this.ttl = source["ttl"];
+	        this.rcode = source["rcode"];
+	        this.rttMillis = source["rttMillis"];
+	        this.err = source["err"];
+	        this.group = source["group"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Group {
+	    values: string[];
+	    rcode: string;
+	    resolvers: string[];
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Group(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.values = source["values"];
+	        this.rcode = source["rcode"];
+	        this.resolvers = source["resolvers"];
+	        this.count = source["count"];
+	    }
+	}
+	export class Report {
+	    name: string;
+	    type: string;
+	    answers: Answer[];
+	    groups: Group[];
+	    consensus: boolean;
+	    propagated: number;
+	    total: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.answers = this.convertValues(source["answers"], Answer);
+	        this.groups = this.convertValues(source["groups"], Group);
+	        this.consensus = source["consensus"];
+	        this.propagated = source["propagated"];
+	        this.total = source["total"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace dnsx {
 	
 	export class Record {
