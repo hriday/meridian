@@ -38,6 +38,7 @@ func Catalog() []CommandGroup {
 			{"subdomains", "<domain> [--json]", "subdomains via Certificate Transparency"},
 			{"blocklist", "<ip> [--resolver <ip>] [--json]", "DNS blocklist (DNSBL) check"},
 			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/DNSSEC)"},
+			{"dnspropagation", "<name> [--type A] [--json]", "check a record across global resolvers"},
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
 			{"certexpiry", "<host[:port]>... [--json]", "bulk TLS cert days-to-expiry"},
 			{"certissue", "<domain>... [--email x] [--staging] [--out <dir>]", "get a Let's Encrypt cert (DNS-01)"},
