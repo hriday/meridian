@@ -79,8 +79,30 @@ func printPingMonSummary(stdout io.Writer, host string, replies []ping.Reply) {
 	fmt.Fprintf(stdout, "\n--- %s ping statistics ---\n", host)
 	fmt.Fprintf(stdout, "%d sent, %d received, %.0f%% loss\n", sent, recv, loss)
 	if recv > 0 {
-		fmt.Fprintf(stdout, "rtt min/avg/max = %.1f/%.1f/%.1f ms\n", min, avg, max)
+		fmt.Fprintf(stdout, "rtt min/avg/max = %.1f/%.1f/%.1f ms, jitter = %.1f ms\n", min, avg, max, jitter(replies))
 	}
+}
+
+// jitter is the mean absolute difference between consecutive received RTTs.
+func jitter(replies []ping.Reply) float64 {
+	var prev float64
+	var sum float64
+	var n, have int
+	for _, r := range replies {
+		if !r.OK {
+			continue
+		}
+		if have > 0 {
+			sum += math.Abs(r.RTTMillis - prev)
+			n++
+		}
+		prev = r.RTTMillis
+		have++
+	}
+	if n == 0 {
+		return 0
+	}
+	return sum / float64(n)
 }
 
 // summarizePing returns sent, received, and min/avg/max RTT (ms) over replies.
