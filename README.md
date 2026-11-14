@@ -16,26 +16,63 @@ really say?* — and explains every answer in plain language, not just raw numbe
 
 ## Features
 
+Every tool is point-in-time — go in, get actionable data, move on; nothing is
+retained. Where a tool would normally mean pasting a secret or a token into a
+website, Meridian does it locally so the data never leaves your machine.
+
 **Internet**
 - **Lookup** — paste anything (`1.1.1.1`, `AS13335`, `104.16.0.0/13`,
-  `cloudflare.com`) and get an entity page for the IP, ASN, prefix, or domain,
-  with every related entity a click away. Routing (RIPEstat) + registration
-  (RDAP) + AS ownership (Team Cymru), with RPKI status and related prefixes.
-- **Traceroute (AS)** — unprivileged ICMP traceroute that annotates each hop
-  with its autonomous system, so you see the *networks* a packet crosses.
-- **BGP & looking glass** — the control-plane view of a prefix/IP: origin AS(es)
-  (with MOAS warnings), the AS paths seen across public route collectors, your
-  upstreams and transit, RPKI validity, and a searchable list of vantage points.
+  `cloudflare.com`) → an entity page for the IP, ASN, prefix, or domain, with
+  routing (RIPEstat), registration (RDAP), AS ownership (Team Cymru) and RPKI.
+- **Traceroute (AS)** — ICMP traceroute annotating each hop with its AS.
+- **BGP & looking glass** — origin AS(es) with MOAS warnings, AS paths across
+  public collectors, upstreams/transit, RPKI, and vantage points.
+- **TLS certificate** / **Cert & CSR decoder** — inspect a live server's cert, or
+  decode a pasted PEM certificate/CSR locally.
+- **Cipher scan** — TLS versions + cipher suites, graded. **Cert expiry** — bulk
+  days-to-expiry. **Let's Encrypt** — one-shot DNS-01 issuance for firewalled sites.
+- **HTTP check**, **Security headers** (OWASP-mapped), **Service status**
+  (Statuspage outage check), **WHOIS**, **Subdomains** (Certificate Transparency).
+- **DNS blocklist** (DNSBL), **DNS audit** (SPF/DMARC/DNSSEC), **DNS propagation**
+  (one record across a dozen global resolvers), **Email auth** (SPF/DKIM/DMARC).
+- **SMTP probe** (banner / STARTTLS / cert) and **SIP OPTIONS ping** (is VoIP
+  signaling up?).
 
 **Addressing**
 - **Subnet calculator** — network/broadcast/host math and prefix splitting.
-- **IP space** — record your own networks in a local, **passphrase-encrypted**,
-  append-only inventory (argon2id + NaCl secretbox). Nothing leaves your machine.
+- **IP space** — record your networks in up to 25 local, **passphrase-encrypted**,
+  append-only inventories (argon2id + NaCl secretbox) with record tags and
+  optional sync (local/S3/SFTP/git, encrypted blob). Nothing leaves your machine.
 
-**Local / environment**
-- **NTP** — query a time server and read its stratum, offset, and health with a
-  plain-language verdict.
-- **DNS** — resolve any record type against any resolver, with DNSSEC signals.
+**Local / environment** — **NTP** (stratum/offset/verdict), **DNS** (any record,
+any resolver, DNSSEC signals), **Interfaces**.
+
+**Local network**
+- **Ping** / **Ping monitor** / **Connection quality** — live latency, jitter,
+  loss, with an estimated **MOS** verdict for real-time (VoIP/video) readiness.
+- **MTR** (continuous path + per-hop loss), **Path MTU** (find MTU black holes),
+  **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
+  I on), **ARP scan** (live MAC↔IP + vendor).
+- **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
+  **Speed test** (iperf3 client).
+
+**SNMP & monitoring** — **SNMP sweep**, **Device health**, **Switch-port mapper**
+(MAC→port), **MIB browser** (walk), **SNMP community audit** (authorization-gated).
+
+**Collectors** (local receivers) — **Syslog**, **SNMP traps**, **NetFlow v5**,
+**TFTP** (saves grabbed files).
+
+**Security**
+- **JWT decoder + verifier**, **TOTP (2FA) code**, **bcrypt / htpasswd**,
+  **Encode / decode** (base64 / hex / URL / JSON) — all local, so tokens,
+  passwords and secrets never hit a website.
+- **Netcat**, **AD password audit** (authorized self-audit, HIBP k-anonymity),
+  **Cisco password decode**, **Hash identifier**, **Breach lookup** (HIBP),
+  **CVE lookup** (NVD), **Threat intel** (abuse.ch botnet C2).
+
+**Config insight** — **Firewall analyzer** (FortiGate, PAN-OS, Cisco ASA, Juniper
+SRX, Arista, Check Point, VyOS, pfSense), **Web-server analyzer** (nginx/Apache/
+Caddy), **Terraform exposure scan**, **config diff**.
 
 ## Screenshots
 

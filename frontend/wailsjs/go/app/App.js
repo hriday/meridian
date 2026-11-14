@@ -450,6 +450,10 @@ export function RulesInstalled() {
   return window['go']['app']['App']['RulesInstalled']();
 }
 
+export function SIPProbe(arg1, arg2, arg3) {
+  return window['go']['app']['App']['SIPProbe'](arg1, arg2, arg3);
+}
+
 export function SMTPProbe(arg1, arg2, arg3, arg4) {
   return window['go']['app']['App']['SMTPProbe'](arg1, arg2, arg3, arg4);
 }

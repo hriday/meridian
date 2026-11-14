@@ -193,6 +193,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runEmailAuth(args[1:], stdout, stderr)
 	case "smtp":
 		return runSMTP(args[1:], stdout, stderr)
+	case "sip":
+		return runSIP(args[1:], stdout, stderr)
 	case "jwt":
 		return runJWT(args[1:], stdout, stderr)
 	case "certinfo":

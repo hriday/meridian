@@ -41,6 +41,7 @@ import {ping} from '../models';
 import {scan} from '../models';
 import {pwhash} from '../models';
 import {wordlist} from '../models';
+import {sipping} from '../models';
 import {smtpprobe} from '../models';
 import {secheaders} from '../models';
 import {svcstatus} from '../models';
@@ -277,6 +278,8 @@ export function RulesDir():Promise<string>;
 export function RulesDownload(arg1:string):Promise<string>;
 
 export function RulesInstalled():Promise<Array<string>>;
+
+export function SIPProbe(arg1:string,arg2:string,arg3:string):Promise<sipping.Result>;
 
 export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<smtpprobe.Result>;
 

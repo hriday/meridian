@@ -3305,6 +3305,41 @@ export namespace secheaders {
 
 }
 
+export namespace sipping {
+	
+	export class Result {
+	    target: string;
+	    transport: string;
+	    statusCode: number;
+	    reason: string;
+	    server?: string;
+	    userAgent?: string;
+	    allow?: string[];
+	    accept?: string[];
+	    supported?: string[];
+	    rttMillis: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.transport = source["transport"];
+	        this.statusCode = source["statusCode"];
+	        this.reason = source["reason"];
+	        this.server = source["server"];
+	        this.userAgent = source["userAgent"];
+	        this.allow = source["allow"];
+	        this.accept = source["accept"];
+	        this.supported = source["supported"];
+	        this.rttMillis = source["rttMillis"];
+	    }
+	}
+
+}
+
 export namespace smtpprobe {
 	
 	export class TLSInfo {
