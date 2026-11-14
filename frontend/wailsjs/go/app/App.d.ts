@@ -39,6 +39,7 @@ import {ptrsweep} from '../models';
 import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
+import {pwhash} from '../models';
 import {wordlist} from '../models';
 import {smtpprobe} from '../models';
 import {secheaders} from '../models';
@@ -262,6 +263,10 @@ export function PingHost(arg1:string,arg2:number):Promise<ping.Stats>;
 export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;
+
+export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
+
+export function PwHashGenerate(arg1:string,arg2:string,arg3:number):Promise<pwhash.GenResult>;
 
 export function RulesCatalog():Promise<Array<wordlist.Entry>>;
 

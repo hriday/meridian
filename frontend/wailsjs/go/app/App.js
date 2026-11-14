@@ -426,6 +426,14 @@ export function PortScan(arg1, arg2) {
   return window['go']['app']['App']['PortScan'](arg1, arg2);
 }
 
+export function PwHashCheck(arg1, arg2) {
+  return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
+}
+
+export function PwHashGenerate(arg1, arg2, arg3) {
+  return window['go']['app']['App']['PwHashGenerate'](arg1, arg2, arg3);
+}
+
 export function RulesCatalog() {
   return window['go']['app']['App']['RulesCatalog']();
 }
