@@ -59,6 +59,7 @@ func Catalog() []CommandGroup {
 		{Name: "Local network", Commands: []CommandDoc{
 			{"ping", "<host> [--count 5] [--interval 500ms] [--json]", "ping"},
 			{"pingmon", "<host> [--interval 1s] [--json]", "live ping (Ctrl-C to stop)"},
+			{"quality", "<host> [--count 25] [--json]", "connection quality — jitter, loss, MOS"},
 			{"mtr", "<host> [--interval 1s] [--6] [--json]", "live path + per-hop loss (Ctrl-C to stop)"},
 			{"pathmtu", "<host> [--json]", "discover the path MTU (find MTU bottlenecks)"},
 			{"dhcpdiscover", "[--wait 5s] [--json]", "find DHCP servers / rogues on the LAN"},

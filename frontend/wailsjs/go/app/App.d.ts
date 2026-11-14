@@ -312,6 +312,8 @@ export function StartMTR(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function StartPingMonitor(arg1:string,arg2:string):Promise<void>;
 
+export function StartQualityMonitor(arg1:string,arg2:string):Promise<void>;
+
 export function StopDeviceMonitor(arg1:string):Promise<void>;
 
 export function StopIfMonitor(arg1:string):Promise<void>;
@@ -319,6 +321,8 @@ export function StopIfMonitor(arg1:string):Promise<void>;
 export function StopMTR(arg1:string):Promise<void>;
 
 export function StopPingMonitor(arg1:string):Promise<void>;
+
+export function StopQualityMonitor(arg1:string):Promise<void>;
 
 export function StopTrace():Promise<void>;
 

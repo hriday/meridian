@@ -518,6 +518,10 @@ export function StartPingMonitor(arg1, arg2) {
   return window['go']['app']['App']['StartPingMonitor'](arg1, arg2);
 }
 
+export function StartQualityMonitor(arg1, arg2) {
+  return window['go']['app']['App']['StartQualityMonitor'](arg1, arg2);
+}
+
 export function StopDeviceMonitor(arg1) {
   return window['go']['app']['App']['StopDeviceMonitor'](arg1);
 }
@@ -532,6 +536,10 @@ export function StopMTR(arg1) {
 
 export function StopPingMonitor(arg1) {
   return window['go']['app']['App']['StopPingMonitor'](arg1);
+}
+
+export function StopQualityMonitor(arg1) {
+  return window['go']['app']['App']['StopQualityMonitor'](arg1);
 }
 
 export function StopTrace() {
