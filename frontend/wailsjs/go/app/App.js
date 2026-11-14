@@ -602,6 +602,18 @@ export function Traceroute(arg1, arg2) {
   return window['go']['app']['App']['Traceroute'](arg1, arg2);
 }
 
+export function Transcode(arg1, arg2) {
+  return window['go']['app']['App']['Transcode'](arg1, arg2);
+}
+
+export function TranscodeDetect(arg1) {
+  return window['go']['app']['App']['TranscodeDetect'](arg1);
+}
+
+export function TranscodeOps() {
+  return window['go']['app']['App']['TranscodeOps']();
+}
+
 export function TrapPoll(arg1) {
   return window['go']['app']['App']['TrapPoll'](arg1);
 }

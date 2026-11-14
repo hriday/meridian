@@ -51,6 +51,7 @@ import {tlsscan} from '../models';
 import {totp} from '../models';
 import {threatintel} from '../models';
 import {trace} from '../models';
+import {transcode} from '../models';
 import {whois} from '../models';
 
 export function ADAuditCheckPwned():Promise<Record<string, number>>;
@@ -352,6 +353,12 @@ export function TftpStop():Promise<void>;
 export function ThreatIntelCheck(arg1:string):Promise<Array<threatintel.Hit>>;
 
 export function Traceroute(arg1:string,arg2:boolean):Promise<trace.Result>;
+
+export function Transcode(arg1:string,arg2:string):Promise<string>;
+
+export function TranscodeDetect(arg1:string):Promise<Array<transcode.Guess>>;
+
+export function TranscodeOps():Promise<Array<string>>;
 
 export function TrapPoll(arg1:number):Promise<collector.Poll_github_com_hriday_meridian_internal_snmp_TrapMsg_>;
 

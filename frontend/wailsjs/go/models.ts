@@ -4141,6 +4141,25 @@ export namespace trace {
 
 }
 
+export namespace transcode {
+	
+	export class Guess {
+	    label: string;
+	    result: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Guess(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.label = source["label"];
+	        this.result = source["result"];
+	    }
+	}
+
+}
+
 export namespace update {
 	
 	export class Result {
