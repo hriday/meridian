@@ -3870,6 +3870,81 @@ export namespace sysconf {
 
 }
 
+export namespace tcpping {
+	
+	export class Probe {
+	    seq: number;
+	    rttMs: number;
+	    ok: boolean;
+	    err?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Probe(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.seq = source["seq"];
+	        this.rttMs = source["rttMs"];
+	        this.ok = source["ok"];
+	        this.err = source["err"];
+	    }
+	}
+	export class Result {
+	    host: string;
+	    port: number;
+	    address: string;
+	    sent: number;
+	    received: number;
+	    lossPct: number;
+	    minMs: number;
+	    avgMs: number;
+	    maxMs: number;
+	    jitterMs: number;
+	    verdict: string;
+	    probes: Probe[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.address = source["address"];
+	        this.sent = source["sent"];
+	        this.received = source["received"];
+	        this.lossPct = source["lossPct"];
+	        this.minMs = source["minMs"];
+	        this.avgMs = source["avgMs"];
+	        this.maxMs = source["maxMs"];
+	        this.jitterMs = source["jitterMs"];
+	        this.verdict = source["verdict"];
+	        this.probes = this.convertValues(source["probes"], Probe);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace tfscan {
 	
 	export class Counts {
