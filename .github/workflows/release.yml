@@ -62,6 +62,19 @@ jobs:
             echo "VERSION=dev-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
           fi
 
+      - name: Stamp bundle version
+        shell: bash
+        run: |
+          # Set wails.json info.productVersion so the macOS Info.plist
+          # (CFBundleShortVersionString) and the Windows exe version resource
+          # carry the real version instead of Wails's 1.0.0 default. Apple wants
+          # a numeric version, so strip the leading "v" and fall back for dev.
+          BV="${VERSION#v}"
+          case "$BV" in dev-*|"") BV="0.0.0";; esac
+          tmp="$(mktemp)"
+          jq --arg v "$BV" '.info.productVersion = $v' wails.json > "$tmp" && mv "$tmp" wails.json
+          echo "stamped productVersion=$BV"
+
       - name: Build (macOS / Windows)
         if: runner.os != 'Linux'
         run: wails build -clean -platform ${{ matrix.platform }} -ldflags "-X github.com/hriday/meridian/internal/version.Version=${VERSION}"
