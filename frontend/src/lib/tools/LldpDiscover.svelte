@@ -9,6 +9,7 @@
   LLDPSupported().then((s) => (supported = s)).catch(() => {});
 
   const needsPriv = () => error.toLowerCase().includes("elevated privileges");
+  const needsNpcap = () => error.toLowerCase().includes("npcap");
 
   async function run() {
     if (loading) return;
@@ -34,10 +35,10 @@
   </p>
 
   {#if !supported}
-    <div class="hint">LLDP/CDP capture isn't supported on this operating system yet (macOS and Linux only).</div>
+    <div class="hint">LLDP/CDP capture isn't supported on this operating system yet.</div>
   {:else}
     <button class="go" on:click={run} disabled={loading}>{loading ? "Listening… (up to ~35s)" : "Listen for neighbors"}</button>
-    <p class="muted">Switches announce every ~30s, so this listens up to ~35 seconds. Needs raw capture — on macOS, run elevated or with ChmodBPF; on Linux, <span class="mono">sudo</span>.</p>
+    <p class="muted">Switches announce every ~30s, so this listens up to ~35 seconds. Needs raw capture — on macOS, run elevated or with ChmodBPF; on Linux, <span class="mono">sudo</span>; on Windows, install <span class="mono">Npcap</span> (free).</p>
   {/if}
 
   {#if loading}
@@ -45,7 +46,12 @@
   {/if}
 
   {#if error}
-    {#if needsPriv()}
+    {#if needsNpcap()}
+      <div class="card warn">
+        <div class="ctitle">Needs Npcap</div>
+        <p class="cbody">Windows has no built-in raw-capture API, so LLDP/CDP needs <strong>Npcap</strong> — a free driver from <span class="mono">npcap.com</span> (it's what Wireshark installs). Install it, then try again.</p>
+      </div>
+    {:else if needsPriv()}
       <div class="card warn">
         <div class="ctitle">Needs elevated privileges</div>
         <p class="cbody">Raw packet capture requires root. Run <span class="mono">sudo meridian-cli lldp</span>, relaunch the app elevated, or install ChmodBPF (Wireshark) to grant BPF access.</p>
