@@ -132,7 +132,7 @@
     {#if running}<p class="muted">Tracing… (<button class="linkbtn" on:click={stop}>stop</button>)</p>{/if}
   {/if}
 
-  <p class="foot">BGP AS-path comparison and MTR live view — <span class="soon">soon</span>.</p>
+  <p class="foot">Need continuous per-hop loss over time? Use <strong>MTR (live path)</strong> under Local network.</p>
 </div>
 
 <style>
@@ -162,6 +162,5 @@
   .muted { color: var(--text-dim); font-size: 0.8rem; margin: 10px 0 0; }
   .linkbtn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
   .foot { color: var(--text-faint); font-size: 0.74rem; margin: 16px 0 0; }
-  .soon { font-size: 0.6rem; color: var(--text-faint); border: 1px solid var(--pill-border); border-radius: 8px; padding: 0 6px; }
   .mono { font-family: var(--font-mono); }
 </style>

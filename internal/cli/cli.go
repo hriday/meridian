@@ -165,6 +165,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runSNMPBrute(args[1:], stdout, stderr)
 	case "pingmon":
 		return runPingMon(args[1:], stdout, stderr)
+	case "mtr":
+		return runMTR(args[1:], stdout, stderr)
 	case "speedtest":
 		return runSpeedTest(args[1:], stdout, stderr)
 	case "syslog":

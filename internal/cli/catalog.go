@@ -56,6 +56,7 @@ func Catalog() []CommandGroup {
 		{Name: "Local network", Commands: []CommandDoc{
 			{"ping", "<host> [--count 5] [--interval 500ms] [--json]", "ping"},
 			{"pingmon", "<host> [--interval 1s] [--json]", "live ping (Ctrl-C to stop)"},
+			{"mtr", "<host> [--interval 1s] [--6] [--json]", "live path + per-hop loss (Ctrl-C to stop)"},
 			{"pingsweep", "<cidr> [--ports 22,80,443] [--json]", "ping / TCP sweep"},
 			{"portscan", "<host> <ports|--common> [--json]", "port scan"},
 			{"ptrsweep", "<cidr> [--concurrency 64] [--json]", "reverse-DNS sweep"},
