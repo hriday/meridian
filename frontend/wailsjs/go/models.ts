@@ -3160,6 +3160,41 @@ export namespace pwaudit {
 
 }
 
+export namespace pwhash {
+	
+	export class CheckResult {
+	    match: boolean;
+	    cost?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.match = source["match"];
+	        this.cost = source["cost"];
+	    }
+	}
+	export class GenResult {
+	    hash: string;
+	    cost: number;
+	    htpasswd?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new GenResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hash = source["hash"];
+	        this.cost = source["cost"];
+	        this.htpasswd = source["htpasswd"];
+	    }
+	}
+
+}
+
 export namespace scan {
 	
 	export class HostResult {

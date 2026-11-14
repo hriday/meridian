@@ -195,6 +195,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runJWT(args[1:], stdout, stderr)
 	case "certinfo":
 		return runCertInfo(args[1:], stdout, stderr)
+	case "htpasswd":
+		return runHtpasswd(args[1:], stdout, stderr)
 	case "cipherscan":
 		return runCipherScan(args[1:], stdout, stderr)
 	case "ptrsweep":

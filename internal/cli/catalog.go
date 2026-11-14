@@ -89,6 +89,7 @@ func Catalog() []CommandGroup {
 			{"ciscopw", "[<config-file>] [--decode <type7>] [--json]", "Cisco password analysis"},
 			{"hashid", "<hash> [--json]", "identify a hash type"},
 			{"jwt", "<token> [--secret s | --keyfile f] [--json]", "decode + verify a JWT (local, private)"},
+			{"htpasswd", "[<user>] [--cost 10] [--check <hash>]  (password on stdin)", "bcrypt hash / verify (htpasswd)"},
 			{"snmpbrute", "<device> --authorized [--communities a,b,c]", "SNMP community audit"},
 			{"breaches", "<email> [--json]   (or --latest)", "breach lookup"},
 			{"cve", "<id|keyword> [--json]", "CVE lookup (NVD)"},
