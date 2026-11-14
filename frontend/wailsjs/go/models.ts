@@ -3576,6 +3576,35 @@ export namespace snmp {
 
 }
 
+export namespace stun {
+	
+	export class Result {
+	    server: string;
+	    localIP: string;
+	    publicIP: string;
+	    publicPort: number;
+	    nat: boolean;
+	    natType: string;
+	    rttMillis: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.server = source["server"];
+	        this.localIP = source["localIP"];
+	        this.publicIP = source["publicIP"];
+	        this.publicPort = source["publicPort"];
+	        this.nat = source["nat"];
+	        this.natType = source["natType"];
+	        this.rttMillis = source["rttMillis"];
+	    }
+	}
+
+}
+
 export namespace subnet {
 	
 	export class Info {

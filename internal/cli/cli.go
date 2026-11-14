@@ -195,6 +195,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runSMTP(args[1:], stdout, stderr)
 	case "sip":
 		return runSIP(args[1:], stdout, stderr)
+	case "stun":
+		return runSTUN(args[1:], stdout, stderr)
 	case "jwt":
 		return runJWT(args[1:], stdout, stderr)
 	case "certinfo":
