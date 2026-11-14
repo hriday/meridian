@@ -642,6 +642,14 @@ export function TrapStop() {
   return window['go']['app']['App']['TrapStop']();
 }
 
+export function VoipBandwidth(arg1, arg2, arg3) {
+  return window['go']['app']['App']['VoipBandwidth'](arg1, arg2, arg3);
+}
+
+export function VoipCodecs() {
+  return window['go']['app']['App']['VoipCodecs']();
+}
+
 export function WakeOnLAN(arg1, arg2, arg3) {
   return window['go']['app']['App']['WakeOnLAN'](arg1, arg2, arg3);
 }
