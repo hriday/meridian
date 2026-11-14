@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hriday/meridian/internal/acmecert"
 	"github.com/hriday/meridian/internal/collector"
 	"github.com/hriday/meridian/internal/ipspace"
 	"github.com/hriday/meridian/internal/lookup"
@@ -84,6 +85,11 @@ type App struct {
 
 	monMu    sync.Mutex
 	monitors map[string]*monitor
+
+	// In-flight ACME (Let's Encrypt) orders, held between CertBegin (which
+	// returns the TXT records to publish) and CertFinalize (which issues).
+	acmeMu     sync.Mutex
+	acmeOrders map[string]*acmecert.Order
 
 	syslog  *collector.Collector[collector.SyslogMsg]
 	traps   *collector.Collector[snmp.TrapMsg]

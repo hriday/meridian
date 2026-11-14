@@ -40,6 +40,7 @@ func Catalog() []CommandGroup {
 			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/DNSSEC)"},
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
 			{"certexpiry", "<host[:port]>... [--json]", "bulk TLS cert days-to-expiry"},
+			{"certissue", "<domain>... [--email x] [--staging] [--out <dir>]", "get a Let's Encrypt cert (DNS-01)"},
 		}},
 		{Name: "Addressing", Commands: []CommandDoc{
 			{"subnet", "<cidr> [--split <prefixlen>] [--json]", "subnet calculator"},
