@@ -52,7 +52,8 @@ any resolver, DNSSEC signals), **Interfaces**.
   loss, with an estimated **MOS** verdict for real-time (VoIP/video) readiness.
 - **MTR** (continuous path + per-hop loss), **Path MTU** (find MTU black holes),
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
-  I on), **ARP scan** (live MAC↔IP + vendor).
+  I on), **ARP scan** (live MAC↔IP + vendor), **RTP analyzer** (per-stream
+  jitter/loss/codec from captured media).
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
   **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
 

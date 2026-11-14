@@ -3195,6 +3195,41 @@ export namespace pwhash {
 
 }
 
+export namespace rtp {
+	
+	export class Stream {
+	    ssrc: number;
+	    src: string;
+	    dst: string;
+	    payloadType: number;
+	    codec: string;
+	    packets: number;
+	    lost: number;
+	    lossPct: number;
+	    jitterMs: number;
+	    durationMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Stream(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ssrc = source["ssrc"];
+	        this.src = source["src"];
+	        this.dst = source["dst"];
+	        this.payloadType = source["payloadType"];
+	        this.codec = source["codec"];
+	        this.packets = source["packets"];
+	        this.lost = source["lost"];
+	        this.lossPct = source["lossPct"];
+	        this.jitterMs = source["jitterMs"];
+	        this.durationMs = source["durationMs"];
+	    }
+	}
+
+}
+
 export namespace scan {
 	
 	export class HostResult {
