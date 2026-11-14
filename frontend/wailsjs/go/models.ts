@@ -2949,6 +2949,87 @@ export namespace subnet {
 
 }
 
+export namespace svcstatus {
+	
+	export class Component {
+	    name: string;
+	    status: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Component(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.status = source["status"];
+	    }
+	}
+	export class Incident {
+	    name: string;
+	    status: string;
+	    impact: string;
+	    shortlink: string;
+	    updatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Incident(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.status = source["status"];
+	        this.impact = source["impact"];
+	        this.shortlink = source["shortlink"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class Status {
+	    service: string;
+	    url: string;
+	    indicator: string;
+	    description: string;
+	    operational: boolean;
+	    impacted: Component[];
+	    incidents: Incident[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Status(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.service = source["service"];
+	        this.url = source["url"];
+	        this.indicator = source["indicator"];
+	        this.description = source["description"];
+	        this.operational = source["operational"];
+	        this.impacted = this.convertValues(source["impacted"], Component);
+	        this.incidents = this.convertValues(source["incidents"], Incident);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace sysconf {
 	
 	export class Found {
