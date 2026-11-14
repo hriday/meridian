@@ -434,6 +434,14 @@ export function PwHashGenerate(arg1, arg2, arg3) {
   return window['go']['app']['App']['PwHashGenerate'](arg1, arg2, arg3);
 }
 
+export function RTPCapture(arg1) {
+  return window['go']['app']['App']['RTPCapture'](arg1);
+}
+
+export function RTPSupported() {
+  return window['go']['app']['App']['RTPSupported']();
+}
+
 export function RulesCatalog() {
   return window['go']['app']['App']['RulesCatalog']();
 }

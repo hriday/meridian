@@ -40,6 +40,7 @@ import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
 import {pwhash} from '../models';
+import {rtp} from '../models';
 import {wordlist} from '../models';
 import {sipping} from '../models';
 import {smtpprobe} from '../models';
@@ -272,6 +273,10 @@ export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.Port
 export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
 
 export function PwHashGenerate(arg1:string,arg2:string,arg3:number):Promise<pwhash.GenResult>;
+
+export function RTPCapture(arg1:number):Promise<Array<rtp.Stream>>;
+
+export function RTPSupported():Promise<boolean>;
 
 export function RulesCatalog():Promise<Array<wordlist.Entry>>;
 
