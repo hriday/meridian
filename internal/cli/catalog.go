@@ -33,6 +33,7 @@ func Catalog() []CommandGroup {
 			{"tls", "<host[:port]> [--json]", "inspect a server's certificate"},
 			{"certinfo", "[<file>] [--json]", "decode a PEM certificate / CSR (stdin ok)"},
 			{"cipherscan", "<host[:port]> [--json]", "TLS versions + cipher suites, graded"},
+			{"sshaudit", "<host[:port]> [--json]", "SSH algorithms + host keys + post-quantum readiness"},
 			{"http", "<url> [--json]", "HTTP(S) check"},
 			{"sechdr", "<url> [--json]", "security headers (OWASP-mapped)"},
 			{"whois", "<domain|ip|asn> [--json]", "whois"},

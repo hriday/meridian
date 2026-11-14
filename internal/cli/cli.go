@@ -213,6 +213,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTranscode(args[1:], stdout, stderr)
 	case "cipherscan":
 		return runCipherScan(args[1:], stdout, stderr)
+	case "sshaudit":
+		return runSSHAudit(args[1:], stdout, stderr)
 	case "ptrsweep":
 		return runPTRSweep(args[1:], stdout, stderr)
 	case "certissue":
