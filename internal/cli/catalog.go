@@ -43,6 +43,7 @@ func Catalog() []CommandGroup {
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
 			{"smtp", "<host|domain> [--mx] [--tls] [--port N] [--json]", "SMTP banner / STARTTLS / cert probe"},
 			{"sip", "<host> [--transport udp|tcp|tls] [--port N] [--json]", "SIP OPTIONS ping (is VoIP signaling up?)"},
+			{"stun", "[<server>] [--json]", "public IP + NAT type (STUN)"},
 			{"certexpiry", "<host[:port]>... [--json]", "bulk TLS cert days-to-expiry"},
 			{"certissue", "<domain>... [--email x] [--staging] [--out <dir>]", "get a Let's Encrypt cert (DNS-01)"},
 			{"status", "<service|status-url> [--json]", "service outage check (Statuspage)"},

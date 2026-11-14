@@ -43,6 +43,7 @@ import {pwhash} from '../models';
 import {wordlist} from '../models';
 import {sipping} from '../models';
 import {smtpprobe} from '../models';
+import {stun} from '../models';
 import {secheaders} from '../models';
 import {svcstatus} from '../models';
 import {subnet} from '../models';
@@ -282,6 +283,8 @@ export function RulesInstalled():Promise<Array<string>>;
 export function SIPProbe(arg1:string,arg2:string,arg3:string):Promise<sipping.Result>;
 
 export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<smtpprobe.Result>;
+
+export function STUNDiscover(arg1:string):Promise<stun.Result>;
 
 export function ScanCommonPorts():Promise<Array<number>>;
 
