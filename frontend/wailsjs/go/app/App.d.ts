@@ -14,6 +14,7 @@ import {cve} from '../models';
 import {certexpiry} from '../models';
 import {update} from '../models';
 import {netinput} from '../models';
+import {dhcpscan} from '../models';
 import {dnsaudit} from '../models';
 import {dnsprop} from '../models';
 import {dnsx} from '../models';
@@ -101,6 +102,10 @@ export function CheckForUpdate():Promise<update.Result>;
 export function Classify(arg1:string):Promise<netinput.Result>;
 
 export function ClearAtlasKey():Promise<void>;
+
+export function DHCPDiscover():Promise<dhcpscan.Result>;
+
+export function DHCPSupported():Promise<boolean>;
 
 export function DNSAudit(arg1:string,arg2:string):Promise<dnsaudit.Report>;
 

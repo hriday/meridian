@@ -169,6 +169,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runMTR(args[1:], stdout, stderr)
 	case "pathmtu":
 		return runPathMTU(args[1:], stdout, stderr)
+	case "dhcpdiscover", "dhcp":
+		return runDHCP(args[1:], stdout, stderr)
 	case "dnspropagation", "dnsprop":
 		return runDNSProp(args[1:], stdout, stderr)
 	case "speedtest":

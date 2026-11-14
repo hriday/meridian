@@ -905,6 +905,69 @@ export namespace cve {
 
 }
 
+export namespace dhcpscan {
+	
+	export class Server {
+	    serverID: string;
+	    offered: string;
+	    subnetMask: string;
+	    gateway: string;
+	    dns: string[];
+	    domainName: string;
+	    leaseSecs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Server(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.serverID = source["serverID"];
+	        this.offered = source["offered"];
+	        this.subnetMask = source["subnetMask"];
+	        this.gateway = source["gateway"];
+	        this.dns = source["dns"];
+	        this.domainName = source["domainName"];
+	        this.leaseSecs = source["leaseSecs"];
+	    }
+	}
+	export class Result {
+	    interface: string;
+	    servers: Server[];
+	    rogue: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.interface = source["interface"];
+	        this.servers = this.convertValues(source["servers"], Server);
+	        this.rogue = source["rogue"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace dnsaudit {
 	
 	export class Check {
