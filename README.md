@@ -54,7 +54,7 @@ any resolver, DNSSEC signals), **Interfaces**.
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
   I on), **ARP scan** (live MAC↔IP + vendor).
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
-  **Speed test** (iperf3 client).
+  **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
 
 **SNMP & monitoring** — **SNMP sweep**, **Device health**, **Switch-port mapper**
 (MAC→port), **MIB browser** (walk), **SNMP community audit** (authorization-gated).

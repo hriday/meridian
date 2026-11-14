@@ -54,6 +54,7 @@ import {totp} from '../models';
 import {threatintel} from '../models';
 import {trace} from '../models';
 import {transcode} from '../models';
+import {voipcalc} from '../models';
 import {whois} from '../models';
 
 export function ADAuditCheckPwned():Promise<Record<string, number>>;
@@ -375,6 +376,10 @@ export function TrapPoll(arg1:number):Promise<collector.Poll_github_com_hriday_m
 export function TrapStart(arg1:number):Promise<void>;
 
 export function TrapStop():Promise<void>;
+
+export function VoipBandwidth(arg1:string,arg2:number,arg3:number):Promise<voipcalc.Result>;
+
+export function VoipCodecs():Promise<Array<voipcalc.Codec>>;
 
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
 

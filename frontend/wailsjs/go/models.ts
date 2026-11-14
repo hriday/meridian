@@ -4255,6 +4255,57 @@ export namespace update {
 
 }
 
+export namespace voipcalc {
+	
+	export class Codec {
+	    name: string;
+	    bitrateKbps: number;
+	    defaultPtimeMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Codec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.bitrateKbps = source["bitrateKbps"];
+	        this.defaultPtimeMs = source["defaultPtimeMs"];
+	    }
+	}
+	export class Result {
+	    codec: string;
+	    ptimeMs: number;
+	    payloadBytes: number;
+	    packetsPerSec: number;
+	    oneWayKbps: number;
+	    oneWayEthKbps: number;
+	    perCallKbps: number;
+	    calls: number;
+	    totalKbps: number;
+	    totalEthKbps: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.codec = source["codec"];
+	        this.ptimeMs = source["ptimeMs"];
+	        this.payloadBytes = source["payloadBytes"];
+	        this.packetsPerSec = source["packetsPerSec"];
+	        this.oneWayKbps = source["oneWayKbps"];
+	        this.oneWayEthKbps = source["oneWayEthKbps"];
+	        this.perCallKbps = source["perCallKbps"];
+	        this.calls = source["calls"];
+	        this.totalKbps = source["totalKbps"];
+	        this.totalEthKbps = source["totalEthKbps"];
+	    }
+	}
+
+}
+
 export namespace webconf {
 	
 	export class Counts {
