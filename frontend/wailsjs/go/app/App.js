@@ -590,6 +590,10 @@ export function SyslogStop() {
   return window['go']['app']['App']['SyslogStop']();
 }
 
+export function TCPPing(arg1, arg2, arg3) {
+  return window['go']['app']['App']['TCPPing'](arg1, arg2, arg3);
+}
+
 export function TLSCheck(arg1) {
   return window['go']['app']['App']['TLSCheck'](arg1);
 }
