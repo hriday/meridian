@@ -12,13 +12,16 @@ import (
 	"github.com/hriday/meridian/internal/ipspace"
 )
 
-// IP space holds up to maxInventories separate, isolated inventories — e.g. one
-// per company. Each lives in its own directory under invRoot with its own store,
-// passphrase, sync config and base; they never co-mingle. A registry (index.json)
-// lists them and remembers which is active. The active inventory's live state
-// lives in the a.ip* fields (so every store/sync method operates on the active
-// one); other unlocked inventories are parked in invLive until switched back.
-const maxInventories = 3
+// IP space holds up to maxInventories separate, isolated inventories — one per
+// security domain (a company/client, with its own passphrase and sync backend
+// that must never co-mingle). Finer grouping within a domain — VLANs, sites,
+// roles — is done with record tags, not separate inventories. Each inventory
+// lives in its own directory under invRoot with its own store, passphrase, sync
+// config and base. A registry (index.json) lists them and remembers which is
+// active. The active inventory's live state lives in the a.ip* fields (so every
+// store/sync method operates on the active one); other unlocked inventories are
+// parked in invLive until switched back.
+const maxInventories = 25
 
 type invMeta struct {
 	ID   string `json:"id"`

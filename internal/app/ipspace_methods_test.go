@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -93,9 +94,6 @@ func TestInventoryCreateSwitchLimit(t *testing.T) {
 	require.NoError(t, a.IPSpaceCreateInventory("Initech", "pw3"))
 	require.Len(t, a.IPSpaceList(), 3)
 
-	// Fourth is refused.
-	require.Error(t, a.IPSpaceCreateInventory("Umbrella", "pw4"))
-
 	// The newest is active and unlocked; the first is parked (unlocked state kept).
 	ids := a.IPSpaceList()
 	require.Equal(t, "Initech", active(ids).Name)
@@ -105,6 +103,17 @@ func TestInventoryCreateSwitchLimit(t *testing.T) {
 	require.Equal(t, first, a.IPSpaceActive())
 	// Switching back to an inventory unlocked earlier keeps it unlocked.
 	require.True(t, a.IPSpaceStatus().Unlocked)
+}
+
+func TestInventoryCapEnforced(t *testing.T) {
+	a := New()
+	a.invRoot = t.TempDir()
+	for i := 0; i < maxInventories; i++ {
+		require.NoError(t, a.IPSpaceCreateInventory(fmt.Sprintf("inv%d", i), fmt.Sprintf("pw%d", i)))
+	}
+	require.Len(t, a.IPSpaceList(), maxInventories)
+	// One past the cap is refused until a slot is parked.
+	require.Error(t, a.IPSpaceCreateInventory("overflow", "pwx"))
 }
 
 func TestInventoryRenameRemove(t *testing.T) {

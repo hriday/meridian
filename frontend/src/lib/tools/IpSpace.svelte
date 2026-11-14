@@ -39,6 +39,26 @@
   }
   $: rows = flatten(tree);
 
+  // Tag / text filter: slice a large inventory by VLAN tag, name, or prefix.
+  let filter = "";
+  $: allTags = [...new Set(rows.flatMap((r) => r.rec.tags || []))].sort((a, b) => a.localeCompare(b));
+  function recMatches(rec: any, q: string): boolean {
+    const tags = (rec.tags || []).map((t: string) => t.toLowerCase());
+    return (
+      (rec.prefix || "").toLowerCase().includes(q) ||
+      (rec.name || "").toLowerCase().includes(q) ||
+      tags.some((t: string) => t.includes(q))
+    );
+  }
+  // When filtering, show matches as a flat list (tree depth isn't meaningful once
+  // ancestors may be filtered out).
+  $: filtered = filter.trim()
+    ? rows.filter((r) => recMatches(r.rec, filter.trim().toLowerCase())).map((r) => ({ ...r, depth: 0 }))
+    : rows;
+  function toggleTag(t: string) {
+    filter = filter === t ? "" : t;
+  }
+
   async function init() { await loadList(); }
 
   async function loadList() {
@@ -640,15 +660,31 @@
 
     <div class="cols">
       <div class="card">
-        <div class="chead"><h3>Your IP space</h3><span class="pill">{rows.length} records</span></div>
+        <div class="chead"><h3>Your IP space</h3><span class="pill">{filtered.length}{filter.trim() ? ` / ${rows.length}` : ""} records</span></div>
+        {#if rows.length}
+          <div class="filterbar">
+            <input class="field flt" bind:value={filter} placeholder="filter by tag, name, or prefix…" spellcheck="false" />
+            {#if filter}<button class="clearflt" title="Clear filter" on:click={() => (filter = "")}>×</button>{/if}
+          </div>
+          {#if allTags.length}
+            <div class="tagchips">
+              {#each allTags as t}
+                <button class="tagchip" class:on={filter === t} on:click={() => toggleTag(t)}>{t}</button>
+              {/each}
+            </div>
+          {/if}
+        {/if}
         {#if !rows.length}
           <p class="muted">No records yet — add a block to get started.</p>
+        {:else if !filtered.length}
+          <p class="muted">No records match “{filter}”.</p>
         {:else}
           <div class="tree">
-            {#each rows as r}
+            {#each filtered as r}
               <button class="node" class:sel={selected && selected.id === r.rec.id} style={`padding-left:${6 + r.depth * 18}px`} on:click={() => select(r.rec)}>
                 <span class="cidr mono">{r.rec.prefix}</span>
                 <span class="nm">{r.rec.name}</span>
+                {#if r.rec.tags && r.rec.tags.length}<span class="rtags">{r.rec.tags.join(" · ")}</span>{/if}
                 <span class="st pill {r.rec.status}">{r.rec.status}</span>
               </button>
             {/each}
@@ -763,7 +799,16 @@
   .node:hover { background: var(--hover); } .node.sel { background: var(--active); }
   .node .cidr { color: var(--text-strong); font-size: 0.82rem; }
   .node .nm { color: var(--text-dim); font-size: 0.82rem; }
+  .node .rtags { font-size: 0.68rem; color: var(--accent); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
   .node .st { margin-left: auto; }
+  .filterbar { position: relative; margin-bottom: 8px; }
+  .flt { padding-right: 28px; }
+  .clearflt { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-dim); font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .clearflt:hover { color: var(--text); }
+  .tagchips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 11px; }
+  .tagchip { font-size: 0.7rem; background: var(--well); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; color: var(--text-dim); cursor: pointer; }
+  .tagchip:hover { border-color: var(--accent); color: var(--text); }
+  .tagchip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #052e2b); }
   .acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 11px; }
   dl { display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
   dt { color: var(--text-dim); } dd { margin: 0; color: var(--text); }
