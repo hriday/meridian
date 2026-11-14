@@ -31,6 +31,7 @@ func Catalog() []CommandGroup {
 			{"trace", "<host> [--6] [--json]", "traceroute with AS lookups"},
 			{"bgp", "<prefix|ip> [--json]", "BGP looking glass"},
 			{"tls", "<host[:port]> [--json]", "inspect a server's certificate"},
+			{"certinfo", "[<file>] [--json]", "decode a PEM certificate / CSR (stdin ok)"},
 			{"cipherscan", "<host[:port]> [--json]", "TLS versions + cipher suites, graded"},
 			{"http", "<url> [--json]", "HTTP(S) check"},
 			{"sechdr", "<url> [--json]", "security headers (OWASP-mapped)"},

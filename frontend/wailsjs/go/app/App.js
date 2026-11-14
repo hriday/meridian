@@ -102,6 +102,10 @@ export function CertCancel(arg1) {
   return window['go']['app']['App']['CertCancel'](arg1);
 }
 
+export function CertDecode(arg1) {
+  return window['go']['app']['App']['CertDecode'](arg1);
+}
+
 export function CertExpiryCheck(arg1) {
   return window['go']['app']['App']['CertExpiryCheck'](arg1);
 }
