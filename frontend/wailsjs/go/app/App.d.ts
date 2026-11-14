@@ -31,6 +31,7 @@ import {macvendor} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
 import {ptrsweep} from '../models';
+import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
 import {wordlist} from '../models';
@@ -206,6 +207,8 @@ export function MACVendor(arg1:string):Promise<macvendor.Result>;
 
 export function MIBWalk(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.MIBRow>>;
 
+export function MTUSupported():Promise<boolean>;
+
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
 export function NTPSystem():Promise<sysconf.Found>;
@@ -225,6 +228,8 @@ export function NetflowStop():Promise<void>;
 export function NetflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
 
 export function PTRSweep(arg1:string):Promise<Array<ptrsweep.Entry>>;
+
+export function PathMTU(arg1:string):Promise<mtu.Result>;
 
 export function PickFile(arg1:string):Promise<string>;
 

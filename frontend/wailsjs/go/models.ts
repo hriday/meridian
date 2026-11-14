@@ -2382,6 +2382,39 @@ export namespace macvendor {
 
 }
 
+export namespace mtu {
+	
+	export class Result {
+	    target: string;
+	    addr: string;
+	    dfEnforced: boolean;
+	    note?: string;
+	    pathMTU: number;
+	    payloadMax: number;
+	    localMTU: number;
+	    nextHopMTU?: number;
+	    bottleneck: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.addr = source["addr"];
+	        this.dfEnforced = source["dfEnforced"];
+	        this.note = source["note"];
+	        this.pathMTU = source["pathMTU"];
+	        this.payloadMax = source["payloadMax"];
+	        this.localMTU = source["localMTU"];
+	        this.nextHopMTU = source["nextHopMTU"];
+	        this.bottleneck = source["bottleneck"];
+	    }
+	}
+
+}
+
 export namespace netcat {
 	
 	export class CertInfo {
