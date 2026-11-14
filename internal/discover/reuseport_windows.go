@@ -8,6 +8,11 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// mdnsListenAddr is the bind address for the mDNS receive socket. Windows does
+// not allow binding a multicast group address, so we bind the wildcard and rely
+// on JoinGroup for delivery.
+const mdnsListenAddr = "0.0.0.0:5353"
+
 // reusePortControl sets SO_REUSEADDR on Windows, where it provides the
 // shared-port semantics needed to bind UDP/5353 alongside other listeners.
 func reusePortControl(network, address string, c syscall.RawConn) error {

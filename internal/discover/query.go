@@ -166,7 +166,7 @@ func queryMDNS(ctx context.Context, window time.Duration) ([]Service, error) {
 	}
 
 	lc := net.ListenConfig{Control: reusePortControl}
-	pc, err := lc.ListenPacket(ctx, "udp4", "0.0.0.0:5353")
+	pc, err := lc.ListenPacket(ctx, "udp4", mdnsListenAddr)
 	if err != nil {
 		return nil, fmt.Errorf("bind mDNS port: %w", err)
 	}
