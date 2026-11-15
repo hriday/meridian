@@ -244,6 +244,10 @@ meridian-cli runbook ./my-profile.yaml acme.com        # …or your own YAML/TOM
 meridian-cli completion zsh > "${fpath[1]}/_meridian-cli"   # shell tab-completion (bash|zsh|fish|powershell)
 ```
 
+The [guide](docs/guide.md) has a **Quickstart** and a **Recipes** cookbook —
+real multi-tool workflows (vet a VPN gateway, diagnose a choppy call, migrate a
+spreadsheet into encrypted IPAM, review a firewall config, and more).
+
 Raw-socket tools (`arpscan`, `lldp`, `rtp`, `pktscan`, and the `ipspace reconcile`
 sweep; `tcptrace` on Linux) need `sudo`/admin — on macOS, `tcptrace`, `discover` and the
 ICMP tools run unprivileged. Receivers on privileged ports (`syslog` 514, `traps`

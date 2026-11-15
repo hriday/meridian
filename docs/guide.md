@@ -142,6 +142,70 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 
 ---
 
+## Recipes
+
+Longer, real-world combinations — building on the three workflows at the top.
+Each runs from the CLI (and every step is a tool in the GUI too).
+
+**Vet a VPN gateway before you trust it.** Is the responder up, what does it
+negotiate, and is the port even reachable?
+
+```bash
+meridian-cli ike vpn.example.com                 # IKEv2 proposal + NAT-T
+meridian-cli wg  vpn.example.com --pubkey <b64>   # WireGuard (needs the peer key)
+meridian-cli tcpping vpn.example.com 443          # is the fallback TLS port open?
+```
+
+**Diagnose a choppy video/voice call.** Is it loss, jitter, or the path?
+
+```bash
+meridian-cli quality teams.microsoft.com --count 50   # jitter, loss, MOS verdict
+meridian-cli mtr      teams.microsoft.com             # per-hop loss along the path
+meridian-cli pathmtu  teams.microsoft.com             # MTU black-hole check
+```
+
+**TLS & certificate hygiene across a fleet.** Grade ciphers and catch expiries
+before they page you.
+
+```bash
+cat hosts.txt | meridian-cli batch cipherscan --json      # per-host cipher grade (NDJSON)
+meridian-cli certexpiry $(cat hosts.txt) --json           # days-to-expiry, bulk
+```
+
+**Compare encrypted-DNS reachability.** Which private-DNS transports actually
+work on this network?
+
+```bash
+meridian-cli dns example.com --transport dot    # DNS-over-TLS
+meridian-cli dns example.com --transport doh    # DNS-over-HTTPS
+meridian-cli dns example.com --transport doq    # DNS-over-QUIC
+```
+
+**See who's hogging the link.** A fast triage before reaching for Wireshark.
+
+```bash
+sudo meridian-cli pktscan --seconds 10 --top 10   # live top talkers, resets, DNS errors, TLS SNI
+# or point a switch/router's NetFlow or sFlow export at this machine:
+meridian-cli netflow    # (and `sflow` on 6343) → live top conversations
+```
+
+**Migrate an IP spreadsheet or NetBox export into encrypted IPAM, then keep it
+honest.**
+
+```bash
+cat prefixes.csv | meridian-cli ipspace import --format csv        # or --format netbox / terraform
+meridian-cli ipspace reconcile                                     # diff vs a live ARP sweep
+```
+
+**Review an exported firewall config, offline.** Vendor is auto-detected.
+
+```bash
+meridian-cli fwanalyze firewall-running-config.txt         # segments, flows, what-talks-to-what
+meridian-cli tfexposure main.tf                            # internet-exposure scan for Terraform
+```
+
+---
+
 ## Every tool at a glance
 
 > In the GUI these appear in the sidebar; the CLI column is the `meridian-cli`
