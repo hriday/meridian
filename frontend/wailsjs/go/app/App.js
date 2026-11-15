@@ -146,8 +146,8 @@ export function DNSPropagation(arg1, arg2) {
   return window['go']['app']['App']['DNSPropagation'](arg1, arg2);
 }
 
-export function DNSQuery(arg1, arg2, arg3) {
-  return window['go']['app']['App']['DNSQuery'](arg1, arg2, arg3);
+export function DNSQuery(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['DNSQuery'](arg1, arg2, arg3, arg4);
 }
 
 export function DNSSystem() {

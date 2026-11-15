@@ -1,6 +1,8 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/ntp"
 	"github.com/hriday/meridian/internal/sysconf"
@@ -17,9 +19,14 @@ func (a *App) NTPQuery(server string) (ntp.Reply, error) {
 	return ntpQueryFn(a.lookupCtx(), server)
 }
 
-// DNSQuery resolves name's rtype records against server (empty = caller picks).
-func (a *App) DNSQuery(name, rtype, server string) (dnsx.Result, error) {
-	return dnsQueryFn(a.lookupCtx(), name, rtype, server)
+// DNSQuery resolves name's rtype records against server (empty = caller picks)
+// over transport "udp" (default), "tcp", "dot" (DNS-over-TLS), or "doh"
+// (DNS-over-HTTPS).
+func (a *App) DNSQuery(name, rtype, server, transport string) (dnsx.Result, error) {
+	if t := strings.ToLower(transport); t == "" || t == "udp" {
+		return dnsQueryFn(a.lookupCtx(), name, rtype, server)
+	}
+	return dnsx.QueryVia(a.lookupCtx(), name, rtype, server, transport)
 }
 
 // NTPSystem reports the host's configured time server(s), best-effort.

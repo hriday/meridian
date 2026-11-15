@@ -16,7 +16,7 @@ func TestAppDNSQuery(t *testing.T) {
 		return dnsx.Result{Rcode: "NOERROR", Answers: []dnsx.Record{{Name: name, Type: rtype, TTL: 300, Value: "1.2.3.4"}}}, nil
 	}
 	a := New()
-	r, err := a.DNSQuery("example.com", "A", "8.8.8.8")
+	r, err := a.DNSQuery("example.com", "A", "8.8.8.8", "udp")
 	require.NoError(t, err)
 	require.Equal(t, "NOERROR", r.Rcode)
 	require.Equal(t, "1.2.3.4", r.Answers[0].Value)

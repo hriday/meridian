@@ -7,6 +7,7 @@
   let name = "cloudflare.com";
   let rtype = "A";
   let server = "";
+  let transport = "udp";
   let busy = false;
   let error = "";
   let result: any = null;
@@ -28,8 +29,12 @@
     result = null;
     try {
       let srv = server.trim();
-      if (!srv && system?.values?.length) srv = system.values[0];
-      result = await DNSQuery(n, rtype, srv);
+      if (!srv) {
+        if (transport === "dot") srv = "one.one.one.one";
+        else if (transport === "doh") srv = "cloudflare-dns.com";
+        else if (system?.values?.length) srv = system.values[0];
+      }
+      result = await DNSQuery(n, rtype, srv, transport);
     } catch (e) {
       error = String(e);
     } finally {
@@ -86,6 +91,12 @@
       {#each TYPES as t}<option>{t}</option>{/each}
     </select>
     <input class="field mono" bind:value={server} placeholder="resolver (default: system)" autocomplete="off" spellcheck="false" aria-label="Resolver" style="flex:1.2" />
+    <select class="sel" bind:value={transport} aria-label="Transport" title="DNS transport">
+      <option value="udp">UDP</option>
+      <option value="tcp">TCP</option>
+      <option value="dot">DoT</option>
+      <option value="doh">DoH</option>
+    </select>
     <button class="go" disabled={busy}>{busy ? "Querying…" : "Query"}</button>
   </form>
 
