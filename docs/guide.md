@@ -195,11 +195,12 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | CVE lookup | NVD CVE lookup | `cve` |
 | Threat intel | abuse.ch botnet C2 check | `threatintel` |
 
-### Scripting (CLI only)
+### Scripting & workflows
 
 | Tool | What it does | CLI |
 |---|---|---|
-| Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` |
+| Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
+| Runbook | composite audit — run a profile of tools into one report (audit-domain, triage-host; md/json/html) | `runbook` + GUI |
 
 ### Config insight
 

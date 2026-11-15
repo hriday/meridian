@@ -91,6 +91,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "batch":
 		return runBatch(args[1:], stdout, stderr)
+	case "runbook":
+		return runRunbook(args[1:], stdout, stderr)
 	case "classify":
 		return runClassify(args[1:], stdout, stderr)
 	case "subnet":
