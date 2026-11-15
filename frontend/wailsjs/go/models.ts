@@ -3179,6 +3179,109 @@ export namespace ping {
 
 }
 
+export namespace pktscan {
+	
+	export class DNSError {
+	    rcode: number;
+	    name: string;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DNSError(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.rcode = source["rcode"];
+	        this.name = source["name"];
+	        this.count = source["count"];
+	    }
+	}
+	export class ProtoStat {
+	    proto: string;
+	    packets: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProtoStat(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.proto = source["proto"];
+	        this.packets = source["packets"];
+	        this.bytes = source["bytes"];
+	    }
+	}
+	export class Talker {
+	    ip: string;
+	    packets: number;
+	    bytes: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Talker(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.packets = source["packets"];
+	        this.bytes = source["bytes"];
+	    }
+	}
+	export class Summary {
+	    interface: string;
+	    seconds: number;
+	    packets: number;
+	    bytes: number;
+	    topTalkers: Talker[];
+	    protocols: ProtoStat[];
+	    tcpSyns: number;
+	    tcpResets: number;
+	    retransmits: number;
+	    dnsErrors: DNSError[];
+	    snis: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Summary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.interface = source["interface"];
+	        this.seconds = source["seconds"];
+	        this.packets = source["packets"];
+	        this.bytes = source["bytes"];
+	        this.topTalkers = this.convertValues(source["topTalkers"], Talker);
+	        this.protocols = this.convertValues(source["protocols"], ProtoStat);
+	        this.tcpSyns = source["tcpSyns"];
+	        this.tcpResets = source["tcpResets"];
+	        this.retransmits = source["retransmits"];
+	        this.dnsErrors = this.convertValues(source["dnsErrors"], DNSError);
+	        this.snis = source["snis"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace ptrsweep {
 	
 	export class Entry {

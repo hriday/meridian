@@ -73,6 +73,7 @@ func Catalog() []CommandGroup {
 			{"arpscan", "[--wait 2s] [--max 1024] [--json]", "ARP sweep the LAN — live MAC/IP + vendor"},
 			{"discover", "[--seconds 8] [--json]", "find LAN devices via mDNS/Bonjour + SSDP/UPnP"},
 			{"rtp", "[--seconds 10] [--iface en0] [--json]", "analyze RTP streams — jitter/loss (sudo)"},
+			{"pktscan", "[--iface en0] [--seconds 8] [--top 10] [--json]", "live packet summary — top talkers, TCP resets/retransmits, DNS errors, TLS SNI (sudo)"},
 			{"pingsweep", "<cidr> [--ports 22,80,443] [--json]", "ping / TCP sweep"},
 			{"portscan", "<host> <ports|--common> [--json]", "port scan"},
 			{"ptrsweep", "<cidr> [--concurrency 64] [--json]", "reverse-DNS sweep"},
