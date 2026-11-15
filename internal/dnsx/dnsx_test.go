@@ -154,3 +154,38 @@ func TestQueryFallsBackToTCPOnUDPError(t *testing.T) {
 	require.Len(t, res.Answers, 1)
 	require.Equal(t, "192.0.2.11", res.Answers[0].Value)
 }
+
+func TestDoQFramingRoundTrip(t *testing.T) {
+	// A DoQ query must carry message ID 0 (RFC 9250 §4.2.1) and a 2-byte
+	// length prefix; the response deframer must recover the same message.
+	q := new(mdns.Msg)
+	q.SetQuestion("example.com.", mdns.TypeA)
+	q.Id = 1234 // must be forced to 0 by the encoder
+
+	framed, err := doqEncode(q)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(framed), 2)
+	require.Equal(t, len(framed)-2, int(framed[0])<<8|int(framed[1]))
+
+	// A server echoes the message back, length-prefixed.
+	resp := new(mdns.Msg)
+	resp.SetQuestion("example.com.", mdns.TypeA)
+	resp.Answer = []mdns.RR{aRR("example.com.", "93.184.216.34", 300)}
+	wire, err := resp.Pack()
+	require.NoError(t, err)
+	reply := append([]byte{byte(len(wire) >> 8), byte(len(wire))}, wire...)
+
+	out, err := doqDecode(reply)
+	require.NoError(t, err)
+	require.Len(t, out.Answer, 1)
+	require.Equal(t, "example.com.", out.Question[0].Name)
+}
+
+func TestDoQDecodeRejectsTruncated(t *testing.T) {
+	if _, err := doqDecode([]byte{0x00}); err == nil {
+		t.Fatal("1-byte response should be rejected")
+	}
+	if _, err := doqDecode([]byte{0x00, 0x10, 0x01, 0x02}); err == nil {
+		t.Fatal("length(16) with only 2 bytes should be rejected")
+	}
+}

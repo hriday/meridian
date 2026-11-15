@@ -56,7 +56,7 @@ website, Meridian does it locally so the data never leaves your machine.
   optional sync (local/S3/SFTP/git, encrypted blob). Nothing leaves your machine.
 
 **Local / environment** — **NTP** (stratum/offset/verdict), **DNS** (any record,
-any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**),
+any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / DNS-over-QUIC**),
 **Interfaces**.
 
 **Local network**

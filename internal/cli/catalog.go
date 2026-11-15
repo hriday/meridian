@@ -58,7 +58,7 @@ func Catalog() []CommandGroup {
 		}},
 		{Name: "Local / environment", Commands: []CommandDoc{
 			{"ntp", "<server> [--json]", "query an NTP server"},
-			{"dns", "<name> [--type A] [--server <ip>] [--transport udp|tcp|dot|doh] [--json]", "DNS lookup (incl. DNS-over-TLS / DNS-over-HTTPS)"},
+			{"dns", "<name> [--type A] [--server <ip>] [--transport udp|tcp|dot|doh|doq] [--json]", "DNS lookup (incl. DNS-over-TLS / HTTPS / QUIC)"},
 			{"interfaces", "[--json]", "local network interfaces"},
 		}},
 		{Name: "Local network", Commands: []CommandDoc{

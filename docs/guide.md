@@ -135,7 +135,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | Tool | What it does | CLI |
 |---|---|---|
 | NTP | query an NTP server (stratum/offset/verdict) | `ntp` |
-| DNS | any record, any resolver, DNSSEC signals; UDP/TCP or DoT/DoH | `dns` |
+| DNS | any record, any resolver, DNSSEC signals; UDP/TCP or DoT/DoH/DoQ | `dns` |
 | Interfaces | local network interfaces | `interfaces` |
 
 ### Local network

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"net"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	mdns "github.com/miekg/dns"
+	"github.com/quic-go/quic-go"
 )
 
 // Record is one answer resource record in text form.
@@ -45,8 +47,9 @@ func Query(ctx context.Context, name, rtype, server string) (Result, error) {
 }
 
 // QueryVia is Query over a chosen transport: "udp" (default), "tcp", "dot"
-// (DNS-over-TLS, port 853), or "doh" (DNS-over-HTTPS, RFC 8484). For dot/doh,
-// server may be a hostname (verified) or IP; for doh it may also be a full URL.
+// (DNS-over-TLS, port 853), "doh" (DNS-over-HTTPS, RFC 8484), or "doq"
+// (DNS-over-QUIC, RFC 9250, port 853). For dot/doq, server may be a hostname
+// (verified) or IP; for doh it may also be a full URL.
 func QueryVia(ctx context.Context, name, rtype, server, transport string) (Result, error) {
 	m, err := buildQuery(name, rtype)
 	if err != nil {
@@ -68,8 +71,10 @@ func QueryVia(ctx context.Context, name, rtype, server, transport string) (Resul
 		resp, rtt, err = exchangeDoT(ctx, m, server, timeout)
 	case "doh", "https":
 		resp, rtt, err = exchangeDoH(ctx, m, server, timeout)
+	case "doq", "quic":
+		resp, rtt, err = exchangeDoQ(ctx, m, server, timeout)
 	default:
-		return Result{}, fmt.Errorf("unknown transport %q (want udp, tcp, dot, or doh)", transport)
+		return Result{}, fmt.Errorf("unknown transport %q (want udp, tcp, dot, doh, or doq)", transport)
 	}
 	if err != nil {
 		return Result{}, err
@@ -87,6 +92,8 @@ func normTransport(t string) string {
 		return "dot"
 	case "https", "doh":
 		return "doh"
+	case "quic", "doq":
+		return "doq"
 	default:
 		return strings.ToLower(t)
 	}
@@ -176,6 +183,86 @@ func exchangeDoH(ctx context.Context, m *mdns.Msg, server string, timeout time.D
 		return nil, 0, fmt.Errorf("parsing DoH response: %w", err)
 	}
 	return out, rtt, nil
+}
+
+// doqEncode frames a DNS message for DoQ (RFC 9250): the message ID is set to 0
+// (the QUIC stream provides query/response correlation) and the wire message is
+// 2-byte length-prefixed, as in DNS-over-TCP.
+func doqEncode(m *mdns.Msg) ([]byte, error) {
+	m.Id = 0
+	packed, err := m.Pack()
+	if err != nil {
+		return nil, err
+	}
+	if len(packed) > 0xffff {
+		return nil, fmt.Errorf("DoQ query too large: %d bytes", len(packed))
+	}
+	buf := make([]byte, 2+len(packed))
+	binary.BigEndian.PutUint16(buf[:2], uint16(len(packed)))
+	copy(buf[2:], packed)
+	return buf, nil
+}
+
+// doqDecode parses a 2-byte length-prefixed DoQ response.
+func doqDecode(b []byte) (*mdns.Msg, error) {
+	if len(b) < 2 {
+		return nil, fmt.Errorf("short DoQ response (%d bytes)", len(b))
+	}
+	n := int(binary.BigEndian.Uint16(b[:2]))
+	if len(b)-2 < n {
+		return nil, fmt.Errorf("truncated DoQ response: have %d, want %d", len(b)-2, n)
+	}
+	out := new(mdns.Msg)
+	if err := out.Unpack(b[2 : 2+n]); err != nil {
+		return nil, fmt.Errorf("parsing DoQ response: %w", err)
+	}
+	return out, nil
+}
+
+// exchangeDoQ does DNS-over-QUIC (RFC 9250, port 853, ALPN "doq"): one query per
+// bidirectional stream, each message 2-byte length-prefixed. A hostname server
+// is name-verified; an IP can't be, so the TLS name check is skipped for IPs.
+func exchangeDoQ(ctx context.Context, m *mdns.Msg, server string, timeout time.Duration) (*mdns.Msg, time.Duration, error) {
+	addr := withPort(server, "853")
+	host, _, _ := net.SplitHostPort(addr)
+	tlsConf := &tls.Config{NextProtos: []string{"doq"}}
+	if net.ParseIP(host) != nil {
+		tlsConf.InsecureSkipVerify = true // IP target: no name to verify
+	} else {
+		tlsConf.ServerName = host
+	}
+	query, err := doqEncode(m)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	t0 := time.Now()
+	conn, err := quic.DialAddr(dctx, addr, tlsConf, &quic.Config{HandshakeIdleTimeout: timeout})
+	if err != nil {
+		return nil, 0, fmt.Errorf("DoQ dial: %w", err)
+	}
+	defer conn.CloseWithError(0, "")
+
+	stream, err := conn.OpenStreamSync(dctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	if _, err := stream.Write(query); err != nil {
+		return nil, 0, err
+	}
+	stream.Close() // half-close: the client's query is complete
+
+	resp, err := io.ReadAll(io.LimitReader(stream, 0xffff+2))
+	if err != nil && len(resp) == 0 {
+		return nil, 0, err
+	}
+	out, err := doqDecode(resp)
+	if err != nil {
+		return nil, 0, err
+	}
+	return out, time.Since(t0), nil
 }
 
 // summarize maps a DNS response message into a Result.

@@ -32,6 +32,7 @@
       if (!srv) {
         if (transport === "dot") srv = "one.one.one.one";
         else if (transport === "doh") srv = "cloudflare-dns.com";
+        else if (transport === "doq") srv = "dns.adguard-dns.com";
         else if (system?.values?.length) srv = system.values[0];
       }
       result = await DNSQuery(n, rtype, srv, transport);
@@ -96,6 +97,7 @@
       <option value="tcp">TCP</option>
       <option value="dot">DoT</option>
       <option value="doh">DoH</option>
+      <option value="doq">DoQ</option>
     </select>
     <button class="go" disabled={busy}>{busy ? "Querying…" : "Query"}</button>
   </form>
