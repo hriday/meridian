@@ -139,12 +139,14 @@ Meridian ships three themes — **dark**, **light**, and a green-on-black
 ```bash
 # macOS (Homebrew)
 brew install --cask hriday/meridian/meridian
+
+# Windows (Scoop)
+scoop install https://raw.githubusercontent.com/hriday/meridian/master/scoop/meridian.json
 ```
 
-**Windows** and **Linux**: grab the `.exe` / `.AppImage` from the
-[latest release](../../releases/latest) (per-OS steps below). Native
-Windows/Linux package-manager entries (winget / Scoop / `.deb` / AUR) aren't
-published yet — they're gated on code-signing, tracked in the issues.
+**Linux**: grab the `.AppImage` from the [latest release](../../releases/latest)
+(steps below). `.deb` / AUR and Windows `winget` entries aren't published yet
+(the `winget` route is gated on code-signing).
 
 Builds are attached to each [GitHub Release](../../releases). Meridian is **not
 yet code-signed**, so your OS will warn on first launch — this is expected for an
@@ -158,8 +160,9 @@ open-source app without a paid signing certificate.
     notice, and click **Open Anyway**.
 
   Universal build (Apple Silicon + Intel).
-- **Windows** — download the `.exe` and run it. SmartScreen may show
-  "Windows protected your PC" → **More info → Run anyway**.
+- **Windows** — install with **Scoop** (above) or download the `.exe` and run
+  it. SmartScreen may show "Windows protected your PC" → **More info → Run
+  anyway**.
 - **Linux** — download the `.AppImage`, then:
   ```bash
   chmod +x Meridian-*-linux-x86_64.AppImage
@@ -187,6 +190,17 @@ brew install --cask meridian
 The cask installs the universal `.dmg` from the latest release. Because the app
 isn't code-signed yet, follow the macOS first-launch steps above (the cask
 repeats them). Upgrade with `brew upgrade --cask meridian`.
+
+### Scoop (Windows)
+
+```powershell
+scoop install https://raw.githubusercontent.com/hriday/meridian/master/scoop/meridian.json
+```
+
+This installs the Windows build and adds a `meridian` shim. The manifest's
+version and hash are bumped automatically by the release workflow on each tagged
+release, so `scoop update meridian` always tracks the latest. (SmartScreen may
+warn on first launch until the app is code-signed.)
 
 ## Command line (`meridian-cli`)
 
