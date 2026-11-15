@@ -664,7 +664,8 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	asJSON := fs.Bool("json", false, "output JSON")
 	rtype := fs.String("type", "A", "record type")
-	server := fs.String("server", "", "resolver to query (default: system)")
+	server := fs.String("server", "", "resolver to query (default: system, or a public one for dot/doh)")
+	transport := fs.String("transport", "udp", "transport: udp, tcp, dot (DNS-over-TLS), doh (DNS-over-HTTPS)")
 	pos, ok := parsePositionals(fs, args)
 	if !ok {
 		return 2
@@ -675,13 +676,27 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 	}
 	srv := *server
 	if srv == "" {
-		if f := sysconf.Resolvers(); len(f.Values) > 0 {
-			srv = f.Values[0]
-		} else {
-			srv = "1.1.1.1"
+		switch strings.ToLower(*transport) {
+		case "dot", "tls":
+			srv = "one.one.one.one"
+		case "doh", "https":
+			srv = "cloudflare-dns.com"
+		default:
+			if f := sysconf.Resolvers(); len(f.Values) > 0 {
+				srv = f.Values[0]
+			} else {
+				srv = "1.1.1.1"
+			}
 		}
 	}
-	res, err := dnsQuery(context.Background(), pos[0], *rtype, srv)
+
+	var res dnsx.Result
+	var err error
+	if t := strings.ToLower(*transport); t == "" || t == "udp" {
+		res, err = dnsQuery(context.Background(), pos[0], *rtype, srv)
+	} else {
+		res, err = dnsx.QueryVia(context.Background(), pos[0], *rtype, srv, *transport)
+	}
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -690,6 +705,7 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 		return writeJSON(stdout, stderr, res)
 	}
 	reportRow(stdout, "Server", res.Server)
+	reportRow(stdout, "Transport", strings.ToUpper(res.Transport))
 	reportRow(stdout, "Status", res.Rcode)
 	reportRow(stdout, "Flags", strings.Join(res.Flags, " "))
 	for _, a := range res.Answers {

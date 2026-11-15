@@ -135,7 +135,7 @@ export function DNSAudit(arg1:string,arg2:string):Promise<dnsaudit.Report>;
 
 export function DNSPropagation(arg1:string,arg2:string):Promise<dnsprop.Report>;
 
-export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Result>;
+export function DNSQuery(arg1:string,arg2:string,arg3:string,arg4:string):Promise<dnsx.Result>;
 
 export function DNSSystem():Promise<sysconf.Found>;
 

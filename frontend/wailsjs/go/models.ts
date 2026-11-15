@@ -1566,6 +1566,7 @@ export namespace dnsx {
 	}
 	export class Result {
 	    server: string;
+	    transport: string;
 	    rcode: string;
 	    flags: string[];
 	    authenticated: boolean;
@@ -1579,6 +1580,7 @@ export namespace dnsx {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.server = source["server"];
+	        this.transport = source["transport"];
 	        this.rcode = source["rcode"];
 	        this.flags = source["flags"];
 	        this.authenticated = source["authenticated"];
