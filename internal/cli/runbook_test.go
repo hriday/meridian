@@ -29,24 +29,26 @@ func TestRenderRunbookFormats(t *testing.T) {
 	}
 }
 
-func TestOrgReconProfileCommandsAreReal(t *testing.T) {
-	// org-recon must exist, and every step must reference a real subcommand
-	// (guards against a typo'd cmd that would just error at run time).
-	p, ok := findProfile("org-recon")
-	if !ok {
-		t.Fatal("org-recon profile is missing")
-	}
-	if len(p.steps) < 8 {
-		t.Fatalf("org-recon has %d steps, want a comprehensive sweep", len(p.steps))
-	}
+func TestBuiltinProfileCommandsAreReal(t *testing.T) {
+	// Every built-in recipe's steps must reference real subcommands (guards
+	// against a typo'd cmd in the recipe book that would only fail at run time).
 	known := map[string]bool{}
 	for _, n := range names() { // from the catalog (completion.go)
 		known[n] = true
 	}
-	for _, s := range p.steps {
-		if !known[s.cmd] {
-			t.Errorf("org-recon step %q is not a known command", s.cmd)
+	for _, p := range rbProfiles {
+		if len(p.steps) == 0 {
+			t.Errorf("profile %q has no steps", p.id)
 		}
+		for _, s := range p.steps {
+			if !known[s.cmd] {
+				t.Errorf("profile %q step %q is not a known command", p.id, s.cmd)
+			}
+		}
+	}
+	// org-recon should be the comprehensive one.
+	if p, ok := findProfile("org-recon"); !ok || len(p.steps) < 8 {
+		t.Error("org-recon should exist with a comprehensive step list")
 	}
 }
 
@@ -139,6 +141,24 @@ func TestLoadProfileRejectsEmpty(t *testing.T) {
 	}
 	if _, err := loadProfileFile(path); err == nil {
 		t.Fatal("profile with no steps should error")
+	}
+}
+
+func TestRunbookFileInfo(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "my.yaml")
+	if err := os.WriteFile(path, []byte("name: My Recipe\nsteps:\n  - cmd: lookup\n    args: [\"{t}\"]\n  - cmd: whois\n    args: [\"{t}\"]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := RunbookFileInfo(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Name != "My Recipe" || info.Steps != 2 {
+		t.Fatalf("info = %+v", info)
+	}
+	if _, err := RunbookFileInfo(filepath.Join(dir, "nope.yaml")); err == nil {
+		t.Fatal("missing file should error")
 	}
 }
 

@@ -92,6 +92,9 @@ type App struct {
 	acmeMu     sync.Mutex
 	acmeOrders map[string]*acmecert.Order
 
+	// Session-imported runbook profiles (GUI "Import recipe"): id → file path.
+	importedRunbooks map[string]string
+
 	syslog  *collector.Collector[collector.SyslogMsg]
 	traps   *collector.Collector[snmp.TrapMsg]
 	netflow *collector.Collector[netflow.FlowRecord]

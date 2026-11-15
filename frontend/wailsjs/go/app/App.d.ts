@@ -233,6 +233,8 @@ export function IdentifyHash(arg1:string):Promise<Array<hashid.Candidate>>;
 
 export function IkeProbe(arg1:string):Promise<ikeprobe.Result>;
 
+export function ImportRunbook():Promise<cli.RunbookInfo>;
+
 export function InstallCLI():Promise<app.CLIInfo>;
 
 export function Interfaces():Promise<Array<netif.Iface>>;

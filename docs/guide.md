@@ -340,7 +340,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | Tool | What it does | CLI |
 |---|---|---|
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
-| Runbook | composite audit — run a profile of tools into one report: built-in (org-recon, audit-domain, triage-host) or your own YAML/TOML/JSON profile. CLI: md/json/html; in the app, **export the report to Text / JSON / HTML / PDF** | `runbook` + GUI |
+| Runbook | composite audit — run a profile of tools into one report. Pick a **built-in recipe** (org-recon, audit-domain, web-posture, vpn-check, triage-host) or **Import** your own YAML/TOML/JSON. CLI: md/json/html; in the app, **export to Text / JSON / HTML / PDF** | `runbook` + GUI |
 
 ### Config insight
 

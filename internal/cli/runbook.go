@@ -103,6 +103,25 @@ var rbProfiles = []rbProfile{
 		},
 	},
 	{
+		id: "web-posture", name: "Web Posture",
+		desc: "Security posture of a web service: TLS ciphers, certificate expiry, HTTP/3, and OWASP-mapped security headers.",
+		steps: []rbStep{
+			{"cipherscan", []string{"{t}"}},
+			{"certexpiry", []string{"{t}"}},
+			{"http3", []string{"{t}"}},
+			{"sechdr", []string{"https://{t}"}},
+		},
+	},
+	{
+		id: "vpn-check", name: "VPN Check",
+		desc: "Probe a host for VPN responders: IKE/IPsec (IKEv2 proposal + NAT-T), WireGuard, and whether the TLS fallback port is open.",
+		steps: []rbStep{
+			{"ike", []string{"{t}"}},
+			{"wg", []string{"{t}"}},
+			{"tcpping", []string{"{t}", "443"}},
+		},
+	},
+	{
 		id: "triage-host", name: "Triage Host",
 		desc: "Reachability, latency, path, TLS and common open ports for a host.",
 		steps: []rbStep{
@@ -217,6 +236,25 @@ func loadProfileFile(path string) (rbProfile, error) {
 		p.steps = append(p.steps, rbStep{cmd: s.Cmd, args: s.Args})
 	}
 	return p, nil
+}
+
+// RunbookFileInfo parses a user-defined profile file and returns its summary
+// (name, description, step count) without running it — for the GUI's "import".
+func RunbookFileInfo(path string) (RunbookInfo, error) {
+	p, err := loadProfileFile(path)
+	if err != nil {
+		return RunbookInfo{}, err
+	}
+	return RunbookInfo{ID: p.id, Name: p.name, Desc: p.desc, Steps: len(p.steps)}, nil
+}
+
+// RunRunbookFile runs a user-defined profile file against target.
+func RunRunbookFile(path, target string) (RunbookData, error) {
+	p, err := loadProfileFile(path)
+	if err != nil {
+		return RunbookData{}, err
+	}
+	return runProfile(p, target), nil
 }
 
 // resolveProfile returns the profile for a built-in id or a user-defined file.
