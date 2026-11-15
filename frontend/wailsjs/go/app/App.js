@@ -210,6 +210,10 @@ export function IPSpaceEdit(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['IPSpaceEdit'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function IPSpaceExport(arg1) {
+  return window['go']['app']['App']['IPSpaceExport'](arg1);
+}
+
 export function IPSpaceExportCSV() {
   return window['go']['app']['App']['IPSpaceExportCSV']();
 }
@@ -220,6 +224,10 @@ export function IPSpaceExportHandoff(arg1, arg2) {
 
 export function IPSpaceHistory() {
   return window['go']['app']['App']['IPSpaceHistory']();
+}
+
+export function IPSpaceImport(arg1, arg2) {
+  return window['go']['app']['App']['IPSpaceImport'](arg1, arg2);
 }
 
 export function IPSpaceImportApplyMerge(arg1) {

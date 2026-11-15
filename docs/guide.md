@@ -168,7 +168,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 |---|---|---|
 | Subnet calculator | network/broadcast/host math + prefix splitting | `subnet` |
 | Classify | classify an address or value | `classify` |
-| IP space | encrypted, append-only IP inventory — nested blocks, carve into subnets, utilization %, optional sync | `ipspace` |
+| IP space | encrypted, append-only IP inventory — nested blocks, carve into subnets, utilization %, optional sync; import/export CSV · NetBox YAML · Terraform CIDR | `ipspace` |
 | LAN reconcile | diff a live ARP sweep against your inventory; import/update | `ipspace reconcile` |
 
 ### Local / environment

@@ -142,12 +142,30 @@ func (a *App) IPSpaceUndo() error {
 
 // IPSpaceImportCSV imports records from CSV text and persists.
 func (a *App) IPSpaceImportCSV(text string) (ipspace.ImportReport, error) {
+	return a.IPSpaceImport("csv", text)
+}
+
+// IPSpaceImport imports records from text in the given format ("csv",
+// "netbox" YAML, or "terraform" HCL) and persists.
+func (a *App) IPSpaceImport(format, text string) (ipspace.ImportReport, error) {
 	a.ipMu.Lock()
 	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return ipspace.ImportReport{}, err
 	}
-	rep, err := a.ipStore.ImportCSV(strings.NewReader(text))
+	r := strings.NewReader(text)
+	var rep ipspace.ImportReport
+	var err error
+	switch strings.ToLower(format) {
+	case "", "csv":
+		rep, err = a.ipStore.ImportCSV(r)
+	case "netbox", "yaml":
+		rep, err = a.ipStore.ImportNetBoxYAML(r)
+	case "terraform", "tf":
+		rep, err = a.ipStore.ImportTerraform(r)
+	default:
+		return ipspace.ImportReport{}, fmt.Errorf("unknown import format %q", format)
+	}
 	if err != nil {
 		return rep, err
 	}
@@ -155,14 +173,29 @@ func (a *App) IPSpaceImportCSV(text string) (ipspace.ImportReport, error) {
 }
 
 // IPSpaceExportCSV returns the records as CSV text.
-func (a *App) IPSpaceExportCSV() (string, error) {
+func (a *App) IPSpaceExportCSV() (string, error) { return a.IPSpaceExport("csv") }
+
+// IPSpaceExport returns the records in the given format ("csv", "netbox" YAML,
+// or "terraform" HCL).
+func (a *App) IPSpaceExport(format string) (string, error) {
 	a.ipMu.Lock()
 	defer a.ipMu.Unlock()
 	if err := a.requireUnlocked(); err != nil {
 		return "", err
 	}
 	var b strings.Builder
-	if err := a.ipStore.ExportCSV(&b); err != nil {
+	var err error
+	switch strings.ToLower(format) {
+	case "", "csv":
+		err = a.ipStore.ExportCSV(&b)
+	case "netbox", "yaml":
+		err = a.ipStore.ExportNetBoxYAML(&b)
+	case "terraform", "tf":
+		err = a.ipStore.ExportTerraform(&b)
+	default:
+		return "", fmt.Errorf("unknown export format %q", format)
+	}
+	if err != nil {
 		return "", err
 	}
 	return b.String(), nil

@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import {
     IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
-    IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceCarve, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
+    IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceCarve, IPSpaceUndo, IPSpaceImport, IPSpaceExport,
     IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory, IPSpaceExportHandoff,
     IPSpaceImportOpen, IPSpaceImportPreviewMerge, IPSpaceImportApplyMerge, IPSpaceImportAsNew, IPSpaceImportTree, IPSpaceImportCancel,
     IPSpaceInventoryTree, IPSpacePullRecords,
@@ -19,6 +19,7 @@
   let form = { prefix: "", name: "", status: "active", tags: "", notes: "" };
   let editing = false, editForm = { name: "", status: "active", tags: "", notes: "" };
   let showCsv = false, importText = "", exportText = "", importReport: any = null, csvErr = "";
+  let ieFormat = "csv"; // csv | netbox | terraform
 
   // Sync state.
   let showSync = false, syncInfo: any = { configured: false }, syncPath = "";
@@ -305,10 +306,11 @@
     requestedTool.set({ tool, value });
   }
 
-  async function openExport() { exportText = await IPSpaceExportCSV(); showCsv = true; importReport = null; csvErr = ""; }
+  async function openExport() { showCsv = true; importReport = null; csvErr = ""; await reExport(); }
+  async function reExport() { try { exportText = await IPSpaceExport(ieFormat); } catch (e) { csvErr = String(e); } }
   async function doImport() {
     csvErr = "";
-    try { importReport = await IPSpaceImportCSV(importText); await refresh(); }
+    try { importReport = await IPSpaceImport(ieFormat, importText); await refresh(); }
     catch (e) { csvErr = String(e); }
   }
 
@@ -661,10 +663,22 @@
 
     {#if showCsv}
       <div class="card">
-        <div class="chead"><h3>CSV</h3><button class="x" on:click={() => (showCsv = false)}>✕</button></div>
+        <div class="chead">
+          <h3>Import / Export</h3>
+          <select class="field fmtsel" bind:value={ieFormat} on:change={reExport} aria-label="Format">
+            <option value="csv">CSV</option>
+            <option value="netbox">NetBox YAML</option>
+            <option value="terraform">Terraform</option>
+          </select>
+          <button class="x" on:click={() => (showCsv = false)}>✕</button>
+        </div>
         <p class="lbl">Export (copy this):</p>
         <textarea class="field mono" rows="4" readonly>{exportText}</textarea>
-        <p class="lbl">Import (paste rows: prefix,name,status,tags,notes):</p>
+        <p class="lbl">
+          {#if ieFormat === "csv"}Import (paste rows: prefix,name,status,tags,notes):
+          {:else if ieFormat === "netbox"}Import (paste a NetBox prefixes export — YAML):
+          {:else}Import (paste Terraform .tf — cidr_block / cidr_blocks are read):{/if}
+        </p>
         <textarea class="field mono" rows="4" bind:value={importText}></textarea>
         <div class="formbtns"><button class="btn" on:click={doImport}>Import</button></div>
         {#if csvErr}<div class="err">{csvErr}</div>{/if}
@@ -812,6 +826,7 @@
   .card { background: var(--card); border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px 14px; }
   .addcard { margin-bottom: 14px; }
   .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+  .fmtsel { margin-left: auto; margin-right: 8px; padding: 4px 8px; font-size: 0.76rem; }
   .chead h3 { margin: 0; font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; }
   .x { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; }
   .lbl { color: var(--text-dim); font-size: 0.72rem; margin: 8px 0 3px; }

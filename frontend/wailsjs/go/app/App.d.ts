@@ -170,11 +170,15 @@ export function IPSpaceDelete(arg1:string):Promise<void>;
 
 export function IPSpaceEdit(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<void>;
 
+export function IPSpaceExport(arg1:string):Promise<string>;
+
 export function IPSpaceExportCSV():Promise<string>;
 
 export function IPSpaceExportHandoff(arg1:string,arg2:string):Promise<string>;
 
 export function IPSpaceHistory():Promise<Array<ipspace.Event>>;
+
+export function IPSpaceImport(arg1:string,arg2:string):Promise<ipspace.ImportReport>;
 
 export function IPSpaceImportApplyMerge(arg1:string):Promise<app.SyncResult>;
 
