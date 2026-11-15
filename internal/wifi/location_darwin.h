@@ -13,4 +13,10 @@ const char *meridian_location_status(void);
 // the system prompt is shown asynchronously.
 void meridian_request_location(void);
 
+// meridian_current_ssid returns the connected network's SSID read via CoreWLAN
+// in THIS process — so the app's own Location grant applies, unlike the
+// separate `system_profiler` process which can still redact it. Returns NULL
+// when not connected or not authorized. The caller frees the result with free().
+char *meridian_current_ssid(void);
+
 #endif

@@ -1,4 +1,6 @@
 #import <CoreLocation/CoreLocation.h>
+#import <CoreWLAN/CoreWLAN.h>
+#import <string.h>
 #import "location_darwin.h"
 
 // A single retained manager: CLLocationManager must stay alive for the
@@ -37,4 +39,15 @@ void meridian_request_location(void) {
         // coordinates, so no delegate is required.
         [m startUpdatingLocation];
     });
+}
+
+char *meridian_current_ssid(void) {
+    @autoreleasepool {
+        CWInterface *iface = [[CWWiFiClient sharedWiFiClient] interface];
+        NSString *ssid = [iface ssid];
+        if (ssid == nil || ssid.length == 0) {
+            return NULL;
+        }
+        return strdup([ssid UTF8String]);
+    }
 }
