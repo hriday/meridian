@@ -179,6 +179,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | Syslog | syslog receiver | `syslog` |
 | SNMP traps | trap receiver | `traps` |
 | NetFlow | NetFlow v5 / v9 / IPFIX receiver | `netflow` |
+| sFlow | sFlow v5 receiver — sampled flows → top talkers | `sflow` |
 | TFTP | TFTP receiver (saves grabbed files) | `tftp` |
 
 ### Security

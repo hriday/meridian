@@ -82,7 +82,7 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**)
 (MAC→port), **MIB browser** (walk), **SNMP community audit** (authorization-gated).
 
 **Collectors** (local receivers) — **Syslog**, **SNMP traps**, **NetFlow v5/v9/IPFIX**,
-**TFTP** (saves grabbed files).
+**sFlow v5** (sampled flows → top talkers), **TFTP** (saves grabbed files).
 
 **Security**
 - **JWT decoder + verifier**, **TOTP (2FA) code**, **bcrypt / htpasswd**,

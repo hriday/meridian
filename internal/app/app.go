@@ -18,6 +18,7 @@ import (
 	"github.com/hriday/meridian/internal/netflow"
 	"github.com/hriday/meridian/internal/pwaudit"
 	"github.com/hriday/meridian/internal/scan"
+	"github.com/hriday/meridian/internal/sflow"
 	"github.com/hriday/meridian/internal/snmp"
 	"github.com/hriday/meridian/internal/tftp"
 )
@@ -94,6 +95,7 @@ type App struct {
 	syslog  *collector.Collector[collector.SyslogMsg]
 	traps   *collector.Collector[snmp.TrapMsg]
 	netflow *collector.Collector[netflow.FlowRecord]
+	sflow   *collector.Collector[netflow.FlowRecord]
 	tftpSrv *tftp.Server
 }
 
@@ -111,6 +113,8 @@ func New() *App {
 		traps:       collector.New[snmp.TrapMsg](collectorBuffer, snmp.ParseTrap),
 		netflow: collector.NewMulti[netflow.FlowRecord](netflowBuffer,
 			func(b []byte, src netip.Addr) []netflow.FlowRecord { return nfParser.Parse(b, src, time.Now()) }),
+		sflow: collector.NewMulti[netflow.FlowRecord](netflowBuffer,
+			func(b []byte, src netip.Addr) []netflow.FlowRecord { return sflow.Parse(b, src, time.Now()) }),
 		tftpSrv: tftp.New(),
 	}
 }
@@ -134,6 +138,7 @@ func OnShutdown(a *App) func(context.Context) {
 		a.syslog.Stop()
 		a.traps.Stop()
 		a.netflow.Stop()
+		a.sflow.Stop()
 		a.tftpSrv.Stop()
 	}
 }
