@@ -112,6 +112,7 @@ func Catalog() []CommandGroup {
 			{"threatintel", "<ip>... [--json]", "botnet C2 check (abuse.ch)"},
 		}},
 		{Name: "Scripting", Note: "pipe a newline-delimited target list on stdin.", Commands: []CommandDoc{
+			{"completion", "bash|zsh|fish|powershell", "print a shell tab-completion script"},
 			{"batch", "<command> [flags]   (targets on stdin)", "run a single-target command over many targets — e.g. `cat hosts.txt | meridian-cli batch cipherscan --json` (NDJSON)"},
 			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in profile (audit-domain, triage-host) or your own YAML/TOML/JSON"},
 		}},
