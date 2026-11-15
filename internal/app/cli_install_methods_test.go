@@ -111,7 +111,9 @@ func TestCLIInfoShape(t *testing.T) {
 	if info.OS != runtime.GOOS {
 		t.Errorf("OS = %q, want %q", info.OS, runtime.GOOS)
 	}
-	if info.Supported != (runtime.GOOS == "darwin") {
-		t.Errorf("Supported = %v on %s", info.Supported, runtime.GOOS)
+	// One-click install is supported on macOS and Linux (see guiInstallSupported).
+	wantSupported := runtime.GOOS == "darwin" || runtime.GOOS == "linux"
+	if info.Supported != wantSupported {
+		t.Errorf("Supported = %v on %s, want %v", info.Supported, runtime.GOOS, wantSupported)
 	}
 }
