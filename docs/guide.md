@@ -58,6 +58,10 @@ right.
 - **Pick a tool** — tools are grouped in the sidebar (Internet, Addressing, Local
   network, SNMP & monitoring, Collectors, Security, Config insight). Click one and
   it opens on the right. The header shows the active tool's name.
+- **Command palette (⌘K / Ctrl-K)** — a keyboard launcher for the whole toolset:
+  start typing a tool name to fuzzy-jump to it, or **paste a value** (an IP, CIDR,
+  domain, URL, JWT, PEM, MAC or hash) and it recognises the type and jumps to the
+  right tool with the value pre-filled. ↑/↓ to move, Enter to open, Esc to close.
 - **Collapse the sidebar** — the **☰** button at the top gives the active tool more
   room.
 - **Run a tool** — type your input (an IP, host, prefix, file, token…) and press

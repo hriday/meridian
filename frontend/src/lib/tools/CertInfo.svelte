@@ -1,7 +1,11 @@
 <script lang="ts">
   import { CertDecode } from "../../../wailsjs/go/app/App.js";
+  import { get } from "svelte/store";
+  import { requestedTool } from "../nav";
 
   let pem = "";
+  const _req = get(requestedTool);
+  if (_req && _req.tool === "certinfo" && _req.value) { pem = _req.value; requestedTool.set(null); }
   let result: any = null;
   let error = "";
 
