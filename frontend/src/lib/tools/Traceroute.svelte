@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { Traceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
+  import { Traceroute, TCPTraceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
 
   let target = "cloudflare.com";
   let useV6 = false;
+  let mode: "icmp" | "tcp" = "icmp";
+  let port = 443;
   let running = false;
   let error = "";
   let hops: any[] = [];
@@ -57,7 +59,10 @@
     const handler = (h: any) => (hops = [...hops, h]);
     EventsOn("trace:hop", handler);
     try {
-      result = await Traceroute(target.trim(), useV6);
+      result =
+        mode === "tcp"
+          ? await TCPTraceroute(target.trim(), Number(port) || 443)
+          : await Traceroute(target.trim(), useV6);
       if (result?.hops) hops = result.hops; // authoritative, fully annotated
     } catch (e) {
       error = String(e);
@@ -81,14 +86,28 @@
 
 <div class="tool">
   <h2>Traceroute (AS-aware)</h2>
-  <p class="sub">Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.</p>
+  <p class="sub">
+    {#if mode === "tcp"}
+      TCP-SYN probes to a port — reaches through firewalls that drop UDP/ICMP traceroute. IPv4 only; needs admin rights (raw sockets).
+    {:else}
+      Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.
+    {/if}
+  </p>
 
   <form on:submit|preventDefault={start} class="row">
     <input class="field mono" bind:value={target} placeholder="cloudflare.com  or  104.16.123.45" autocomplete="off" spellcheck="false" aria-label="Target host" />
-    <select class="sel" bind:value={useV6} aria-label="IP version">
-      <option value={false}>IPv4</option>
-      <option value={true}>IPv6</option>
+    <select class="sel" bind:value={mode} aria-label="Probe mode">
+      <option value="icmp">ICMP</option>
+      <option value="tcp">TCP</option>
     </select>
+    {#if mode === "tcp"}
+      <input class="field mono port" type="number" min="1" max="65535" bind:value={port} aria-label="TCP port" />
+    {:else}
+      <select class="sel" bind:value={useV6} aria-label="IP version">
+        <option value={false}>IPv4</option>
+        <option value={true}>IPv6</option>
+      </select>
+    {/if}
     {#if running}
       <button type="button" class="go stop" on:click={stop}>Stop</button>
     {:else}
@@ -142,6 +161,7 @@
   .row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 200px; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 0.9rem; outline: none; }
   .field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .field.port { flex: 0 0 auto; min-width: 0; width: 92px; }
   .sel { background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 9px 10px; color: var(--text); font: inherit; font-size: 0.86rem; cursor: pointer; }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 0 16px; font: inherit; font-size: 0.9rem; cursor: pointer; }
   .go.stop { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }

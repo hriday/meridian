@@ -21,6 +21,7 @@ import (
 // Seams (overridable in tests).
 var (
 	NewProber     = trace.NewICMPProber
+	NewTCPProber  = trace.NewTCPProber
 	Query         asnmap.QueryFunc = dnsx.Query
 	ResolveTarget                  = defaultResolveTarget
 	ResolveHost                    = defaultResolveHost
@@ -42,7 +43,26 @@ func Run(ctx context.Context, target string, useV6 bool, onHop func(trace.Hop)) 
 		return trace.Result{Target: target}, err
 	}
 	defer p.Close()
+	return drive(ctx, target, dst, p, onHop)
+}
 
+// RunTCP traces target over TCP to port (IPv4), reaching through middleboxes
+// that drop UDP/ICMP traceroute. It needs elevated privileges (raw sockets).
+func RunTCP(ctx context.Context, target string, port int, onHop func(trace.Hop)) (trace.Result, error) {
+	dst, err := ResolveTarget(ctx, target, false)
+	if err != nil {
+		return trace.Result{Target: target}, err
+	}
+	p, err := NewTCPProber("ip4", port)
+	if err != nil {
+		return trace.Result{Target: target}, err
+	}
+	defer p.Close()
+	return drive(ctx, target, dst, p, onHop)
+}
+
+// drive runs the probe loop with an opened prober and annotates each hop.
+func drive(ctx context.Context, target string, dst netip.Addr, p trace.Prober, onHop func(trace.Hop)) (trace.Result, error) {
 	cache := map[string]asnmap.ASInfo{}
 	annotate := func(h *trace.Hop) {
 		if h.Addr == "" {

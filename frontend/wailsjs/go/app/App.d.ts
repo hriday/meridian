@@ -52,11 +52,11 @@ import {svcstatus} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tcpping} from '../models';
+import {trace} from '../models';
 import {tlscheck} from '../models';
 import {tlsscan} from '../models';
 import {totp} from '../models';
 import {threatintel} from '../models';
-import {trace} from '../models';
 import {transcode} from '../models';
 import {voipcalc} from '../models';
 import {whois} from '../models';
@@ -358,6 +358,8 @@ export function SyslogStart(arg1:number):Promise<void>;
 export function SyslogStop():Promise<void>;
 
 export function TCPPing(arg1:string,arg2:number,arg3:number):Promise<tcpping.Result>;
+
+export function TCPTraceroute(arg1:string,arg2:number):Promise<trace.Result>;
 
 export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 

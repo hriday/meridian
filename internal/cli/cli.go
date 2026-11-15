@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -99,6 +100,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "tcptrace":
+		return runTCPTrace(args[1:], stdout, stderr)
 	case "ping":
 		return runPing(args[1:], stdout, stderr)
 	case "tcpping":
@@ -709,6 +712,11 @@ func runTrace(args []string, stdout, stderr io.Writer) int {
 	if *asJSON {
 		return writeJSON(stdout, stderr, r)
 	}
+	printTrace(stdout, r)
+	return 0
+}
+
+func printTrace(stdout io.Writer, r trace.Result) {
 	for _, h := range r.Hops {
 		host := h.Addr
 		if h.Timeout {
@@ -731,6 +739,34 @@ func runTrace(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "%2d  %-40s %-26s %s\n", h.TTL, host, as, rtt)
 	}
 	fmt.Fprintln(stdout, trace.Verdict(r))
+}
+
+func runTCPTrace(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("tcptrace", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 2 {
+		fmt.Fprintf(stderr, "tcptrace needs a host and a port\n%s", usage)
+		return 2
+	}
+	port, err := strconv.Atoi(pos[1])
+	if err != nil || port < 1 || port > 65535 {
+		fmt.Fprintf(stderr, "invalid port %q\n", pos[1])
+		return 2
+	}
+	r, err := tracerun.RunTCP(context.Background(), pos[0], port, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	printTrace(stdout, r)
 	return 0
 }
 

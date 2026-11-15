@@ -29,6 +29,7 @@ func Catalog() []CommandGroup {
 		{Name: "Internet", Commands: []CommandDoc{
 			{"lookup", "<ip|asn> [--json]", "IP / ASN intelligence"},
 			{"trace", "<host> [--6] [--json]", "traceroute with AS lookups"},
+		{"tcptrace", "<host> <port> [--json]", "TCP-SYN traceroute (through firewalls that drop UDP/ICMP; sudo)"},
 			{"bgp", "<prefix|ip> [--json]", "BGP looking glass"},
 			{"tls", "<host[:port]> [--json]", "inspect a server's certificate"},
 			{"certinfo", "[<file>] [--json]", "decode a PEM certificate / CSR (stdin ok)"},
