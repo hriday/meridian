@@ -33,7 +33,7 @@
     for (const n of info?.neighbors || []) if (n.band === band && n.channel) out.push(n);
     return out;
   }
-  function chart(nets: any[]) {
+  function chart(band: string, nets: any[]) {
     if (!nets.length) return null;
     const chans = nets.map((n) => n.channel);
     let minC = Math.min(...chans) - 6, maxC = Math.max(...chans) + 6;
@@ -51,7 +51,13 @@
     const ticks = [...new Set(chans)].sort((a, b) => a - b).map((c) => ({ c, x: xOf(c) }));
     return { arcs, ticks };
   }
-  $: bands = info ? ["2GHz", "5GHz", "6GHz"].map((b) => ({ band: b, nets: bandNets(b) })).filter((x) => x.nets.length) : [];
+  $: bands = info
+    ? ["2GHz", "5GHz", "6GHz"]
+        .map((b) => ({ band: b, nets: bandNets(b) }))
+        .filter((x) => x.nets.length)
+        .map((x) => ({ ...x, c: chart(x.band, x.nets) }))
+        .filter((x) => x.c)
+    : [];
 </script>
 
 <div class="tool">
@@ -101,13 +107,13 @@
         <div class="bandlabel">{b.band} channels</div>
         <svg viewBox={`0 0 ${W} ${H}`} class="chart" preserveAspectRatio="none">
           <line x1={padL} y1={bot} x2={W - padR} y2={bot} class="axis" />
-          {#each chart(b.nets).arcs as a}
+          {#each b.c.arcs as a}
             <path d={a.d} class="arc" class:cur={a.n.current} />
           {/each}
-          {#each chart(b.nets).arcs as a}
+          {#each b.c.arcs as a}
             <text x={a.cx} y={a.py - 4} class="peak" class:curt={a.n.current}>{a.n.channel}</text>
           {/each}
-          {#each chart(b.nets).ticks as t}
+          {#each b.c.ticks as t}
             <text x={t.x} y={bot + 14} class="tick">{t.c}</text>
           {/each}
         </svg>
