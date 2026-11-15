@@ -151,6 +151,16 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 Longer, real-world combinations — building on the three workflows at the top.
 Each runs from the CLI (and every step is a tool in the GUI too).
 
+**Everything about an organization, from its domain.** One built-in runbook
+sweeps the whole external footprint — registration, DNS posture, email auth, DNS
+propagation, subdomains, TLS ciphers, HTTP/3, security headers and certificate
+expiry — into a single report:
+
+```bash
+meridian-cli runbook org-recon example.com                    # one report, 10 tools
+meridian-cli runbook org-recon example.com --format html --out report.html
+```
+
 **Vet a VPN gateway before you trust it.** Is the responder up, what does it
 negotiate, and is the port even reachable?
 
@@ -327,7 +337,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | Tool | What it does | CLI |
 |---|---|---|
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
-| Runbook | composite audit — run a profile of tools into one report: built-in (audit-domain, triage-host) or your own YAML/TOML/JSON profile; md/json/html | `runbook` + GUI |
+| Runbook | composite audit — run a profile of tools into one report: built-in (org-recon, audit-domain, triage-host) or your own YAML/TOML/JSON profile; md/json/html | `runbook` + GUI |
 
 ### Config insight
 

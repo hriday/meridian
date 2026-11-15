@@ -13,6 +13,27 @@ func TestRunbooksList(t *testing.T) {
 	}
 }
 
+func TestOrgReconProfileCommandsAreReal(t *testing.T) {
+	// org-recon must exist, and every step must reference a real subcommand
+	// (guards against a typo'd cmd that would just error at run time).
+	p, ok := findProfile("org-recon")
+	if !ok {
+		t.Fatal("org-recon profile is missing")
+	}
+	if len(p.steps) < 8 {
+		t.Fatalf("org-recon has %d steps, want a comprehensive sweep", len(p.steps))
+	}
+	known := map[string]bool{}
+	for _, n := range names() { // from the catalog (completion.go)
+		known[n] = true
+	}
+	for _, s := range p.steps {
+		if !known[s.cmd] {
+			t.Errorf("org-recon step %q is not a known command", s.cmd)
+		}
+	}
+}
+
 func TestRunbookUnknownProfile(t *testing.T) {
 	msg, code := RunbookReport("nope", "x", "md")
 	if code != 2 {
