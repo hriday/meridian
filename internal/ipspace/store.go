@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/hriday/meridian/internal/subnet"
 )
 
 // Store holds the append-only event log and the records derived from it.
@@ -69,6 +71,52 @@ func (s *Store) Add(prefix, name string, status Status, tags []string, notes str
 	}
 	s.appendEvent(Event{Type: EventAdd, Record: rec})
 	return s.records[rec.ID], nil
+}
+
+// maxCarve caps how many child subnets one carve creates, so a wide split can't
+// flood the inventory.
+const maxCarve = 1024
+
+// Carve subdivides the block with id into equal child subnets of newPrefixLen
+// and adds them (status for each; skipping any that already exist), nesting them
+// under the block automatically. It returns the records it created.
+func (s *Store) Carve(id string, newPrefixLen int, status Status) ([]Record, error) {
+	parent, ok := s.records[id]
+	if !ok {
+		return nil, fmt.Errorf("no such block")
+	}
+	subs, err := subnet.Split(parent.Prefix, newPrefixLen)
+	if err != nil {
+		return nil, err
+	}
+	if len(subs) > maxCarve {
+		return nil, fmt.Errorf("that split makes %d subnets; carve into a shorter prefix (at most %d at once)", len(subs), maxCarve)
+	}
+
+	existing := map[string]bool{}
+	for _, r := range s.records {
+		existing[r.Prefix] = true
+	}
+
+	var added []Record
+	for _, sn := range subs {
+		pfx := sn
+		if p, err := netip.ParsePrefix(sn); err == nil {
+			pfx = p.Masked().String()
+		}
+		if existing[pfx] {
+			continue
+		}
+		r, err := s.Add(sn, "", status, nil, "")
+		if err != nil {
+			continue // skip anything that would conflict
+		}
+		added = append(added, r)
+	}
+	if len(added) == 0 {
+		return nil, fmt.Errorf("nothing to carve — all %d subnet(s) already exist", len(subs))
+	}
+	return added, nil
 }
 
 // Edit updates a record's mutable fields.

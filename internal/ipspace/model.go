@@ -5,6 +5,7 @@
 package ipspace
 
 import (
+	"math"
 	"net/netip"
 	"sort"
 	"time"
@@ -56,6 +57,30 @@ type Event struct {
 type TreeNode struct {
 	Record   Record     `json:"record"`
 	Children []TreeNode `json:"children"`
+	UtilPct  float64    `json:"utilPct"` // % of this block's addresses covered by its direct children
+}
+
+// utilPct returns the share of parentPrefix's address space covered by its
+// direct children, as a percentage. Each child of length L inside a parent of
+// length P covers 2^(P-L) of the parent, so the sum is exact and overflow-free
+// for both IPv4 and IPv6 (no huge address counts).
+func utilPct(parentPrefix string, children []Record) float64 {
+	pp, err := netip.ParsePrefix(parentPrefix)
+	if err != nil {
+		return 0
+	}
+	sum := 0.0
+	for _, c := range children {
+		cp, err := netip.ParsePrefix(c.Prefix)
+		if err != nil || cp.Bits() < pp.Bits() {
+			continue
+		}
+		sum += math.Pow(2, float64(pp.Bits()-cp.Bits()))
+	}
+	if sum > 1 {
+		sum = 1
+	}
+	return sum * 100
 }
 
 // replay derives the current records by applying the log in order.
@@ -108,7 +133,11 @@ func buildTree(records map[string]Record) []TreeNode {
 		sort.Slice(kids, func(i, j int) bool { return lessPrefix(kids[i], kids[j]) })
 		out := make([]TreeNode, 0, len(kids))
 		for _, r := range kids {
-			out = append(out, TreeNode{Record: r, Children: build(r.ID)})
+			out = append(out, TreeNode{
+				Record:   r,
+				Children: build(r.ID),
+				UtilPct:  utilPct(r.Prefix, childrenOf[r.ID]),
+			})
 		}
 		return out
 	}
