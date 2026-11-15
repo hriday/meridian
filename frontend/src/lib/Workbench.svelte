@@ -309,6 +309,9 @@
         </div>
         <div class="sidefoot">
           <span class="ver mono">Meridian {appVersion || "…"}</span>
+          <button class="upd link" on:click={() => BrowserOpenURL("https://github.com/hriday/meridian/blob/master/docs/guide.md")} title="Open the Meridian user guide in your browser">
+            How to use Meridian ↗
+          </button>
           {#if upState === "available"}
             <button class="upd avail" on:click={() => (showUpdate = true)} title="See what's new">
               {upLatest} available
