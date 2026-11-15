@@ -714,6 +714,14 @@ export function Whois(arg1) {
   return window['go']['app']['App']['Whois'](arg1);
 }
 
+export function WifiStatus() {
+  return window['go']['app']['App']['WifiStatus']();
+}
+
+export function WifiSupported() {
+  return window['go']['app']['App']['WifiSupported']();
+}
+
 export function WordlistCatalog() {
   return window['go']['app']['App']['WordlistCatalog']();
 }

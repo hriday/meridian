@@ -63,6 +63,7 @@ import {threatintel} from '../models';
 import {transcode} from '../models';
 import {voipcalc} from '../models';
 import {whois} from '../models';
+import {wifi} from '../models';
 
 export function ADAuditCheckPwned():Promise<Record<string, number>>;
 
@@ -419,6 +420,10 @@ export function VoipCodecs():Promise<Array<voipcalc.Codec>>;
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
 
 export function Whois(arg1:string):Promise<whois.Result>;
+
+export function WifiStatus():Promise<wifi.Info>;
+
+export function WifiSupported():Promise<boolean>;
 
 export function WordlistCatalog():Promise<Array<wordlist.Entry>>;
 

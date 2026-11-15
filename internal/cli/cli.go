@@ -197,6 +197,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runRTP(args[1:], stdout, stderr)
 	case "pktscan":
 		return runPktScan(args[1:], stdout, stderr)
+	case "wifi":
+		return runWifi(args[1:], stdout, stderr)
 	case "dnspropagation", "dnsprop":
 		return runDNSProp(args[1:], stdout, stderr)
 	case "speedtest":
