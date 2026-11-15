@@ -92,9 +92,10 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**)
   **Cisco password decode**, **Hash identifier**, **Breach lookup** (HIBP),
   **CVE lookup** (NVD), **Threat intel** (abuse.ch botnet C2).
 
-**Config insight** — **Firewall analyzer** (FortiGate, PAN-OS, Cisco ASA, Juniper
-SRX, Arista, Check Point, VyOS, pfSense), **Web-server analyzer** (nginx/Apache/
-Caddy), **Terraform exposure scan** (AWS, GCP, Azure), **config diff**.
+**Config insight** — **Firewall analyzer** (FortiGate, PAN-OS, Cisco ASA, Cisco
+IOS/IOS-XE/NX-OS, Juniper SRX, Juniper Junos filters, Arista, Check Point, VyOS,
+pfSense — vendor auto-detected), **Web-server analyzer** (nginx/Apache/Caddy),
+**Terraform exposure scan** (AWS, GCP, Azure), **config diff**.
 
 ## Screenshots
 
