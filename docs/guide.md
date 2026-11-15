@@ -200,7 +200,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | Service discovery | mDNS/Bonjour + SSDP/UPnP — what's on the LAN | `discover` |
 | RTP analyzer | per-stream jitter/loss/codec (sudo) | `rtp` |
 | Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (sudo) | `pktscan` |
-| Wi-Fi analyzer | channel, signal/SNR, neighbors + channel map / co-channel contention (macOS) | `wifi` |
+| Wi-Fi analyzer | channel, signal/SNR, neighbors + channel map / co-channel contention (macOS; Linux via nmcli & Windows via netsh give channel/signal/security, no SNR) | `wifi` |
 | Ping sweep | ping / TCP sweep a range | `pingsweep` |
 | Port scan | scan ports on a host | `portscan` |
 | PTR sweep | reverse-DNS a range | `ptrsweep` |
