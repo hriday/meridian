@@ -2310,6 +2310,91 @@ export namespace jwtinspect {
 
 }
 
+export namespace lanrecon {
+	
+	export class ApplyResult {
+	    imported: number;
+	    updated: number;
+	    deprecated: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ApplyResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.imported = source["imported"];
+	        this.updated = source["updated"];
+	        this.deprecated = source["deprecated"];
+	    }
+	}
+	export class Finding {
+	    ip: string;
+	    mac: string;
+	    vendor?: string;
+	    category: string;
+	    recordId?: string;
+	    name?: string;
+	    knownMac?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Finding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.mac = source["mac"];
+	        this.vendor = source["vendor"];
+	        this.category = source["category"];
+	        this.recordId = source["recordId"];
+	        this.name = source["name"];
+	        this.knownMac = source["knownMac"];
+	    }
+	}
+	export class Report {
+	    subnet: string;
+	    findings: Finding[];
+	    new: number;
+	    inSync: number;
+	    macChange: number;
+	    missing: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.subnet = source["subnet"];
+	        this.findings = this.convertValues(source["findings"], Finding);
+	        this.new = source["new"];
+	        this.inSync = source["inSync"];
+	        this.macChange = source["macChange"];
+	        this.missing = source["missing"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace lldp {
 	
 	export class Neighbor {
