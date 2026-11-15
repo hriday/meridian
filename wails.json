@@ -8,5 +8,10 @@
   "frontend:dev:serverUrl": "auto",
   "author": {
     "name": "Hriday Balachandran"
+  },
+  "info": {
+    "productName": "Meridian",
+    "copyright": "© 2026 Hriday Balachandran",
+    "comments": "A cross-platform desktop toolkit for understanding networks, addresses, and routes."
   }
 }
