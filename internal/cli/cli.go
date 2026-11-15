@@ -758,10 +758,13 @@ func traceRTT(d []time.Duration) (min, avg, max time.Duration) {
 
 func runIPSpace(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintf(stderr, "ipspace needs a subcommand (list or export)\n%s", usage)
+		fmt.Fprintf(stderr, "ipspace needs a subcommand (list, export, or reconcile)\n%s", usage)
 		return 2
 	}
 	sub := args[0]
+	if sub == "reconcile" {
+		return runReconcile(args[1:], stdout, stderr)
+	}
 	fs := flag.NewFlagSet("ipspace", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	file := fs.String("file", ipspace.DefaultPath(), "store file path")
