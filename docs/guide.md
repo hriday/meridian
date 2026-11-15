@@ -79,6 +79,13 @@ meridian-cli <command>     # run with no args to see its usage
 
 Most commands take `--json`. Live receivers/monitors run until **Ctrl-C**.
 
+**Bulk runs** — pipe a newline-delimited target list into `batch` to run any
+single-target command over many targets at once (NDJSON with `--json`):
+
+```bash
+cat hosts.txt | meridian-cli batch cipherscan --json
+```
+
 ---
 
 ## Every tool at a glance
@@ -187,6 +194,12 @@ Most commands take `--json`. Live receivers/monitors run until **Ctrl-C**.
 | Breach lookup | HIBP breaches | `breaches` |
 | CVE lookup | NVD CVE lookup | `cve` |
 | Threat intel | abuse.ch botnet C2 check | `threatintel` |
+
+### Scripting (CLI only)
+
+| Tool | What it does | CLI |
+|---|---|---|
+| Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` |
 
 ### Config insight
 

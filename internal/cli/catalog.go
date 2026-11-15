@@ -107,6 +107,9 @@ func Catalog() []CommandGroup {
 			{"cve", "<id|keyword> [--json]", "CVE lookup (NVD)"},
 			{"threatintel", "<ip>... [--json]", "botnet C2 check (abuse.ch)"},
 		}},
+		{Name: "Scripting", Note: "pipe a newline-delimited target list on stdin.", Commands: []CommandDoc{
+			{"batch", "<command> [flags]   (targets on stdin)", "run a single-target command over many targets — e.g. `cat hosts.txt | meridian-cli batch cipherscan --json` (NDJSON)"},
+		}},
 		{Name: "Config insight", Commands: []CommandDoc{
 			{"fwanalyze", "[<config-file>] [--json]", "firewall config analysis (stdin ok)"},
 			{"webanalyze", "[<file>] [--server nginx] [--json]", "web-server config analysis (stdin ok)"},

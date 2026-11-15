@@ -195,6 +195,8 @@ meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on 
 meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
+
+cat hosts.txt | meridian-cli batch cipherscan --json   # bulk audit — one JSON object per host (NDJSON)
 ```
 
 Raw-socket tools (`arpscan`, `lldp`, `rtp`, `pktscan`, and the `ipspace reconcile`
