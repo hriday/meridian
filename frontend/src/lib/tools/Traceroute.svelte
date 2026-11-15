@@ -128,6 +128,22 @@
     </div>
   {/if}
 
+  {#if result?.networks?.length}
+    <div class="nets">
+      <div class="netlabel">Networks in path · PeeringDB</div>
+      {#each result.networks as n}
+        <div class="net">
+          <span class="nasn mono">{n.asn}</span>
+          <span class="nowner">{n.owner || ""}</span>
+          {#if n.policy}<span class="pol {n.policy}">{n.policy}</span>{/if}
+          {#if n.ixCount}<span class="chip">{n.ixCount} IX</span>{/if}
+          {#if n.facCount}<span class="chip">{n.facCount} fac</span>{/if}
+          {#if n.ixps && n.ixps.length}<span class="ixps mono">{n.ixps.slice(0, 4).join(" · ")}</span>{/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   {#if hops.length}
     <table class="tbl">
       <thead><tr><th>#</th><th>Host</th><th>AS · owner</th><th>RTT (min / avg / max)</th><th style="width:110px">trend</th></tr></thead>
@@ -172,6 +188,18 @@
   .asnode { display: flex; flex-direction: column; gap: 1px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 7px; }
   .asnode .n { font-size: 0.78rem; color: var(--accent); }
   .asnode .o { font-size: 0.64rem; color: var(--text-dim); }
+  .nets { background: var(--card); border: 1px solid var(--border-soft); border-radius: 9px; padding: 10px 13px; margin-bottom: 14px; }
+  .netlabel { font-size: 0.6rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); margin-bottom: 7px; }
+  .net { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 4px 0; font-size: 0.8rem; }
+  .net + .net { border-top: 1px solid var(--border-soft); }
+  .nasn { color: var(--accent); min-width: 72px; }
+  .nowner { color: var(--text); flex: 0 1 auto; }
+  .pol { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-dim); }
+  .pol.Open, .pol.open { background: var(--accent); color: var(--on-accent, #052e2b); border-color: transparent; }
+  .pol.Selective, .pol.selective { background: var(--well); color: var(--text); }
+  .pol.Restrictive, .pol.restrictive { background: var(--well); color: var(--text-dim); }
+  .chip { font-size: 0.64rem; background: var(--well); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--text-dim); }
+  .ixps { font-size: 0.66rem; color: var(--text-dim); }
   .arrow { color: var(--text-faint); }
   table.tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   .tbl th { text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .04em; padding: 7px 10px; border-bottom: 1px solid var(--border); }

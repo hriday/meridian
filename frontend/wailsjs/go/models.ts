@@ -4466,6 +4466,32 @@ export namespace trace {
 	        this.timeout = source["timeout"];
 	    }
 	}
+	export class NetInfo {
+	    asn: string;
+	    owner: string;
+	    policy: string;
+	    ratio: string;
+	    ixCount: number;
+	    facCount: number;
+	    ixps: string[];
+	    irrAsSet: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NetInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.asn = source["asn"];
+	        this.owner = source["owner"];
+	        this.policy = source["policy"];
+	        this.ratio = source["ratio"];
+	        this.ixCount = source["ixCount"];
+	        this.facCount = source["facCount"];
+	        this.ixps = source["ixps"];
+	        this.irrAsSet = source["irrAsSet"];
+	    }
+	}
 	export class Result {
 	    target: string;
 	    addr: string;
@@ -4473,6 +4499,7 @@ export namespace trace {
 	    reached: boolean;
 	    elapsed: number;
 	    verdict: string;
+	    networks?: NetInfo[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Result(source);
@@ -4486,6 +4513,7 @@ export namespace trace {
 	        this.reached = source["reached"];
 	        this.elapsed = source["elapsed"];
 	        this.verdict = source["verdict"];
+	        this.networks = this.convertValues(source["networks"], NetInfo);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

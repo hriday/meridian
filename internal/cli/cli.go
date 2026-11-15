@@ -739,6 +739,26 @@ func printTrace(stdout io.Writer, r trace.Result) {
 		fmt.Fprintf(stdout, "%2d  %-40s %-26s %s\n", h.TTL, host, as, rtt)
 	}
 	fmt.Fprintln(stdout, trace.Verdict(r))
+
+	if len(r.Networks) > 0 {
+		fmt.Fprintln(stdout, "\nNetworks in path (PeeringDB):")
+		for _, n := range r.Networks {
+			line := fmt.Sprintf("  %-9s %s", n.ASN, n.Owner)
+			if n.Policy != "" {
+				line += "  · peering " + n.Policy
+			}
+			if n.IXCount > 0 {
+				line += fmt.Sprintf("  · %d IX", n.IXCount)
+			}
+			if n.FacCount > 0 {
+				line += fmt.Sprintf("  · %d fac", n.FacCount)
+			}
+			fmt.Fprintln(stdout, line)
+			if len(n.IXPs) > 0 {
+				fmt.Fprintf(stdout, "      IX: %s\n", strings.Join(n.IXPs, ", "))
+			}
+		}
+	}
 }
 
 func runTCPTrace(args []string, stdout, stderr io.Writer) int {
