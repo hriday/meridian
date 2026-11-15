@@ -3,6 +3,7 @@ module github.com/hriday/meridian
 go 1.26.0
 
 require (
+	github.com/BurntSushi/toml v1.2.1
 	github.com/appshubcc/go-iperf3 v0.1.0
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.18
@@ -22,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/wailsapp/wails/v2 v2.10.1
 	github.com/zclconf/go-cty v1.20.0
+	go.yaml.in/yaml/v3 v3.0.5
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.62.0
@@ -82,7 +84,6 @@ require (
 	github.com/wailsapp/go-webview2 v1.0.19 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/text v0.44.0 // indirect

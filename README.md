@@ -204,6 +204,7 @@ meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 
 cat hosts.txt | meridian-cli batch cipherscan --json   # bulk audit — one JSON object per host (NDJSON)
 meridian-cli runbook audit-domain acme.com             # composite audit — many tools → one report
+meridian-cli runbook ./my-profile.yaml acme.com        # …or your own YAML/TOML/JSON profile
 ```
 
 Raw-socket tools (`arpscan`, `lldp`, `rtp`, `pktscan`, and the `ipspace reconcile`

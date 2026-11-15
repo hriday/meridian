@@ -8,8 +8,12 @@ import (
 	"html"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/BurntSushi/toml"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 func runRunbook(args []string, stdout, stderr io.Writer) int {
@@ -138,13 +142,93 @@ func findProfile(id string) (rbProfile, bool) {
 	return rbProfile{}, false
 }
 
-// RunRunbookData runs a profile against target and returns the structured
-// result. ok is false if the profile id is unknown.
+// profileFile is the on-disk schema for a user-defined runbook (YAML/TOML/JSON).
+type profileFile struct {
+	Name  string `yaml:"name" toml:"name" json:"name"`
+	Desc  string `yaml:"desc" toml:"desc" json:"desc"`
+	Steps []struct {
+		Cmd  string   `yaml:"cmd" toml:"cmd" json:"cmd"`
+		Args []string `yaml:"args" toml:"args" json:"args"`
+	} `yaml:"steps" toml:"steps" json:"steps"`
+}
+
+// looksLikeProfileFile is true when idOrPath should be read from disk rather than
+// matched against a built-in profile: it has a profile extension, or it names an
+// existing regular file.
+func looksLikeProfileFile(idOrPath string) bool {
+	switch strings.ToLower(filepath.Ext(idOrPath)) {
+	case ".yaml", ".yml", ".toml", ".json":
+		return true
+	}
+	if fi, err := os.Stat(idOrPath); err == nil && fi.Mode().IsRegular() {
+		return true
+	}
+	return false
+}
+
+// loadProfileFile parses a user-defined runbook. Each step is a single-target
+// command with args; "{t}" in an arg is replaced by the target at run time, just
+// like the built-in profiles. The command still dispatches through Run, so only
+// Meridian's own subcommands can be invoked — never an arbitrary shell.
+func loadProfileFile(path string) (rbProfile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return rbProfile{}, err
+	}
+	var pf profileFile
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".toml":
+		err = toml.Unmarshal(data, &pf)
+	case ".json":
+		err = json.Unmarshal(data, &pf)
+	default: // .yaml, .yml, or extensionless
+		err = yaml.Unmarshal(data, &pf)
+	}
+	if err != nil {
+		return rbProfile{}, fmt.Errorf("parsing %s: %w", path, err)
+	}
+	if len(pf.Steps) == 0 {
+		return rbProfile{}, fmt.Errorf("%s: no steps defined", path)
+	}
+	p := rbProfile{id: filepath.Base(path), name: pf.Name, desc: pf.Desc}
+	if p.name == "" {
+		p.name = p.id
+	}
+	for i, s := range pf.Steps {
+		if strings.TrimSpace(s.Cmd) == "" {
+			return rbProfile{}, fmt.Errorf("%s: step %d is missing a cmd", path, i+1)
+		}
+		p.steps = append(p.steps, rbStep{cmd: s.Cmd, args: s.Args})
+	}
+	return p, nil
+}
+
+// resolveProfile returns the profile for a built-in id or a user-defined file.
+// ok is false only for an unknown built-in id; a file that fails to load is an
+// error.
+func resolveProfile(idOrPath string) (p rbProfile, ok bool, err error) {
+	if looksLikeProfileFile(idOrPath) {
+		p, err = loadProfileFile(idOrPath)
+		return p, err == nil, err
+	}
+	p, ok = findProfile(idOrPath)
+	return p, ok, nil
+}
+
+// RunRunbookData runs a built-in profile against target and returns the
+// structured result. ok is false if the profile id is unknown. (The GUI uses
+// this with built-in ids; the CLI path also accepts file profiles via
+// RunbookReport.)
 func RunRunbookData(profileID, target string) (RunbookData, bool) {
 	p, found := findProfile(profileID)
 	if !found {
 		return RunbookData{}, false
 	}
+	return runProfile(p, target), true
+}
+
+// runProfile executes a resolved profile against target.
+func runProfile(p rbProfile, target string) RunbookData {
 	d := RunbookData{Profile: p.id, Name: p.name, Target: target, Generated: time.Now().UTC().Format(time.RFC3339)}
 	for _, s := range p.steps {
 		args := make([]string, len(s.args))
@@ -159,20 +243,25 @@ func RunRunbookData(profileID, target string) (RunbookData, bool) {
 		}
 		d.Steps = append(d.Steps, RunbookStep{Command: s.cmd, Args: args, Output: o, OK: code == 0})
 	}
-	return d, true
+	return d
 }
 
-// RunbookReport runs a profile and renders it in format ("md", "json", "html").
-// code is 0 on success, 2 for an unknown profile.
+// RunbookReport runs a profile (a built-in id or a user-defined YAML/TOML/JSON
+// file path) and renders it in format ("md", "json", "html"). code is 0 on
+// success, 2 for an unknown profile or a file that failed to load.
 func RunbookReport(profileID, target, format string) (string, int) {
-	d, ok := RunRunbookData(profileID, target)
+	p, ok, err := resolveProfile(profileID)
+	if err != nil {
+		return err.Error(), 2
+	}
 	if !ok {
 		var ids []string
-		for _, p := range rbProfiles {
-			ids = append(ids, p.id)
+		for _, bp := range rbProfiles {
+			ids = append(ids, bp.id)
 		}
-		return fmt.Sprintf("unknown runbook %q (have: %s)", profileID, strings.Join(ids, ", ")), 2
+		return fmt.Sprintf("unknown runbook %q (have: %s, or pass a .yaml/.toml/.json profile file)", profileID, strings.Join(ids, ", ")), 2
 	}
+	d := runProfile(p, target)
 	switch format {
 	case "json":
 		b, _ := json.Marshal(d)
