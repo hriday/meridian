@@ -63,6 +63,7 @@ import {totp} from '../models';
 import {threatintel} from '../models';
 import {transcode} from '../models';
 import {voipcalc} from '../models';
+import {wgprobe} from '../models';
 import {whois} from '../models';
 import {wifi} from '../models';
 
@@ -431,6 +432,8 @@ export function VoipBandwidth(arg1:string,arg2:number,arg3:number):Promise<voipc
 export function VoipCodecs():Promise<Array<voipcalc.Codec>>;
 
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function WgProbe(arg1:string,arg2:number,arg3:string):Promise<wgprobe.Result>;
 
 export function Whois(arg1:string):Promise<whois.Result>;
 

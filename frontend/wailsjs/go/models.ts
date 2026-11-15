@@ -5229,6 +5229,33 @@ export namespace webconf {
 
 }
 
+export namespace wgprobe {
+	
+	export class Result {
+	    target: string;
+	    validMac1: boolean;
+	    responds: boolean;
+	    replyType?: string;
+	    rttMs?: number;
+	    verdict: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.validMac1 = source["validMac1"];
+	        this.responds = source["responds"];
+	        this.replyType = source["replyType"];
+	        this.rttMs = source["rttMs"];
+	        this.verdict = source["verdict"];
+	    }
+	}
+
+}
+
 export namespace whois {
 	
 	export class Result {

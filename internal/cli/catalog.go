@@ -36,6 +36,7 @@ func Catalog() []CommandGroup {
 			{"cipherscan", "<host[:port]> [--json]", "TLS versions + cipher suites, graded"},
 			{"sshaudit", "<host[:port]> [--json]", "SSH algorithms + host keys + post-quantum readiness"},
 			{"ike", "<host> [--json]", "IKE/IPsec VPN probe — IKEv2 accepted proposal + NAT-T (UDP/500)"},
+			{"wg", "<host> [--port 51820] [--pubkey <b64>] [--json]", "WireGuard probe — handshake initiation; cookie/handshake reply confirms a responder"},
 			{"http", "<url> [--json]", "HTTP(S) check"},
 			{"http3", "<host> [--port 443] [--json]", "HTTP/3 (QUIC) reachability — handshake + Alt-Svc"},
 			{"sechdr", "<url> [--json]", "security headers (OWASP-mapped)"},

@@ -47,7 +47,9 @@ website, Meridian does it locally so the data never leaves your machine.
   (one record across a dozen global resolvers), **Email auth** (SPF/DKIM/DMARC).
 - **SMTP probe** (banner / STARTTLS / cert), **SIP OPTIONS ping** (is VoIP
   signaling up?), and **STUN** (your public IP + NAT type, symmetric-NAT warning).
-- **IKE / IPsec probe** (IKEv2 VPN responder — accepted proposal + NAT-T, UDP/500).
+- **IKE / IPsec probe** (IKEv2 VPN responder — accepted proposal + NAT-T, UDP/500)
+  and **WireGuard probe** (handshake initiation — a cookie/handshake reply
+  confirms a responder; paste the peer public key for a meaningful probe).
 
 **Addressing**
 - **Subnet calculator** — network/broadcast/host math and prefix splitting.

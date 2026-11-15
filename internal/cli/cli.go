@@ -138,6 +138,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCompletion(args[1:], stdout, stderr)
 	case "ike", "vpnprobe":
 		return runIke(args[1:], stdout, stderr)
+	case "wg", "wireguard":
+		return runWg(args[1:], stdout, stderr)
 	case "whois":
 		return runWhois(args[1:], stdout, stderr)
 	case "fwanalyze":
