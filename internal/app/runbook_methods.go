@@ -21,11 +21,41 @@ func (a *App) RunRunbook(profile, target string) (cli.RunbookData, error) {
 	if target == "" {
 		return cli.RunbookData{}, fmt.Errorf("enter a target")
 	}
+	// A session-imported recipe is keyed by its file path.
+	if path, ok := a.importedRunbooks[profile]; ok {
+		return cli.RunRunbookFile(path, target)
+	}
 	d, ok := cli.RunRunbookData(profile, target)
 	if !ok {
 		return cli.RunbookData{}, fmt.Errorf("unknown runbook %q", profile)
 	}
 	return d, nil
+}
+
+// ImportRunbook opens a file picker for a user-defined recipe (YAML / TOML /
+// JSON), validates it, remembers it for this session, and returns its summary so
+// the GUI can add it to the profile list. Returns an empty info (no error) if
+// the user cancels.
+func (a *App) ImportRunbook() (cli.RunbookInfo, error) {
+	path, err := wruntime.OpenFileDialog(a.lookupCtx(), wruntime.OpenDialogOptions{
+		Title: "Import a runbook recipe",
+		Filters: []wruntime.FileFilter{
+			{DisplayName: "Runbook recipes (*.yaml, *.yml, *.toml, *.json)", Pattern: "*.yaml;*.yml;*.toml;*.json"},
+		},
+	})
+	if err != nil || path == "" {
+		return cli.RunbookInfo{}, err
+	}
+	info, err := cli.RunbookFileInfo(path)
+	if err != nil {
+		return cli.RunbookInfo{}, err
+	}
+	if a.importedRunbooks == nil {
+		a.importedRunbooks = map[string]string{}
+	}
+	info.ID = path // key the profile by its path so RunRunbook can find it
+	a.importedRunbooks[path] = path
+	return info, nil
 }
 
 // RunbookRender formats an already-run runbook as "json", "html", or markdown

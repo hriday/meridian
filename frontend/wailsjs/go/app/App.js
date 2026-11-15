@@ -334,6 +334,10 @@ export function IkeProbe(arg1) {
   return window['go']['app']['App']['IkeProbe'](arg1);
 }
 
+export function ImportRunbook() {
+  return window['go']['app']['App']['ImportRunbook']();
+}
+
 export function InstallCLI() {
   return window['go']['app']['App']['InstallCLI']();
 }

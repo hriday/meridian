@@ -115,7 +115,7 @@ func Catalog() []CommandGroup {
 		{Name: "Scripting", Note: "pipe a newline-delimited target list on stdin.", Commands: []CommandDoc{
 			{"completion", "bash|zsh|fish|powershell", "print a shell tab-completion script"},
 			{"batch", "<command> [flags]   (targets on stdin)", "run a single-target command over many targets — e.g. `cat hosts.txt | meridian-cli batch cipherscan --json` (NDJSON)"},
-			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in profile (org-recon, audit-domain, triage-host) or your own YAML/TOML/JSON"},
+			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in recipe (org-recon, audit-domain, web-posture, vpn-check, triage-host) or your own YAML/TOML/JSON"},
 		}},
 		{Name: "Config insight", Commands: []CommandDoc{
 			{"fwanalyze", "[<config-file>] [--vendor auto] [--json]", "firewall config analysis — FortiGate/ASA/IOS/NX-OS/SRX/Junos/PAN-OS/Arista/VyOS/pfSense (stdin ok)"},
