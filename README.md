@@ -68,7 +68,8 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**)
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
   I on), **ARP scan** (live MAC↔IP + vendor), **RTP analyzer** (per-stream
   jitter/loss/codec from captured media), **Packet summary** (tcpdump-lite: top
-  talkers, TCP resets/retransmits, DNS errors, TLS SNIs seen).
+  talkers, TCP resets/retransmits, DNS errors, TLS SNIs seen), **Wi-Fi analyzer**
+  (channel, signal/SNR, neighbors + a channel map showing co-channel contention — macOS).
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your

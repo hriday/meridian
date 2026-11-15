@@ -5189,6 +5189,85 @@ export namespace whois {
 
 }
 
+export namespace wifi {
+	
+	export class Network {
+	    ssid: string;
+	    channel: number;
+	    band: string;
+	    width: string;
+	    phyMode: string;
+	    security: string;
+	    rssi: number;
+	    noise: number;
+	    snr: number;
+	    txRate?: number;
+	    coChannel: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Network(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ssid = source["ssid"];
+	        this.channel = source["channel"];
+	        this.band = source["band"];
+	        this.width = source["width"];
+	        this.phyMode = source["phyMode"];
+	        this.security = source["security"];
+	        this.rssi = source["rssi"];
+	        this.noise = source["noise"];
+	        this.snr = source["snr"];
+	        this.txRate = source["txRate"];
+	        this.coChannel = source["coChannel"];
+	    }
+	}
+	export class Info {
+	    interface: string;
+	    connected: boolean;
+	    current: Network;
+	    neighbors: Network[];
+	    coChannel: number;
+	    ssidRedacted: boolean;
+	    note: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.interface = source["interface"];
+	        this.connected = source["connected"];
+	        this.current = this.convertValues(source["current"], Network);
+	        this.neighbors = this.convertValues(source["neighbors"], Network);
+	        this.coChannel = source["coChannel"];
+	        this.ssidRedacted = source["ssidRedacted"];
+	        this.note = source["note"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace wordlist {
 	
 	export class Entry {
