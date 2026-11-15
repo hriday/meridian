@@ -335,6 +335,12 @@ export function SetIfBaseline(arg1:string):Promise<void>;
 
 export function SetPingBaseline(arg1:string):Promise<void>;
 
+export function SflowStart(arg1:number):Promise<void>;
+
+export function SflowStop():Promise<void>;
+
+export function SflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
+
 export function SnmpBruteCommunities(arg1:string,arg2:Array<string>,arg3:boolean):Promise<Array<string>>;
 
 export function SnmpSweep(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.SweepHost>>;

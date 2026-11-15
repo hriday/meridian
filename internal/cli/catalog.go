@@ -93,6 +93,7 @@ func Catalog() []CommandGroup {
 			{"syslog", "[--port 514] [--json]", "syslog receiver"},
 			{"traps", "[--port 162] [--json]", "SNMP trap receiver"},
 			{"netflow", "[--port 2055] [--json]", "NetFlow v5 / v9 / IPFIX receiver"},
+			{"sflow", "[--port 6343] [--json]", "sFlow v5 receiver — sampled flows → top talkers"},
 			{"tftp", "[--port 69] [--out <dir>] [--json]", "TFTP receiver — saves grabbed files"},
 		}},
 		{Name: "Security", Commands: []CommandDoc{

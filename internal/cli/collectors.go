@@ -14,6 +14,7 @@ import (
 
 	"github.com/hriday/meridian/internal/collector"
 	"github.com/hriday/meridian/internal/netflow"
+	"github.com/hriday/meridian/internal/sflow"
 	"github.com/hriday/meridian/internal/snmp"
 )
 
@@ -154,6 +155,28 @@ func runNetflow(args []string, stdout, stderr io.Writer) int {
 	defer stop()
 	parse := func(b []byte, src netip.Addr) []netflow.FlowRecord {
 		return netflow.ParseV5(b, src, time.Now())
+	}
+	c := collector.NewMulti(5000, parse)
+	return streamCollector(ctx, stdout, stderr, c, *port, *asJSON, formatNetflow)
+}
+
+func runSflow(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("sflow", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	port := fs.Int("port", 6343, "UDP port to bind")
+	asJSON := fs.Bool("json", false, "stream one JSON object per sampled flow (ndjson)")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 0 {
+		fmt.Fprintf(stderr, "sflow takes no arguments (use --port)\n%s", usage)
+		return 2
+	}
+	ctx, stop := signalCtx()
+	defer stop()
+	parse := func(b []byte, src netip.Addr) []netflow.FlowRecord {
+		return sflow.Parse(b, src, time.Now())
 	}
 	c := collector.NewMulti(5000, parse)
 	return streamCollector(ctx, stdout, stderr, c, *port, *asJSON, formatNetflow)

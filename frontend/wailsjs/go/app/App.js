@@ -542,6 +542,18 @@ export function SetPingBaseline(arg1) {
   return window['go']['app']['App']['SetPingBaseline'](arg1);
 }
 
+export function SflowStart(arg1) {
+  return window['go']['app']['App']['SflowStart'](arg1);
+}
+
+export function SflowStop() {
+  return window['go']['app']['App']['SflowStop']();
+}
+
+export function SflowTop(arg1, arg2) {
+  return window['go']['app']['App']['SflowTop'](arg1, arg2);
+}
+
 export function SnmpBruteCommunities(arg1, arg2, arg3) {
   return window['go']['app']['App']['SnmpBruteCommunities'](arg1, arg2, arg3);
 }
