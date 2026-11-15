@@ -38,7 +38,9 @@
     A <strong>tcpdump-lite</strong>: capture on your interface for a few seconds and summarize what's on the wire —
     <strong>top talkers</strong>, protocol mix, <strong>TCP resets &amp; retransmits</strong>, <strong>DNS errors</strong>,
     and the <strong>TLS SNIs</strong> seen. Use it to tell <em>what</em> is happening when ping/MTR/RTP flags an anomaly.
-    Needs admin rights (raw capture); on a switched LAN you only see traffic you're in the path of.
+    Needs <strong>raw-capture access</strong>: root/<span class="mono">sudo</span>, or on macOS membership in a BPF-access
+    group (e.g. Wireshark's <span class="mono">ChmodBPF</span>) — if a capture just worked, you already have it, no admin
+    needed. On a switched LAN you only see traffic you're in the path of.
   </p>
 
   <div class="row">

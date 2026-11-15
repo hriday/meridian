@@ -249,8 +249,9 @@ real multi-tool workflows (vet a VPN gateway, diagnose a choppy call, migrate a
 spreadsheet into encrypted IPAM, review a firewall config, and more).
 
 Raw-socket tools (`arpscan`, `lldp`, `rtp`, `pktscan`, and the `ipspace reconcile`
-sweep; `tcptrace` on Linux) need `sudo`/admin — on macOS, `tcptrace`, `discover` and the
-ICMP tools run unprivileged. Receivers on privileged ports (`syslog` 514, `traps`
+sweep; `tcptrace` on Linux) need raw-capture access — root/`sudo`, **or** on macOS
+a BPF-access group (e.g. Wireshark's ChmodBPF), which lets them run without admin.
+On macOS, `tcptrace`, `discover` and the ICMP tools run unprivileged. Receivers on privileged ports (`syslog` 514, `traps`
 162, `tftp` 69) need `sudo` or a high `--port`. The SNMP community audit (`snmpbrute`) requires an explicit
 `--authorized` flag, and community strings are never printed or logged.
 
