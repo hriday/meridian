@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { RunbookProfiles, RunRunbook } from "../../../wailsjs/go/app/App.js";
+  import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport } from "../../../wailsjs/go/app/App.js";
 
   let profiles: any[] = [];
   let profile = "";
@@ -8,6 +8,43 @@
   let loading = false;
   let error = "";
   let res: any = null;
+  let exportMsg = "";
+
+  // Export the already-run report — no re-running the tools.
+  async function exportFile(fmt: string, ext: string) {
+    exportMsg = "";
+    try {
+      const content = await RunbookRender(res, fmt);
+      const base = `${res.profile || "runbook"}-${res.target}`.replace(/[^\w.\-]+/g, "_");
+      const path = await SaveReport(`${base}.${ext}`, content);
+      if (path) exportMsg = "Saved to " + path;
+    } catch (e: any) {
+      exportMsg = String(e?.message ?? e);
+    }
+  }
+
+  // PDF: render the report's HTML into an off-screen iframe and print it, so the
+  // OS "Save as PDF" captures just the report (not the whole app window).
+  async function exportPDF() {
+    exportMsg = "";
+    try {
+      const html = await RunbookRender(res, "html");
+      const iframe = document.createElement("iframe");
+      iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } finally {
+          setTimeout(() => iframe.remove(), 1500);
+        }
+      };
+      document.body.appendChild(iframe);
+      iframe.srcdoc = html;
+    } catch (e: any) {
+      exportMsg = String(e?.message ?? e);
+    }
+  }
 
   onMount(async () => {
     try {
@@ -59,7 +96,15 @@
     <div class="head">
       <span class="h">{res.name} — <span class="mono">{res.target}</span></span>
       <span class="sub">{res.steps?.length} checks · {new Date(res.generated).toLocaleString()}</span>
+      <span class="exp">
+        <span class="xlbl">Export</span>
+        <button class="xb" on:click={() => exportFile("md", "txt")}>Text</button>
+        <button class="xb" on:click={() => exportFile("json", "json")}>JSON</button>
+        <button class="xb" on:click={() => exportFile("html", "html")}>HTML</button>
+        <button class="xb" on:click={exportPDF}>PDF</button>
+      </span>
     </div>
+    {#if exportMsg}<p class="muted">{exportMsg}</p>{/if}
     {#each res.steps as s}
       <div class="step">
         <div class="shead">
@@ -87,6 +132,10 @@
   .head { margin: 20px 0 8px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .h { font-size: 1rem; font-weight: 650; color: var(--text-strong, var(--text)); }
   .sub { font-size: 0.74rem; color: var(--text-dim); }
+  .exp { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .xlbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); }
+  .xb { background: var(--well); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; color: var(--text); font: inherit; font-size: 0.76rem; cursor: pointer; }
+  .xb:hover { border-color: var(--accent); color: var(--text-strong, var(--text)); }
   .step { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card); }
   .shead { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--well); border-bottom: 1px solid var(--border); }
   .cmd { font-weight: 650; color: var(--accent); font-size: 0.86rem; }

@@ -13,6 +13,22 @@ func TestRunbooksList(t *testing.T) {
 	}
 }
 
+func TestRenderRunbookFormats(t *testing.T) {
+	d := RunbookData{
+		Profile: "org-recon", Name: "Org Recon", Target: "example.com",
+		Steps: []RunbookStep{{Command: "whois", Output: "registrar: Example", OK: true}},
+	}
+	if md := RenderRunbook(d, "md"); !strings.Contains(md, "# Runbook") || !strings.Contains(md, "whois") {
+		t.Errorf("md render: %q", md)
+	}
+	if js := RenderRunbook(d, "json"); !strings.Contains(js, "\"profile\": \"org-recon\"") {
+		t.Errorf("json render: %q", js)
+	}
+	if h := RenderRunbook(d, "html"); !strings.Contains(h, "<h1>") || !strings.Contains(h, "whois") {
+		t.Errorf("html render: %q", h)
+	}
+}
+
 func TestOrgReconProfileCommandsAreReal(t *testing.T) {
 	// org-recon must exist, and every step must reference a real subcommand
 	// (guards against a typo'd cmd that would just error at run time).

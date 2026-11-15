@@ -289,6 +289,21 @@ func RunbookReport(profileID, target, format string) (string, int) {
 	}
 }
 
+// RenderRunbook formats an already-run RunbookData as "json", "html", or (the
+// default) markdown/plain text — for the GUI's export, without re-running the
+// tools.
+func RenderRunbook(d RunbookData, format string) string {
+	switch format {
+	case "json":
+		b, _ := json.MarshalIndent(d, "", "  ")
+		return string(b)
+	case "html":
+		return renderRunbookHTML(d)
+	default:
+		return renderRunbookMD(d)
+	}
+}
+
 func renderRunbookMD(d RunbookData) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Runbook: %s — %s\n\n", d.Name, d.Target)

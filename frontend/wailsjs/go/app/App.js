@@ -506,6 +506,10 @@ export function RunbookProfiles() {
   return window['go']['app']['App']['RunbookProfiles']();
 }
 
+export function RunbookRender(arg1, arg2) {
+  return window['go']['app']['App']['RunbookRender'](arg1, arg2);
+}
+
 export function SIPProbe(arg1, arg2, arg3) {
   return window['go']['app']['App']['SIPProbe'](arg1, arg2, arg3);
 }
@@ -520,6 +524,10 @@ export function SSHAudit(arg1) {
 
 export function STUNDiscover(arg1) {
   return window['go']['app']['App']['STUNDiscover'](arg1);
+}
+
+export function SaveReport(arg1, arg2) {
+  return window['go']['app']['App']['SaveReport'](arg1, arg2);
 }
 
 export function ScanCommonPorts() {
