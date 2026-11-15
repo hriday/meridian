@@ -248,3 +248,62 @@ jobs:
           done
           echo "could not auto-merge the cask bump PR for ${GITHUB_REF_NAME}" >&2
           exit 1
+
+  scoop:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: meridian-Windows
+          path: dist
+
+      - name: Bump scoop manifest
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          EXE="dist/Meridian-${GITHUB_REF_NAME}-windows-amd64.exe"
+          [ -f "$EXE" ] || { echo "no exe at $EXE" >&2; exit 1; }
+          SHA="$(sha256sum "$EXE" | cut -d' ' -f1)"
+          URL="https://github.com/hriday/meridian/releases/download/${GITHUB_REF_NAME}/Meridian-${GITHUB_REF_NAME}-windows-amd64.exe#/meridian.exe"
+          tmp="$(mktemp)"
+          jq --arg v "$VER" --arg sha "$SHA" --arg url "$URL" \
+            '.version=$v | .architecture["64bit"].url=$url | .architecture["64bit"].hash=$sha' \
+            scoop/meridian.json > "$tmp" && mv "$tmp" scoop/meridian.json
+
+      # master is protected, so (like the cask bump) open a short-lived branch,
+      # raise a PR, and squash-merge it.
+      - name: Open and merge the scoop bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- scoop/meridian.json; then
+            echo "scoop manifest already current for ${GITHUB_REF_NAME}"; exit 0
+          fi
+          BRANCH="scoop-bump-${GITHUB_REF_NAME}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add scoop/meridian.json
+          git commit -m "chore(scoop): meridian ${GITHUB_REF_NAME}"
+          git push origin "$BRANCH"
+          gh pr create --base master --head "$BRANCH" \
+            --title "chore(scoop): meridian ${GITHUB_REF_NAME}" \
+            --body "Automated Scoop manifest bump for ${GITHUB_REF_NAME} (release job already published the exe)."
+          for i in $(seq 1 10); do
+            if gh pr merge "$BRANCH" --squash --delete-branch \
+                 --subject "chore(scoop): meridian ${GITHUB_REF_NAME} [skip ci]"; then
+              exit 0
+            fi
+            echo "PR not mergeable yet, retrying in 6s…"; sleep 6
+          done
+          echo "could not auto-merge the scoop bump PR for ${GITHUB_REF_NAME}" >&2
+          exit 1
