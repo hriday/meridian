@@ -101,15 +101,19 @@ low ports:
 
 | Tool | Why | Note |
 |---|---|---|
-| ARP scan, **LAN reconcile** | raw layer-2 | `sudo` / admin — no workaround |
-| LLDP/CDP, RTP analyzer, **Packet summary** | packet capture | `sudo` / admin |
+| ARP scan, **LAN reconcile**, LLDP/CDP, RTP analyzer, **Packet summary** | raw layer-2 / packet capture | **macOS:** root/`sudo`, **or** a BPF-access group — no admin needed if you have it; **Linux:** root or `CAP_NET_RAW` |
 | **TCP traceroute** | raw ICMP for hop replies | **no sudo on macOS**; `sudo` on Linux |
 | Syslog (514), SNMP traps (162), TFTP (69) | privileged ports | `sudo`, or use a high `--port` |
 
 Everything else — including ICMP ping/traceroute/MTR, `tcpping`, and service
-discovery — runs unprivileged. In the **desktop app**, launched normally, the
-raw-socket tools above will report "needs elevated privileges" (the app runs as
-your user, like Wireshark); the CLI with `sudo` is the clean path for those.
+discovery — runs unprivileged.
+
+**The BPF-access group (macOS).** Raw capture opens a `/dev/bpf*` device. These
+are root-only on a stock macOS, but Wireshark's **ChmodBPF** helper (installed
+with Wireshark, or on its own) grants your user access, so the capture tools —
+**in the desktop app too, launched normally** — work *without* `sudo`. If a
+capture worked for you without elevating, that's why. Without it, those tools
+report "needs elevated privileges" and the CLI with `sudo` is the clean path.
 
 ## The command line
 
@@ -269,11 +273,11 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | MTR | live path + per-hop loss | `mtr` |
 | Path MTU | find MTU black holes | `pathmtu` |
 | DHCP discover | find DHCP servers / rogues | `dhcpdiscover` |
-| LLDP/CDP | what switch & port am I on (sudo) | `lldp` |
-| ARP scan | live MAC↔IP + vendor (sudo) | `arpscan` |
+| LLDP/CDP | what switch & port am I on (raw capture: sudo or BPF group) | `lldp` |
+| ARP scan | live MAC↔IP + vendor (raw capture: sudo or BPF group) | `arpscan` |
 | Service discovery | mDNS/Bonjour + SSDP/UPnP — what's on the LAN | `discover` |
-| RTP analyzer | per-stream jitter/loss/codec (sudo) | `rtp` |
-| Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (sudo) | `pktscan` |
+| RTP analyzer | per-stream jitter/loss/codec (raw capture: sudo or BPF group) | `rtp` |
+| Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (raw capture: sudo or BPF group) | `pktscan` |
 | Wi-Fi analyzer | channel, signal/SNR, neighbors + channel map / co-channel contention (macOS; Linux via nmcli & Windows via netsh give channel/signal/security, no SNR) | `wifi` |
 | Ping sweep | ping / TCP sweep a range | `pingsweep` |
 | Port scan | scan ports on a host | `portscan` |
