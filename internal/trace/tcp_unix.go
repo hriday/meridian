@@ -23,13 +23,14 @@ type tcpProber struct {
 	basePort int
 }
 
-// NewTCPProber opens the raw ICMP socket a TCP traceroute needs, then probes
-// dst:port with TCP SYNs at increasing TTL — the SYN itself is sent by the
-// kernel via a normal connect() with IP_TTL set, so no raw TCP send is needed.
-// Intermediate routers answer with ICMP Time Exceeded (read on the raw socket);
+// NewTCPProber opens the ICMP socket a TCP traceroute reads its per-hop replies
+// on, then probes dst:port with TCP SYNs at increasing TTL — the SYN itself is
+// sent by the kernel via a normal connect() with IP_TTL set, so no raw TCP send
+// is needed. Intermediate routers answer with ICMP Time Exceeded (read here);
 // the destination answers SYN-ACK or RST (seen via connect). This reaches
 // through middleboxes that drop UDP/ICMP traceroute but allow TCP to the port.
-// Requires elevated privileges (raw sockets). IPv4 only.
+// On macOS this runs unprivileged; on Linux it uses a raw ICMP socket (root).
+// IPv4 only.
 func NewTCPProber(network string, port int) (Prober, error) {
 	if network != "ip4" {
 		return nil, fmt.Errorf("TCP traceroute is IPv4-only for now")
@@ -37,12 +38,12 @@ func NewTCPProber(network string, port int) (Prober, error) {
 	if port < 1 || port > 65535 {
 		return nil, fmt.Errorf("invalid destination port %d", port)
 	}
-	conn, err := icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+	conn, err := icmp.ListenPacket(tcpICMPNetwork, "0.0.0.0")
 	if err != nil {
 		if errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
 			return nil, l2.ErrNeedsPrivilege
 		}
-		return nil, fmt.Errorf("couldn't open a raw ICMP socket for TCP traceroute (needs root): %w", err)
+		return nil, fmt.Errorf("couldn't open an ICMP socket for TCP traceroute: %w", err)
 	}
 	base := 33000 + int(time.Now().UnixNano()%10000)
 	return &tcpProber{port: port, conn: conn, basePort: base}, nil
