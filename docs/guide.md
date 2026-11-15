@@ -69,7 +69,8 @@ right.
   receivers) stream until you stop them.
 - **Footer** — the bottom of the sidebar shows your version, an **update check**
   (manual — Meridian never phones home on its own), **Install command-line tool**
-  (adds `meridian-cli` to your `PATH`), and a link to **this guide**.
+  (adds `meridian-cli` to your `PATH`; macOS & Linux — on Windows add the folder
+  holding `meridian-cli.exe` to your `PATH`), and a link to **this guide**.
 
 ## Themes
 
@@ -114,7 +115,8 @@ your user, like Wireshark); the CLI with `sudo` is the clean path for those.
 
 Every tool is also a `meridian-cli` subcommand sharing the exact same engine, so
 anything in the GUI can be scripted, piped, or run over SSH. Install it from the
-sidebar footer (macOS) or build it from source, then:
+sidebar footer (macOS & Linux), or on Windows add the folder holding
+`meridian-cli.exe` to your `PATH`, then:
 
 ```bash
 meridian-cli help          # every command, grouped
@@ -122,6 +124,14 @@ meridian-cli <command>     # run with no args to see its usage
 ```
 
 Most commands take `--json`. Live receivers/monitors run until **Ctrl-C**.
+
+**Tab-completion** — with ~80 subcommands, let your shell complete them. Emit a
+completion script for your shell and load it (the script's header has the exact
+install path):
+
+```bash
+meridian-cli completion zsh > "${fpath[1]}/_meridian-cli"   # also: bash | fish | powershell
+```
 
 **Bulk runs** — pipe a newline-delimited target list into `batch` to run any
 single-target command over many targets at once (NDJSON with `--json`):

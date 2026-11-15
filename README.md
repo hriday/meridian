@@ -130,6 +130,18 @@ Meridian ships three themes — **dark**, **light**, and a green-on-black
 
 ## Install
 
+**Quickest:**
+
+```bash
+# macOS (Homebrew)
+brew install --cask hriday/meridian/meridian
+```
+
+**Windows** and **Linux**: grab the `.exe` / `.AppImage` from the
+[latest release](../../releases/latest) (per-OS steps below). Native
+Windows/Linux package-manager entries (winget / Scoop / `.deb` / AUR) aren't
+published yet — they're gated on code-signing, tracked in the issues.
+
 Builds are attached to each [GitHub Release](../../releases). Meridian is **not
 yet code-signed**, so your OS will warn on first launch — this is expected for an
 open-source app without a paid signing certificate.
