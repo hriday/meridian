@@ -90,7 +90,7 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**)
 
 **Config insight** — **Firewall analyzer** (FortiGate, PAN-OS, Cisco ASA, Juniper
 SRX, Arista, Check Point, VyOS, pfSense), **Web-server analyzer** (nginx/Apache/
-Caddy), **Terraform exposure scan**, **config diff**.
+Caddy), **Terraform exposure scan** (AWS, GCP, Azure), **config diff**.
 
 ## Screenshots
 

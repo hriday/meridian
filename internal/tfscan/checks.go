@@ -97,6 +97,142 @@ func check(resources []rawResource) Analysis {
 				add("warning", "encryption", "EBS volume is not encrypted",
 					key+" has encrypted = false", r)
 			}
+
+		// --- GCP ---
+		case "google_compute_firewall":
+			if d, ok := r.body.str("direction"); ok && strings.EqualFold(d, "EGRESS") {
+				break
+			}
+			if src, _ := r.body.list("source_ranges"); !containsStr(src, "0.0.0.0/0") {
+				break
+			}
+			for _, al := range r.body.blocks("allow") {
+				proto, _ := al.str("protocol")
+				ports, _ := al.list("ports")
+				if len(ports) == 0 || strings.EqualFold(proto, "all") {
+					expose(&res, key, "all ports", "critical")
+					add("critical", "exposure", "Firewall open to the internet",
+						key+" allows all ports from 0.0.0.0/0", r)
+					continue
+				}
+				for _, p := range ports {
+					from, to := portRange(p)
+					if svc, pp := sensitiveInRange(from, to); pp != 0 {
+						expose(&res, key, portLabel(proto, from, to)+" "+svc, "critical")
+						add("critical", "exposure", "Firewall exposes a sensitive port",
+							fmt.Sprintf("%s allows %s %s from the internet (0.0.0.0/0)", key, portLabel(proto, from, to), svc), r)
+					} else {
+						sev := "warning"
+						if onlyWebPorts(from, to) {
+							sev = "info"
+						}
+						expose(&res, key, portLabel(proto, from, to), sev)
+						add(sev, "exposure", "Firewall open to the internet",
+							fmt.Sprintf("%s allows %s from 0.0.0.0/0", key, portLabel(proto, from, to)), r)
+					}
+				}
+			}
+		case "google_storage_bucket_iam_member":
+			if m, ok := r.body.str("member"); ok && (m == "allUsers" || m == "allAuthenticatedUsers") {
+				expose(&res, key, "public ("+m+")", "critical")
+				add("critical", "exposure", "Storage bucket is public",
+					fmt.Sprintf("%s grants a role to %q — objects are world-readable", key, m), r)
+			}
+		case "google_storage_bucket_iam_binding":
+			if ms, _ := r.body.list("members"); containsStr(ms, "allUsers") || containsStr(ms, "allAuthenticatedUsers") {
+				expose(&res, key, "public", "critical")
+				add("critical", "exposure", "Storage bucket is public",
+					key+" binds a role to allUsers / allAuthenticatedUsers", r)
+			}
+		case "google_sql_database_instance":
+			for _, s := range r.body.blocks("settings") {
+				for _, ipc := range s.blocks("ip_configuration") {
+					for _, an := range ipc.blocks("authorized_networks") {
+						if v, ok := an.str("value"); ok && (v == "0.0.0.0/0" || v == "0.0.0.0") {
+							expose(&res, key, "authorized 0.0.0.0/0", "critical")
+							add("critical", "exposure", "Cloud SQL open to the internet",
+								key+" authorizes 0.0.0.0/0 — the database is reachable from anywhere", r)
+						}
+					}
+				}
+			}
+		case "google_compute_instance":
+			for _, ni := range r.body.blocks("network_interface") {
+				if len(ni.blocks("access_config")) > 0 {
+					expose(&res, key, "external IP", "info")
+					add("info", "exposure", "Instance gets an external IP",
+						key+" has an access_config block — it gets a public IP", r)
+					break
+				}
+			}
+
+		// --- Azure ---
+		case "azurerm_network_security_rule":
+			acc, _ := r.body.str("access")
+			dir, _ := r.body.str("direction")
+			if !strings.EqualFold(acc, "Allow") || !strings.EqualFold(dir, "Inbound") {
+				break
+			}
+			src, _ := r.body.str("source_address_prefix")
+			srcs, _ := r.body.list("source_address_prefixes")
+			if !(src == "*" || src == "0.0.0.0/0" || strings.EqualFold(src, "Internet") || containsStr(srcs, "0.0.0.0/0") || containsStr(srcs, "*")) {
+				break
+			}
+			pr, _ := r.body.str("destination_port_range")
+			from, to := portRange(pr)
+			if pr == "*" {
+				from, to = 0, 65535
+			}
+			switch {
+			case from == 0 && to >= 65535:
+				expose(&res, key, "all ports", "critical")
+				add("critical", "exposure", "NSG rule open to the internet",
+					key+" allows all ports inbound from the internet", r)
+			default:
+				if svc, pp := sensitiveInRange(from, to); pp != 0 {
+					expose(&res, key, "port "+pr+" "+svc, "critical")
+					add("critical", "exposure", "NSG rule exposes a sensitive port",
+						fmt.Sprintf("%s allows %s (port %s) inbound from the internet", key, svc, pr), r)
+				} else {
+					sev := "warning"
+					if onlyWebPorts(from, to) {
+						sev = "info"
+					}
+					expose(&res, key, "port "+pr, sev)
+					add(sev, "exposure", "NSG rule open to the internet",
+						fmt.Sprintf("%s allows port %s inbound from the internet", key, pr), r)
+				}
+			}
+		case "azurerm_storage_account":
+			if v, ok := r.body.str("allow_nested_items_to_be_public"); ok && v == "true" {
+				expose(&res, key, "public blobs allowed", "warning")
+				add("warning", "exposure", "Storage account permits public blobs",
+					key+" has allow_nested_items_to_be_public = true — containers can be made anonymously readable", r)
+			}
+		case "azurerm_storage_container":
+			if v, ok := r.body.str("container_access_type"); ok && (v == "blob" || v == "container") {
+				expose(&res, key, "public ("+v+")", "critical")
+				add("critical", "exposure", "Storage container is public",
+					fmt.Sprintf("%s has container_access_type = %q — blobs are anonymously readable", key, v), r)
+			}
+		case "azurerm_postgresql_server", "azurerm_mysql_server", "azurerm_mariadb_server", "azurerm_mssql_server", "azurerm_sql_server":
+			if v, ok := r.body.str("public_network_access_enabled"); ok && v == "true" {
+				expose(&res, key, "public network access", "critical")
+				add("critical", "exposure", "Managed database allows public network access",
+					key+" has public_network_access_enabled = true — the database endpoint is reachable from the internet", r)
+			}
+		case "azurerm_sql_firewall_rule", "azurerm_mssql_firewall_rule", "azurerm_postgresql_firewall_rule", "azurerm_mysql_firewall_rule":
+			start, _ := r.body.str("start_ip_address")
+			end, _ := r.body.str("end_ip_address")
+			if start == "0.0.0.0" && end == "255.255.255.255" {
+				expose(&res, key, "firewall 0.0.0.0–255.255.255.255", "critical")
+				add("critical", "exposure", "Database firewall allows the whole internet",
+					key+" allows 0.0.0.0–255.255.255.255 — the database is reachable from anywhere", r)
+			}
+		case "azurerm_public_ip":
+			expose(&res, key, "public IP", "info")
+			add("info", "exposure", "Public IP allocated",
+				key+" allocates a public IP — confirm what it fronts", r)
 		}
 
 		a.Resources = append(a.Resources, res)
@@ -209,4 +345,14 @@ func containsStr(xs []string, want string) bool {
 func atoi(s string) int {
 	n, _ := strconv.Atoi(strings.TrimSpace(s))
 	return n
+}
+
+// portRange parses a GCP/Azure port spec: "22" (single) or "8000-9000" (range).
+func portRange(s string) (from, to int) {
+	s = strings.TrimSpace(s)
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		return atoi(s[:i]), atoi(s[i+1:])
+	}
+	n := atoi(s)
+	return n, n
 }
