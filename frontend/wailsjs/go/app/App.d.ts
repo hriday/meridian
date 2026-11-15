@@ -421,6 +421,8 @@ export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
 
 export function Whois(arg1:string):Promise<whois.Result>;
 
+export function WifiRequestLocation():Promise<void>;
+
 export function WifiStatus():Promise<wifi.Info>;
 
 export function WifiSupported():Promise<boolean>;

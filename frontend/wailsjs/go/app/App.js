@@ -714,6 +714,10 @@ export function Whois(arg1) {
   return window['go']['app']['App']['Whois'](arg1);
 }
 
+export function WifiRequestLocation() {
+  return window['go']['app']['App']['WifiRequestLocation']();
+}
+
 export function WifiStatus() {
   return window['go']['app']['App']['WifiStatus']();
 }

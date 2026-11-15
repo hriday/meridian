@@ -23,6 +23,10 @@
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
         <string>{{.Info.Copyright}}</string>
+        <key>NSLocationUsageDescription</key>
+        <string>Meridian uses your location only so macOS will reveal nearby Wi-Fi network names (SSIDs) in the Wi-Fi analyzer. Your location is never stored, logged or sent anywhere.</string>
+        <key>NSLocationWhenInUseUsageDescription</key>
+        <string>Meridian uses your location only so macOS will reveal nearby Wi-Fi network names (SSIDs) in the Wi-Fi analyzer. Your location is never stored, logged or sent anywhere.</string>
         {{if .Info.FileAssociations}}
         <key>CFBundleDocumentTypes</key>
         <array>

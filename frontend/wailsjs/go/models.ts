@@ -5230,6 +5230,7 @@ export namespace wifi {
 	    neighbors: Network[];
 	    coChannel: number;
 	    ssidRedacted: boolean;
+	    locationStatus: string;
 	    note: string;
 	
 	    static createFrom(source: any = {}) {
@@ -5244,6 +5245,7 @@ export namespace wifi {
 	        this.neighbors = this.convertValues(source["neighbors"], Network);
 	        this.coChannel = source["coChannel"];
 	        this.ssidRedacted = source["ssidRedacted"];
+	        this.locationStatus = source["locationStatus"];
 	        this.note = source["note"];
 	    }
 	

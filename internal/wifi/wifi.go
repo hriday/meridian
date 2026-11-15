@@ -36,8 +36,19 @@ type Info struct {
 	Neighbors   []Network `json:"neighbors"`
 	CoChannel   int       `json:"coChannel"` // # neighbors on your channel
 	SSIDRedacted bool     `json:"ssidRedacted"`
+	// LocationStatus is the app's macOS Location Services authorization
+	// ("authorized", "denied", "notDetermined", …). SSIDs stay redacted until
+	// it's "authorized"; the UI uses this to offer a grant button.
+	LocationStatus string `json:"locationStatus"`
 	Note        string    `json:"note"`
 }
+
+// LocationStatus reports the app's Location Services authorization (macOS).
+func LocationStatus() string { return locationStatus() }
+
+// RequestLocation asks macOS for Location Services authorization so SSIDs can
+// be shown. Shows the system prompt the first time; returns immediately.
+func RequestLocation() { requestLocation() }
 
 // parseAirport parses `system_profiler SPAirPortDataType` output. It reads the
 // first Wi-Fi interface (the connected one) and stops at the next interface.
