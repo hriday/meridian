@@ -161,6 +161,9 @@ meridian-cli runbook org-recon example.com                    # one report, 10 t
 meridian-cli runbook org-recon example.com --format html --out report.html
 ```
 
+In the **app**, pick the profile, run it, and **export** the report to Text,
+JSON, HTML or **PDF** (the Export buttons appear above the results).
+
 **Vet a VPN gateway before you trust it.** Is the responder up, what does it
 negotiate, and is the port even reachable?
 
@@ -337,7 +340,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | Tool | What it does | CLI |
 |---|---|---|
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
-| Runbook | composite audit — run a profile of tools into one report: built-in (org-recon, audit-domain, triage-host) or your own YAML/TOML/JSON profile; md/json/html | `runbook` + GUI |
+| Runbook | composite audit — run a profile of tools into one report: built-in (org-recon, audit-domain, triage-host) or your own YAML/TOML/JSON profile. CLI: md/json/html; in the app, **export the report to Text / JSON / HTML / PDF** | `runbook` + GUI |
 
 ### Config insight
 

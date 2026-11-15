@@ -319,6 +319,8 @@ export function RunRunbook(arg1:string,arg2:string):Promise<cli.RunbookData>;
 
 export function RunbookProfiles():Promise<Array<cli.RunbookInfo>>;
 
+export function RunbookRender(arg1:cli.RunbookData,arg2:string):Promise<string>;
+
 export function SIPProbe(arg1:string,arg2:string,arg3:string):Promise<sipping.Result>;
 
 export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<smtpprobe.Result>;
@@ -326,6 +328,8 @@ export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Pro
 export function SSHAudit(arg1:string):Promise<sshaudit.Report>;
 
 export function STUNDiscover(arg1:string):Promise<stun.Result>;
+
+export function SaveReport(arg1:string,arg2:string):Promise<string>;
 
 export function ScanCommonPorts():Promise<Array<number>>;
 
