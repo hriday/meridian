@@ -24,13 +24,21 @@ website, Meridian does it locally so the data never leaves your machine.
 - **Lookup** — paste anything (`1.1.1.1`, `AS13335`, `104.16.0.0/13`,
   `cloudflare.com`) → an entity page for the IP, ASN, prefix, or domain, with
   routing (RIPEstat), registration (RDAP), AS ownership (Team Cymru) and RPKI.
-- **Traceroute (AS)** — ICMP traceroute annotating each hop with its AS.
+- **Traceroute (AS)** — ICMP or **TCP-SYN** (punches through firewalls that drop
+  UDP/ICMP traceroute; no admin rights on macOS). Each hop is annotated with its
+  AS, and each network in the path with its **PeeringDB** peering policy and
+  internet-exchange presence — the path reads as "whose networks did I cross,
+  and how open/connected are they".
 - **BGP & looking glass** — origin AS(es) with MOAS warnings, AS paths across
-  public collectors, upstreams/transit, RPKI, and vantage points.
+  public collectors, upstreams/transit, **RPKI + IRR route-object** validation
+  (the crypto and registry sides of route authorization), and vantage points.
 - **TLS certificate** / **Cert & CSR decoder** — inspect a live server's cert, or
   decode a pasted PEM certificate/CSR locally.
-- **Cipher scan** — TLS versions + cipher suites, graded. **Cert expiry** — bulk
-  days-to-expiry. **Let's Encrypt** — one-shot DNS-01 issuance for firewalled sites.
+- **Cipher scan** — TLS versions + cipher suites, graded SSL-Labs-style, with
+  **post-quantum** key-exchange readiness. **SSH audit** — a server's key-exchange,
+  host-key and MAC algorithms, its host-key fingerprints, and whether its key
+  exchange is post-quantum. **Cert expiry** — bulk days-to-expiry. **Let's
+  Encrypt** — one-shot DNS-01 issuance for firewalled sites.
 - **HTTP check**, **Security headers** (OWASP-mapped), **Service status**
   (Statuspage outage check), **WHOIS**, **Subdomains** (Certificate Transparency).
 - **DNS blocklist** (DNSBL), **DNS audit** (SPF/DMARC/DNSSEC), **DNS propagation**
@@ -50,10 +58,17 @@ any resolver, DNSSEC signals), **Interfaces**.
 **Local network**
 - **Ping** / **Ping monitor** / **Connection quality** — live latency, jitter,
   loss, with an estimated **MOS** verdict for real-time (VoIP/video) readiness.
+  **TCP ping** — connect latency & loss to a port, so you can measure reachability
+  when ICMP is blocked.
 - **MTR** (continuous path + per-hop loss), **Path MTU** (find MTU black holes),
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
   I on), **ARP scan** (live MAC↔IP + vendor), **RTP analyzer** (per-stream
   jitter/loss/codec from captured media).
+- **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
+  and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
+  OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
+  IP-space inventory to surface untracked hosts, MAC changes (possible rogues)
+  and records that no longer answer, then import/update in one step.
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
   **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
 
@@ -172,16 +187,19 @@ meridian-cli <command>         # run with no/bad args to see that command's usag
 
 ```bash
 meridian-cli lookup 8.8.8.8                   # IP / ASN intelligence
-meridian-cli emailauth stripe.com             # SPF / DKIM / DMARC
-meridian-cli cipherscan github.com            # TLS protocols + ciphers, graded
-meridian-cli certexpiry github.com google.com # bulk cert days-to-expiry
-meridian-cli ptrsweep 10.0.0.0/24             # reverse-DNS sweep
+meridian-cli bgp 1.1.1.1                       # origin AS, RPKI + IRR, AS paths
+meridian-cli sshaudit github.com               # SSH algos, host keys, post-quantum
+meridian-cli cipherscan github.com            # TLS protocols + ciphers + PQ, graded
+meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on macOS)
+meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 ```
 
-Receivers on privileged ports (`syslog` 514, `traps` 162) need `sudo` or a high
-`--port`. The SNMP community audit (`snmpbrute`) requires an explicit
+Raw-socket tools (`arpscan`, `lldp`, `rtp`, and the `ipspace reconcile` sweep;
+`tcptrace` on Linux) need `sudo`/admin — on macOS, `tcptrace`, `discover` and the
+ICMP tools run unprivileged. Receivers on privileged ports (`syslog` 514, `traps`
+162, `tftp` 69) need `sudo` or a high `--port`. The SNMP community audit (`snmpbrute`) requires an explicit
 `--authorized` flag, and community strings are never printed or logged.
 
 ## Build from source
