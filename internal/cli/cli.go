@@ -671,7 +671,7 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 	asJSON := fs.Bool("json", false, "output JSON")
 	rtype := fs.String("type", "A", "record type")
 	server := fs.String("server", "", "resolver to query (default: system, or a public one for dot/doh)")
-	transport := fs.String("transport", "udp", "transport: udp, tcp, dot (DNS-over-TLS), doh (DNS-over-HTTPS)")
+	transport := fs.String("transport", "udp", "transport: udp, tcp, dot (DNS-over-TLS), doh (DNS-over-HTTPS), doq (DNS-over-QUIC)")
 	pos, ok := parsePositionals(fs, args)
 	if !ok {
 		return 2
@@ -687,6 +687,8 @@ func runDNS(args []string, stdout, stderr io.Writer) int {
 			srv = "one.one.one.one"
 		case "doh", "https":
 			srv = "cloudflare-dns.com"
+		case "doq", "quic":
+			srv = "dns.adguard-dns.com"
 		default:
 			if f := sysconf.Resolvers(); len(f.Values) > 0 {
 				srv = f.Values[0]
