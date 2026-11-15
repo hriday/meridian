@@ -190,6 +190,10 @@ export function IPSpaceAdd(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['IPSpaceAdd'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function IPSpaceCarve(arg1, arg2, arg3) {
+  return window['go']['app']['App']['IPSpaceCarve'](arg1, arg2, arg3);
+}
+
 export function IPSpaceCreateInventory(arg1, arg2) {
   return window['go']['app']['App']['IPSpaceCreateInventory'](arg1, arg2);
 }

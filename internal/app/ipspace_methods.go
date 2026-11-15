@@ -85,6 +85,22 @@ func (a *App) IPSpaceAdd(prefix, name, status string, tags []string, notes strin
 	return rec, a.ipSave()
 }
 
+// IPSpaceCarve subdivides the block with id into equal child subnets of
+// newPrefixLen (each with the given status), skipping any that already exist,
+// and returns the records it created.
+func (a *App) IPSpaceCarve(id string, newPrefixLen int, status string) ([]ipspace.Record, error) {
+	a.ipMu.Lock()
+	defer a.ipMu.Unlock()
+	if err := a.requireUnlocked(); err != nil {
+		return nil, err
+	}
+	added, err := a.ipStore.Carve(id, newPrefixLen, ipspace.Status(status))
+	if err != nil {
+		return nil, err
+	}
+	return added, a.ipSave()
+}
+
 // IPSpaceEdit updates a record and persists.
 func (a *App) IPSpaceEdit(id, name, status string, tags []string, notes string) error {
 	a.ipMu.Lock()

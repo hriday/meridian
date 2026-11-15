@@ -49,7 +49,8 @@ website, Meridian does it locally so the data never leaves your machine.
 **Addressing**
 - **Subnet calculator** — network/broadcast/host math and prefix splitting.
 - **IP space** — record your networks in up to 25 local, **passphrase-encrypted**,
-  append-only inventories (argon2id + NaCl secretbox) with record tags and
+  append-only inventories (argon2id + NaCl secretbox) with record tags, a nested
+  block tree, **carve a block into subnets** + per-block **utilization %**, and
   optional sync (local/S3/SFTP/git, encrypted blob). Nothing leaves your machine.
 
 **Local / environment** — **NTP** (stratum/offset/verdict), **DNS** (any record,

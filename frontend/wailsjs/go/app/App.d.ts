@@ -157,6 +157,8 @@ export function IPSpaceActive():Promise<string>;
 
 export function IPSpaceAdd(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:string):Promise<ipspace.Record>;
 
+export function IPSpaceCarve(arg1:string,arg2:number,arg3:string):Promise<Array<ipspace.Record>>;
+
 export function IPSpaceCreateInventory(arg1:string,arg2:string):Promise<void>;
 
 export function IPSpaceDelete(arg1:string):Promise<void>;

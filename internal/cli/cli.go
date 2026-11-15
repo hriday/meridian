@@ -863,12 +863,25 @@ func runIPSpace(args []string, stdout, stderr io.Writer) int {
 	store := ipspace.FromEvents(ipspace.Actor(), events)
 	switch sub {
 	case "list":
+		util := map[string]float64{}
+		var walk func(ns []ipspace.TreeNode)
+		walk = func(ns []ipspace.TreeNode) {
+			for _, n := range ns {
+				util[n.Record.Prefix] = n.UtilPct
+				walk(n.Children)
+			}
+		}
+		walk(store.Tree())
 		for _, r := range store.Records() {
 			name := r.Name
 			if name == "" {
 				name = "—"
 			}
-			fmt.Fprintf(stdout, "%-20s %-10s %s\n", r.Prefix, r.Status, name)
+			u := ""
+			if p := util[r.Prefix]; p > 0 {
+				u = fmt.Sprintf("%3.0f%% used", p)
+			}
+			fmt.Fprintf(stdout, "%-20s %-10s %-10s %s\n", r.Prefix, r.Status, u, name)
 		}
 		return 0
 	case "export":

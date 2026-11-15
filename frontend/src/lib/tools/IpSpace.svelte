@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import {
     IPSpaceStatus, IPSpaceUnlock, IPSpaceTree, IPSpaceHistory,
-    IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
+    IPSpaceAdd, IPSpaceEdit, IPSpaceDelete, IPSpaceCarve, IPSpaceUndo, IPSpaceImportCSV, IPSpaceExportCSV,
     IPSpaceList, IPSpaceActive, IPSpaceSetActive, IPSpaceCreateInventory, IPSpaceRenameInventory, IPSpaceRemoveInventory, IPSpaceExportHandoff,
     IPSpaceImportOpen, IPSpaceImportPreviewMerge, IPSpaceImportApplyMerge, IPSpaceImportAsNew, IPSpaceImportTree, IPSpaceImportCancel,
     IPSpaceInventoryTree, IPSpacePullRecords,
@@ -32,7 +32,7 @@
   // Flatten the tree into rows with a depth, for rendering.
   function flatten(nodes: any[], depth = 0, out: any[] = []): any[] {
     for (const n of nodes ?? []) {
-      out.push({ rec: n.record, depth });
+      out.push({ rec: n.record, depth, utilPct: n.utilPct || 0 });
       flatten(n.children, depth + 1, out);
     }
     return out;
@@ -283,6 +283,20 @@
     } catch (e) { addErr = String(e); }
   }
   async function del() { if (!selected) return; try { await IPSpaceDelete(selected.id); selected = null; await refresh(); } catch (e) { addErr = String(e); } }
+
+  // Carve: subdivide the selected block into equal child subnets.
+  let carving = false, carveLen = 24, carveStatus = "reserved", carveBusy = false, carveErr = "", carveMsg = "";
+  async function doCarve() {
+    if (!selected) return;
+    carveBusy = true; carveErr = ""; carveMsg = "";
+    try {
+      const added = await IPSpaceCarve(selected.id, Number(carveLen), carveStatus);
+      carveMsg = `Carved ${added.length} subnet${added.length === 1 ? "" : "s"}.`;
+      carving = false;
+      await refresh();
+    } catch (e) { carveErr = String(e?.message ?? e); }
+    finally { carveBusy = false; }
+  }
   async function undo() { try { await IPSpaceUndo(); selected = null; await refresh(); } catch (e) {} }
   function pivot(tool: string) {
     if (!selected) return;
@@ -686,6 +700,11 @@
                 <span class="nm">{r.rec.name}</span>
                 {#if r.rec.tags && r.rec.tags.length}<span class="rtags">{r.rec.tags.join(" · ")}</span>{/if}
                 <span class="st pill {r.rec.status}">{r.rec.status}</span>
+                {#if r.utilPct > 0}
+                  <span class="util" title={`${r.utilPct.toFixed(0)}% of this block is allocated`}>
+                    <span class="ufill" style={`width:${Math.min(100, r.utilPct)}%`}></span>
+                  </span>
+                {/if}
               </button>
             {/each}
           </div>
@@ -699,10 +718,20 @@
             <div class="acts">
               {#if !editing}<button class="btn ghost sm" on:click={startEdit}>Edit</button>{/if}
               <button class="btn ghost sm" on:click={() => { form.prefix = selected.prefix.split("/")[0] + "/"; showAdd = true; }}>Add child</button>
+              <button class="btn ghost sm" class:on={carving} on:click={() => { carving = !carving; carveErr=''; carveMsg=''; }}>Carve…</button>
               <button class="btn ghost sm" on:click={() => pivot("subnet")}>Subnet calc ↗</button>
               <button class="btn ghost sm" on:click={() => pivot("lookup")}>Look up ↗</button>
               <button class="btn ghost sm danger" on:click={del}>Delete</button>
             </div>
+            {#if carving}
+              <div class="form" style="margin-top:6px">
+                <label>Split <span class="mono">{selected.prefix}</span> into /<input class="field" type="number" min="1" max="128" bind:value={carveLen} style="width:64px" /> blocks</label>
+                <label>Status<select class="field" bind:value={carveStatus}><option>reserved</option><option>active</option></select></label>
+                <div class="formbtns"><button class="btn" on:click={doCarve} disabled={carveBusy}>{carveBusy ? "Carving…" : "Carve"}</button></div>
+                {#if carveErr}<div class="err" style="margin-top:4px">{carveErr}</div>{/if}
+                {#if carveMsg}<div style="margin-top:4px;color:var(--accent);font-size:0.82rem">{carveMsg}</div>{/if}
+              </div>
+            {/if}
             {#if editing}
               <div class="form" style="margin-top:4px">
                 <label>Name<input class="field" bind:value={editForm.name} /></label>
@@ -798,6 +827,8 @@
   .node { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 5px 6px; border-radius: 6px; cursor: pointer; font: inherit; }
   .node:hover { background: var(--hover); } .node.sel { background: var(--active); }
   .node .cidr { color: var(--text-strong); font-size: 0.82rem; }
+  .util { display: inline-block; width: 48px; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; margin-left: auto; flex: 0 0 auto; }
+  .ufill { display: block; height: 100%; background: var(--accent); }
   .node .nm { color: var(--text-dim); font-size: 0.82rem; }
   .node .rtags { font-size: 0.68rem; color: var(--accent); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
   .node .st { margin-left: auto; }

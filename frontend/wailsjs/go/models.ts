@@ -2272,6 +2272,7 @@ export namespace ipspace {
 	export class TreeNode {
 	    record: Record;
 	    children: TreeNode[];
+	    utilPct: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new TreeNode(source);
@@ -2281,6 +2282,7 @@ export namespace ipspace {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.record = this.convertValues(source["record"], Record);
 	        this.children = this.convertValues(source["children"], TreeNode);
+	        this.utilPct = source["utilPct"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
