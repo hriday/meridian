@@ -17,6 +17,7 @@ func runFwAnalyze(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("fwanalyze", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	asJSON := fs.Bool("json", false, "output JSON")
+	vendor := fs.String("vendor", "auto", "firewall vendor: auto|fortigate|asa|ios|nxos|srx|junos|panos|arista|checkpoint|vyos|pfsense")
 	pos, ok := parsePositionals(fs, args)
 	if !ok {
 		return 2
@@ -34,7 +35,14 @@ func runFwAnalyze(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	analyses, err := fwconfig.Analyze(string(data), "fortigate")
+	v := strings.ToLower(strings.TrimSpace(*vendor))
+	if v == "" || v == "auto" {
+		v = fwconfig.DetectVendor(string(data))
+		if v == "" {
+			v = "fortigate" // best-effort default when markers are inconclusive
+		}
+	}
+	analyses, err := fwconfig.Analyze(string(data), v)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1

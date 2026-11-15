@@ -116,7 +116,7 @@ func Catalog() []CommandGroup {
 			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in profile (audit-domain, triage-host) or your own YAML/TOML/JSON"},
 		}},
 		{Name: "Config insight", Commands: []CommandDoc{
-			{"fwanalyze", "[<config-file>] [--json]", "firewall config analysis (stdin ok)"},
+			{"fwanalyze", "[<config-file>] [--vendor auto] [--json]", "firewall config analysis — FortiGate/ASA/IOS/NX-OS/SRX/Junos/PAN-OS/Arista/VyOS/pfSense (stdin ok)"},
 			{"webanalyze", "[<file>] [--server nginx] [--json]", "web-server config analysis (stdin ok)"},
 			{"tfexposure", "[<file>] [--source hcl|plan] [--json]", "Terraform exposure scan — AWS/GCP/Azure (stdin ok)"},
 			{"cfgdiff", "<old-file> <new-file> [--json]", "section-aware config diff"},

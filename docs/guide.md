@@ -210,7 +210,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 
 | Tool | What it does | CLI |
 |---|---|---|
-| Firewall analyzer | FortiGate/PAN-OS/ASA/SRX/Arista/Check Point/VyOS/pfSense | `fwanalyze` |
+| Firewall analyzer | FortiGate/PAN-OS/ASA/IOS/NX-OS/SRX/Junos/Arista/Check Point/VyOS/pfSense (auto-detected) | `fwanalyze` |
 | Web-server analyzer | nginx / Apache / Caddy config review | `webanalyze` |
 | Terraform exposure | internet-exposure scan from HCL / plan — AWS, GCP, Azure | `tfexposure` |
 | Config diff | section-aware config compare | `cfgdiff` |
