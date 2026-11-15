@@ -13,13 +13,15 @@ import (
 // the listening window, clamped to a sane range.
 func (a *App) DiscoverLAN(seconds int) (discover.Result, error) {
 	if seconds < 1 {
-		seconds = 3
+		seconds = 8
 	}
-	if seconds > 15 {
-		seconds = 15
+	if seconds > 25 {
+		seconds = 25
 	}
 	window := time.Duration(seconds) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), window+3*time.Second)
+	// mDNS holds one socket open for the whole window (a cold unicast answer can
+	// take ~4-5s); give the context a little headroom beyond it.
+	ctx, cancel := context.WithTimeout(context.Background(), window+5*time.Second)
 	defer cancel()
 	return discover.Run(ctx, window)
 }

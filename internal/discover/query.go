@@ -12,18 +12,23 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
-// mdnsTypes is a spread of common DNS-SD service types, plus the meta query
-// that asks a host to list the types it offers.
+const qmUnicast = 0x8000 // mDNS QU bit: ask responders to unicast their reply
+
+// mdnsTypes is a broad spread of DNS-SD service types. The query goes to the
+// multicast group, but on macOS the local mDNS responder answers from its cache
+// (the aggregated view of the whole LAN) by unicast to our ephemeral port — so
+// the wider this list, the more of the network's services we learn about.
 var mdnsTypes = []string{
-	"_services._dns-sd._udp.local.",
 	"_http._tcp.local.", "_https._tcp.local.",
-	"_airplay._tcp.local.", "_raop._tcp.local.", "_googlecast._tcp.local.",
-	"_spotify-connect._tcp.local.",
+	"_airplay._tcp.local.", "_raop._tcp.local.", "_airport._tcp.local.",
+	"_googlecast._tcp.local.", "_spotify-connect._tcp.local.", "_amzn-wplay._tcp.local.",
+	"_sonos._tcp.local.", "_soundtouch._tcp.local.",
 	"_ipp._tcp.local.", "_ipps._tcp.local.", "_printer._tcp.local.", "_pdl-datastream._tcp.local.", "_scanner._tcp.local.",
-	"_ssh._tcp.local.", "_sftp-ssh._tcp.local.",
-	"_smb._tcp.local.", "_afpovertcp._tcp.local.", "_nfs._tcp.local.",
-	"_homekit._tcp.local.", "_hap._tcp.local.",
-	"_device-info._tcp.local.", "_workstation._tcp.local.",
+	"_ssh._tcp.local.", "_sftp-ssh._tcp.local.", "_rfb._tcp.local.",
+	"_smb._tcp.local.", "_afpovertcp._tcp.local.", "_nfs._tcp.local.", "_webdav._tcp.local.",
+	"_homekit._tcp.local.", "_hap._tcp.local.", "_matter._tcp.local.", "_matterc._udp.local.",
+	"_hue._tcp.local.", "_philips-hue._tcp.local.", "_companion-link._tcp.local.",
+	"_device-info._tcp.local.", "_workstation._tcp.local.", "_daap._tcp.local.", "_dpap._tcp.local.",
 }
 
 // Run performs an mDNS and an SSDP sweep concurrently for the given window and
@@ -37,7 +42,7 @@ func Run(ctx context.Context, window time.Duration) (Result, error) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		s, err := queryMDNS(ctx, window)
+		s, err := systemMDNS(ctx, window)
 		mu.Lock()
 		res.Services, mdnsErr = s, err
 		mu.Unlock()
@@ -103,7 +108,10 @@ func candidateInterfaces() []net.Interface {
 
 // multicastProbe sends payload to a multicast destination out of every
 // candidate interface (so a multi-homed host with VPN tunnels still reaches the
-// real LAN), then collects unicast replies until the window closes.
+// real LAN) and collects unicast replies until the window closes. It sends
+// several bursts, spaced out, because a single mDNS/SSDP query is often not
+// answered — responders reply probabilistically and apply duplicate
+// suppression, so one shot is unreliable.
 func multicastProbe(ctx context.Context, window time.Duration, dst *net.UDPAddr, payload []byte, bufSize int) ([]rawReply, error) {
 	conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
@@ -113,21 +121,45 @@ func multicastProbe(ctx context.Context, window time.Duration, dst *net.UDPAddr,
 
 	p := ipv4.NewPacketConn(conn)
 	_ = p.SetMulticastTTL(2)
-	sent := 0
-	for _, ifi := range candidateInterfaces() {
-		if err := p.SetMulticastInterface(&ifi); err != nil {
-			continue
+	ifaces := candidateInterfaces()
+
+	burst := func() {
+		if len(ifaces) == 0 {
+			_, _ = conn.WriteToUDP(payload, dst) // default route
+			return
 		}
-		if _, err := conn.WriteToUDP(payload, dst); err == nil {
-			sent++
-		}
-	}
-	if sent == 0 {
-		// No usable interface — fall back to the default route.
-		if _, err := conn.WriteToUDP(payload, dst); err != nil {
-			return nil, err
+		for i := range ifaces {
+			if err := p.SetMulticastInterface(&ifaces[i]); err == nil {
+				_, _ = conn.WriteToUDP(payload, dst)
+			}
 		}
 	}
+
+	// One burst immediately, then repeated bursts spread across the window. The
+	// spread matters: on macOS the first query only *primes* the local
+	// responder (it then goes and discovers), and later queries reap the cached
+	// answers — bursts packed too closely never give it time. A net.UDPConn is
+	// safe for one concurrent reader and writer.
+	burst()
+	go func() {
+		t := time.NewTicker(800 * time.Millisecond)
+		defer t.Stop()
+		n := int(window / (800 * time.Millisecond))
+		if n < 4 {
+			n = 4
+		}
+		if n > 20 {
+			n = 20
+		}
+		for i := 0; i < n; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				burst()
+			}
+		}
+	}()
 
 	_ = conn.SetReadDeadline(readDeadline(ctx, window))
 	var replies []rawReply
@@ -144,88 +176,44 @@ func multicastProbe(ctx context.Context, window time.Duration, dst *net.UDPAddr,
 	return replies, nil
 }
 
-// queryMDNS binds UDP/5353 (with SO_REUSEPORT, to coexist with the system mDNS
-// responder), joins the mDNS group on each real interface, sends a DNS-SD
-// query, and collects the multicast responses and ambient announcements for the
-// window. Responders reply by multicast, so we must be group members on the
-// right interface to hear them.
+// queryMDNS sends a DNS-SD query to the mDNS group from an ephemeral port (with
+// the QU bit, asking for a unicast reply) out every real interface, then reads
+// the unicast answers. We deliberately do NOT bind port 5353: on macOS the
+// system mDNS responder owns 5353 and no other socket receives its multicast,
+// but it happily unicasts cached answers back to our ephemeral port — which is
+// the aggregated view of the whole LAN.
 func queryMDNS(ctx context.Context, window time.Duration) ([]Service, error) {
-	ifaces := candidateInterfaces()
-	if len(ifaces) == 0 {
-		return nil, fmt.Errorf("no multicast-capable interface")
-	}
-
 	m := new(dns.Msg)
 	m.Id = 0
 	for _, t := range mdnsTypes {
-		m.Question = append(m.Question, dns.Question{Name: t, Qtype: dns.TypePTR, Qclass: dns.ClassINET})
+		m.Question = append(m.Question, dns.Question{Name: t, Qtype: dns.TypePTR, Qclass: dns.ClassINET | qmUnicast})
 	}
 	buf, err := m.Pack()
 	if err != nil {
 		return nil, fmt.Errorf("pack mDNS query: %w", err)
 	}
-
-	lc := net.ListenConfig{Control: reusePortControl}
-	pc, err := lc.ListenPacket(ctx, "udp4", mdnsListenAddr)
-	if err != nil {
-		return nil, fmt.Errorf("bind mDNS port: %w", err)
-	}
-	conn := pc.(*net.UDPConn)
-	defer conn.Close()
-
-	p := ipv4.NewPacketConn(conn)
-	group := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 251)}
-	joined := 0
-	for i := range ifaces {
-		if err := p.JoinGroup(&ifaces[i], group); err == nil {
-			joined++
-		}
-	}
-	if joined == 0 {
-		return nil, fmt.Errorf("couldn't join the mDNS group on any interface")
-	}
-
-	// Solicit responses: send the query out every interface, twice, since mDNS
-	// queries are unreliable UDP.
 	dst := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 251), Port: 5353}
-	sendOnAllInterfaces(ifaces, dst, buf)
-	time.Sleep(150 * time.Millisecond)
-	sendOnAllInterfaces(ifaces, dst, buf)
 
-	_ = conn.SetReadDeadline(readDeadline(ctx, window))
-	var payloads [][]byte
-	b := make([]byte, 9000)
-	for {
-		n, _, err := conn.ReadFromUDP(b)
-		if err != nil {
-			break
-		}
-		cp := make([]byte, n)
-		copy(cp, b[:n])
-		payloads = append(payloads, cp)
+	// One long-lived socket for the whole window. The local responder answers our
+	// ephemeral-port query by unicast, but a cold answer can take ~4-5s to arrive
+	// — so the socket must stay open (same source port) long enough to catch it.
+	replies, err := multicastProbe(ctx, window, dst, buf, 9000)
+	if err != nil {
+		return nil, fmt.Errorf("mDNS probe: %w", err)
+	}
+	payloads := make([][]byte, len(replies))
+	for i, r := range replies {
+		payloads[i] = r.data
 	}
 	return parseMDNS(payloads), nil
 }
 
-// sendOnAllInterfaces sends payload to a multicast destination out of each
-// interface in turn.
-func sendOnAllInterfaces(ifaces []net.Interface, dst *net.UDPAddr, payload []byte) {
-	conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
-	if err != nil {
-		return
-	}
-	defer conn.Close()
-	p := ipv4.NewPacketConn(conn)
-	_ = p.SetMulticastTTL(2)
-	for i := range ifaces {
-		if err := p.SetMulticastInterface(&ifaces[i]); err != nil {
-			continue
-		}
-		_, _ = conn.WriteToUDP(payload, dst)
-	}
-}
-
 func querySSDP(ctx context.Context, window time.Duration) ([]Device, error) {
+	// SSDP devices answer within an MX-bounded window (a few seconds); no need to
+	// hold the socket as long as the slow mDNS cache warm-up needs.
+	if window > 5*time.Second {
+		window = 5 * time.Second
+	}
 	msearch := "M-SEARCH * HTTP/1.1\r\n" +
 		"HOST: 239.255.255.250:1900\r\n" +
 		"MAN: \"ssdp:discover\"\r\n" +

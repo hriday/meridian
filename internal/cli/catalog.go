@@ -70,7 +70,7 @@ func Catalog() []CommandGroup {
 			{"dhcpdiscover", "[--wait 5s] [--json]", "find DHCP servers / rogues on the LAN"},
 			{"lldp", "[--wait 35s] [--iface en0] [--json]", "LLDP/CDP neighbor — what switch/port (sudo)"},
 			{"arpscan", "[--wait 2s] [--max 1024] [--json]", "ARP sweep the LAN — live MAC/IP + vendor"},
-			{"discover", "[--seconds 3] [--json]", "find LAN devices via mDNS/Bonjour + SSDP/UPnP"},
+			{"discover", "[--seconds 8] [--json]", "find LAN devices via mDNS/Bonjour + SSDP/UPnP"},
 			{"rtp", "[--seconds 10] [--iface en0] [--json]", "analyze RTP streams — jitter/loss (sudo)"},
 			{"pingsweep", "<cidr> [--ports 22,80,443] [--json]", "ping / TCP sweep"},
 			{"portscan", "<host> <ports|--common> [--json]", "port scan"},

@@ -94,6 +94,9 @@ func parseMDNS(payloads [][]byte) []Service {
 
 	var out []Service
 	for name, e := range insts {
+		if e.typ == "" {
+			continue // incomplete entry (a stray SRV/TXT with no matching PTR)
+		}
 		s := Service{
 			Instance: instanceLabel(name),
 			Type:     e.typ,
@@ -200,6 +203,41 @@ func parseSSDP(raw, addr string) (Device, bool) {
 		return Device{}, false
 	}
 	return d, true
+}
+
+// dedupeServices collapses service instances that appear more than once (e.g.
+// the same instance seen on several interfaces), unioning their addresses.
+func dedupeServices(in []Service) []Service {
+	type key struct{ typ, inst string }
+	idx := map[key]int{}
+	var out []Service
+	for _, s := range in {
+		k := key{s.Type, s.Instance}
+		if i, ok := idx[k]; ok {
+			for _, a := range s.Addrs {
+				out[i].Addrs = appendUnique(out[i].Addrs, a)
+			}
+			if out[i].Host == "" {
+				out[i].Host = s.Host
+			}
+			if out[i].Port == 0 {
+				out[i].Port = s.Port
+			}
+			if len(out[i].Info) == 0 {
+				out[i].Info = s.Info
+			}
+			continue
+		}
+		idx[k] = len(out)
+		out = append(out, s)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Type != out[j].Type {
+			return out[i].Type < out[j].Type
+		}
+		return out[i].Instance < out[j].Instance
+	})
+	return out
 }
 
 // dedupeDevices collapses SSDP responses from the same USN (or address+type).

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { DiscoverLAN } from "../../../wailsjs/go/app/App.js";
 
-  let seconds = 4;
+  let seconds = 8;
   let loading = false;
   let error = "";
   let res: any = null;
@@ -12,7 +12,7 @@
     error = "";
     res = null;
     try {
-      res = await DiscoverLAN(Number(seconds) || 4);
+      res = await DiscoverLAN(Number(seconds) || 8);
     } catch (e: any) {
       error = String(e?.message ?? e);
     } finally {
@@ -33,7 +33,7 @@
   </p>
 
   <div class="row">
-    <label>Listen for <input class="field" type="number" min="1" max="15" bind:value={seconds} /> s</label>
+    <label>Listen for <input class="field" type="number" min="5" max="25" bind:value={seconds} /> s</label>
     <button class="btn" on:click={run} disabled={loading}>{loading ? `Discovering ${seconds}s…` : "Discover"}</button>
   </div>
   <p class="muted">You only hear devices on your own link — run it on the same LAN segment, not over a VPN or a routed/guest network that blocks multicast.</p>
