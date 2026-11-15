@@ -178,6 +178,10 @@ export function HIBPLatestBreach() {
   return window['go']['app']['App']['HIBPLatestBreach']();
 }
 
+export function HTTP3Probe(arg1, arg2) {
+  return window['go']['app']['App']['HTTP3Probe'](arg1, arg2);
+}
+
 export function HTTPCheck(arg1) {
   return window['go']['app']['App']['HTTPCheck'](arg1);
 }

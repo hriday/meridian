@@ -1904,6 +1904,41 @@ export namespace fwconfig {
 
 }
 
+export namespace h3probe {
+	
+	export class Result {
+	    host: string;
+	    port: number;
+	    quicReachable: boolean;
+	    alpn: string;
+	    tlsVersion: string;
+	    handshakeMillis: number;
+	    advertisesH3: boolean;
+	    altSvc: string;
+	    quicError?: string;
+	    verdict: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.quicReachable = source["quicReachable"];
+	        this.alpn = source["alpn"];
+	        this.tlsVersion = source["tlsVersion"];
+	        this.handshakeMillis = source["handshakeMillis"];
+	        this.advertisesH3 = source["advertisesH3"];
+	        this.altSvc = source["altSvc"];
+	        this.quicError = source["quicError"];
+	        this.verdict = source["verdict"];
+	    }
+	}
+
+}
+
 export namespace hashid {
 	
 	export class Candidate {
