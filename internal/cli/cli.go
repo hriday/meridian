@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1502,6 +1503,21 @@ func printBGPReport(stdout io.Writer, r lookup.BGPReport) {
 	if r.RPKIState != "" {
 		reportRow(stdout, "RPKI", r.RPKIState)
 	}
+	if r.IRRState != "" {
+		irr := r.IRRState
+		if n := len(r.IRRRoutes); n > 0 {
+			srcs := map[string]bool{}
+			for _, rt := range r.IRRRoutes {
+				if rt.Source != "" {
+					srcs[rt.Source] = true
+				}
+			}
+			if len(srcs) > 0 {
+				irr += "  (" + strings.Join(sortedStringSet(srcs), ", ") + ")"
+			}
+		}
+		reportRow(stdout, "IRR", irr)
+	}
 	for i, p := range r.Paths {
 		if i >= 5 {
 			break
@@ -1516,7 +1532,16 @@ func printBGPReport(stdout io.Writer, r lookup.BGPReport) {
 	if len(r.Transit) > 0 {
 		reportRow(stdout, "Transit", "AS"+strings.Join(r.Transit, ", AS"))
 	}
-	printSourceErrs(stdout, r.RoutingSrc, r.RPKISrc)
+	printSourceErrs(stdout, r.RoutingSrc, r.RPKISrc, r.IRRSrc)
+}
+
+func sortedStringSet(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func registrySuffix(registry string) string {

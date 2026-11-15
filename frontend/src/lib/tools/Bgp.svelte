@@ -46,6 +46,17 @@
     if (s === "invalid") return "bad";
     return "soon";
   }
+  function irrClass(state: string): string {
+    const s = (state || "").toLowerCase();
+    if (s === "valid") return "good";
+    if (s === "origin-mismatch") return "bad";
+    return "soon";
+  }
+  function irrSources(r: any): string {
+    const s = new Set<string>();
+    for (const rt of r?.irrRoutes || []) if (rt.source) s.add(rt.source);
+    return [...s].sort().join(", ");
+  }
 
   // Plain-language verdict for the top of the screen.
   function verdict(r: any): string {
@@ -99,7 +110,7 @@
     <div class="cards">
       <!-- Origin & health -->
       <div class="card hero">
-        <div class="k">Origin &amp; RPKI</div>
+        <div class="k">Origin · RPKI · IRR</div>
         {#if report.prefix}
           <div class="line">
             <button class="chip" on:click={() => pivotTo(report.prefix)} title="Look up this prefix">{report.prefix}</button>
@@ -116,11 +127,16 @@
           {:else}
             <span class="pill soon">RPKI unknown</span>
           {/if}
+          {#if report.irrState}
+            <span class="pill {irrClass(report.irrState)}" title={irrSources(report) ? "Route objects in " + irrSources(report) : ""}>IRR {report.irrState}</span>
+          {:else if report.irrSrc?.err}
+            <span class="pill soon" title={report.irrSrc.err}>IRR uncheckable</span>
+          {/if}
         </div>
         <div class="cap">
           <b>{report.peers}</b> peers · <b>{report.collectors}</b> collectors · <b>{(report.paths || []).length}</b> distinct AS paths.
           A peer is one router's view; more peers &amp; collectors = more independent confirmation the route is real.
-          <span class="pill-exp">RPKI “valid” means the origin is cryptographically authorized to announce this prefix.</span>
+          <span class="pill-exp">RPKI “valid” means the origin is cryptographically authorized to announce this prefix. IRR “valid” means a registry route object (RADB mirror) records the same origin — the registry-side check many transit providers still filter on.</span>
         </div>
       </div>
 

@@ -39,9 +39,12 @@ type BGPReport struct {
 	Upstreams  []string       `json:"upstreams"`
 	Transit    []string       `json:"transit"`
 	RPKIState  string         `json:"rpkiState"`
+	IRRState   string         `json:"irrState"` // valid / origin-mismatch / not-found
+	IRRRoutes  []IRRRoute     `json:"irrRoutes"`
 	Vantages   []BGPCollector `json:"vantages"`
 	RoutingSrc Source         `json:"routingSrc"`
 	RPKISrc    Source         `json:"rpkiSrc"`
+	IRRSrc     Source         `json:"irrSrc"`
 }
 
 // LookupBGP fetches the RIPEstat looking-glass view of input (a prefix or IP)
@@ -154,6 +157,18 @@ func (c *Client) LookupBGP(ctx context.Context, input string) (BGPReport, error)
 			r.RPKISrc.Err = err.Error()
 		} else {
 			r.RPKIState = state
+		}
+	}
+
+	// IRR route-object check (RADB) — the registry-side companion to RPKI: does
+	// an IRR route: object authorize this prefix's origin?
+	if r.Prefix != "" {
+		r.IRRSrc = Source{Label: "RADB (IRR)", FetchedAt: now()}
+		if routes, err := c.irrRoutes(ctx, r.Prefix); err != nil {
+			r.IRRSrc.Err = err.Error()
+		} else {
+			r.IRRRoutes = routes
+			r.IRRState = irrState(routes, r.OriginASNs)
 		}
 	}
 	return r, nil

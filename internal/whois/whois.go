@@ -71,6 +71,19 @@ func Query(ctx context.Context, object string, timeout time.Duration) (Result, e
 	return res, nil
 }
 
+// QueryServer performs a single port-43 exchange against a specific server,
+// skipping the IANA referral chain — for directed queries such as an IRR mirror
+// (e.g. whois.radb.net for route objects).
+func QueryServer(ctx context.Context, server, object string, timeout time.Duration) (string, error) {
+	object = strings.TrimSpace(object)
+	if object == "" {
+		return "", errors.New("no object to look up")
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return queryServer(ctx, server, object)
+}
+
 // queryServer performs one port-43 exchange: send object + CRLF, read the whole
 // response (the server closes when done).
 func queryServer(ctx context.Context, server, object string) (string, error) {
