@@ -6,3 +6,4 @@ package wifi
 // nothing to request.
 func locationStatus() string { return "unsupported" }
 func requestLocation()       {}
+func currentSSID() string    { return "" }
