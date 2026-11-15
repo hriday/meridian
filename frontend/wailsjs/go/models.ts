@@ -751,6 +751,80 @@ export namespace cli {
 		    return a;
 		}
 	}
+	export class RunbookStep {
+	    command: string;
+	    args: string[];
+	    output: string;
+	    ok: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunbookStep(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.command = source["command"];
+	        this.args = source["args"];
+	        this.output = source["output"];
+	        this.ok = source["ok"];
+	    }
+	}
+	export class RunbookData {
+	    profile: string;
+	    name: string;
+	    target: string;
+	    generated: string;
+	    steps: RunbookStep[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RunbookData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.profile = source["profile"];
+	        this.name = source["name"];
+	        this.target = source["target"];
+	        this.generated = source["generated"];
+	        this.steps = this.convertValues(source["steps"], RunbookStep);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RunbookInfo {
+	    id: string;
+	    name: string;
+	    desc: string;
+	    steps: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunbookInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.desc = source["desc"];
+	        this.steps = source["steps"];
+	    }
+	}
 
 }
 

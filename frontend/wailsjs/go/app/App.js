@@ -478,6 +478,14 @@ export function RulesInstalled() {
   return window['go']['app']['App']['RulesInstalled']();
 }
 
+export function RunRunbook(arg1, arg2) {
+  return window['go']['app']['App']['RunRunbook'](arg1, arg2);
+}
+
+export function RunbookProfiles() {
+  return window['go']['app']['App']['RunbookProfiles']();
+}
+
 export function SIPProbe(arg1, arg2, arg3) {
   return window['go']['app']['App']['SIPProbe'](arg1, arg2, arg3);
 }
