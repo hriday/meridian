@@ -108,6 +108,10 @@ pfSense — vendor auto-detected), **Web-server analyzer** (nginx/Apache/Caddy),
 Meridian ships three themes — **dark**, **light**, and a green-on-black
 **terminal** mode (toggle in the top-right).
 
+![Command palette — press ⌘K, paste a MAC address, and Meridian detects the type and jumps to the right tool (dark theme)](docs/media/palette.png)
+
+<p align="center"><em>Command palette (⌘K / Ctrl-K) — fuzzy-jump to any of the 80+ tools, or paste a value (IP, CIDR, domain, URL, JWT, PEM, MAC, hash) and Meridian detects the type and jumps to the matching tool with it pre-filled. Dark theme.</em></p>
+
 ![Lookup — an entity page for an IP, with registration, routing and AS ownership (dark theme)](docs/media/lookup.png)
 
 <p align="center"><em>Lookup — paste any IP, ASN, prefix or domain and get registration (RDAP), routing (RIPEstat) and AS ownership, with RPKI status. Dark theme.</em></p>
@@ -129,6 +133,18 @@ Meridian ships three themes — **dark**, **light**, and a green-on-black
 <p align="center"><em>Connection quality — live latency, jitter and packet loss with an estimated MOS (Mean Opinion Score), answering "is this link good enough for a voice/video call?" No admin rights needed.</em></p>
 
 ## Install
+
+**Quickest:**
+
+```bash
+# macOS (Homebrew)
+brew install --cask hriday/meridian/meridian
+```
+
+**Windows** and **Linux**: grab the `.exe` / `.AppImage` from the
+[latest release](../../releases/latest) (per-OS steps below). Native
+Windows/Linux package-manager entries (winget / Scoop / `.deb` / AUR) aren't
+published yet — they're gated on code-signing, tracked in the issues.
 
 Builds are attached to each [GitHub Release](../../releases). Meridian is **not
 yet code-signed**, so your OS will warn on first launch — this is expected for an
