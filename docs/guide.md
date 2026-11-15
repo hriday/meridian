@@ -10,6 +10,46 @@ full catalog is listed at the end.
 
 ---
 
+## Quickstart — 3 real workflows
+
+New here? These show how the pieces fit together. Each works in the app (pick the
+named tools from the sidebar) or from the CLI in one line.
+
+**1. Triage a slow or flaky host.** Is it reachable, how's the latency and loss,
+where does the path break, and is the TLS endpoint healthy? Run **Ping**,
+**MTR**, **TCP ping** and **Traceroute** — or let the built-in runbook do all of
+it into one report:
+
+```
+meridian-cli runbook triage-host 10.0.0.5
+```
+
+**2. Audit a domain's security posture (TLS + DNS + email).** Check the
+certificate and cipher grade, DNS/DNSSEC hygiene, SPF/DKIM/DMARC, and HTTP
+security headers in one pass with **Cipher scan**, **DNS audit**, **Email auth**
+and **Security headers** — or the runbook:
+
+```
+meridian-cli runbook audit-domain example.com
+```
+
+**3. Find rogue devices on your LAN and reconcile your IP inventory.** Sweep the
+LAN with **ARP scan** / **Service discovery**, then **LAN reconcile** diffs what's
+actually on the wire against your encrypted **IP space** inventory — new hosts,
+missing hosts, conflicts — and you import the changes. Share that inventory across
+a team with its built-in encrypted **sync** (your own S3/SFTP/git/local backend —
+Meridian never hosts it).
+
+```
+meridian-cli arpscan --json            # who's on the LAN right now
+meridian-cli ipspace reconcile         # diff the live sweep vs your inventory
+```
+
+Once a workflow is routine, write your own **runbook profile** (YAML/TOML/JSON) so
+`meridian-cli runbook ./my-profile.yaml <target>` runs exactly your checks.
+
+---
+
 ## The workbench
 
 The window is a **sidebar** of tools on the left and the **active tool** on the
