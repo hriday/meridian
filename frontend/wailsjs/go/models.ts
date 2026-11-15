@@ -2635,6 +2635,22 @@ export namespace lookup {
 	        this.percent = source["percent"];
 	    }
 	}
+	export class IRRRoute {
+	    prefix: string;
+	    origin: string;
+	    source: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new IRRRoute(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prefix = source["prefix"];
+	        this.origin = source["origin"];
+	        this.source = source["source"];
+	    }
+	}
 	export class BGPReport {
 	    input: string;
 	    prefix: string;
@@ -2646,9 +2662,12 @@ export namespace lookup {
 	    upstreams: string[];
 	    transit: string[];
 	    rpkiState: string;
+	    irrState: string;
+	    irrRoutes: IRRRoute[];
 	    vantages: BGPCollector[];
 	    routingSrc: Source;
 	    rpkiSrc: Source;
+	    irrSrc: Source;
 	
 	    static createFrom(source: any = {}) {
 	        return new BGPReport(source);
@@ -2666,9 +2685,12 @@ export namespace lookup {
 	        this.upstreams = source["upstreams"];
 	        this.transit = source["transit"];
 	        this.rpkiState = source["rpkiState"];
+	        this.irrState = source["irrState"];
+	        this.irrRoutes = this.convertValues(source["irrRoutes"], IRRRoute);
 	        this.vantages = this.convertValues(source["vantages"], BGPCollector);
 	        this.routingSrc = this.convertValues(source["routingSrc"], Source);
 	        this.rpkiSrc = this.convertValues(source["rpkiSrc"], Source);
+	        this.irrSrc = this.convertValues(source["irrSrc"], Source);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -2803,6 +2825,7 @@ export namespace lookup {
 		    return a;
 		}
 	}
+	
 	
 	
 	
