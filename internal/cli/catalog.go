@@ -114,7 +114,7 @@ func Catalog() []CommandGroup {
 		{Name: "Config insight", Commands: []CommandDoc{
 			{"fwanalyze", "[<config-file>] [--json]", "firewall config analysis (stdin ok)"},
 			{"webanalyze", "[<file>] [--server nginx] [--json]", "web-server config analysis (stdin ok)"},
-			{"tfexposure", "[<file>] [--source hcl|plan] [--json]", "Terraform exposure scan (stdin ok)"},
+			{"tfexposure", "[<file>] [--source hcl|plan] [--json]", "Terraform exposure scan — AWS/GCP/Azure (stdin ok)"},
 			{"cfgdiff", "<old-file> <new-file> [--json]", "section-aware config diff"},
 		}},
 	}
