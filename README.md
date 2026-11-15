@@ -63,7 +63,8 @@ any resolver, DNSSEC signals), **Interfaces**.
 - **MTR** (continuous path + per-hop loss), **Path MTU** (find MTU black holes),
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
   I on), **ARP scan** (live MAC↔IP + vendor), **RTP analyzer** (per-stream
-  jitter/loss/codec from captured media).
+  jitter/loss/codec from captured media), **Packet summary** (tcpdump-lite: top
+  talkers, TCP resets/retransmits, DNS errors, TLS SNIs seen).
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
@@ -196,8 +197,8 @@ meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 ```
 
-Raw-socket tools (`arpscan`, `lldp`, `rtp`, and the `ipspace reconcile` sweep;
-`tcptrace` on Linux) need `sudo`/admin — on macOS, `tcptrace`, `discover` and the
+Raw-socket tools (`arpscan`, `lldp`, `rtp`, `pktscan`, and the `ipspace reconcile`
+sweep; `tcptrace` on Linux) need `sudo`/admin — on macOS, `tcptrace`, `discover` and the
 ICMP tools run unprivileged. Receivers on privileged ports (`syslog` 514, `traps`
 162, `tftp` 69) need `sudo` or a high `--port`. The SNMP community audit (`snmpbrute`) requires an explicit
 `--authorized` flag, and community strings are never printed or logged.

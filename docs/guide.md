@@ -57,7 +57,7 @@ low ports:
 | Tool | Why | Note |
 |---|---|---|
 | ARP scan, **LAN reconcile** | raw layer-2 | `sudo` / admin — no workaround |
-| LLDP/CDP, RTP analyzer | packet capture | `sudo` / admin |
+| LLDP/CDP, RTP analyzer, **Packet summary** | packet capture | `sudo` / admin |
 | **TCP traceroute** | raw ICMP for hop replies | **no sudo on macOS**; `sudo` on Linux |
 | Syslog (514), SNMP traps (162), TFTP (69) | privileged ports | `sudo`, or use a high `--port` |
 
@@ -145,6 +145,7 @@ Most commands take `--json`. Live receivers/monitors run until **Ctrl-C**.
 | ARP scan | live MAC↔IP + vendor (sudo) | `arpscan` |
 | Service discovery | mDNS/Bonjour + SSDP/UPnP — what's on the LAN | `discover` |
 | RTP analyzer | per-stream jitter/loss/codec (sudo) | `rtp` |
+| Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (sudo) | `pktscan` |
 | Ping sweep | ping / TCP sweep a range | `pingsweep` |
 | Port scan | scan ports on a host | `portscan` |
 | PTR sweep | reverse-DNS a range | `ptrsweep` |
