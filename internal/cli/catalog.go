@@ -55,7 +55,7 @@ func Catalog() []CommandGroup {
 		{Name: "Addressing", Commands: []CommandDoc{
 			{"subnet", "<cidr> [--split <prefixlen>] [--json]", "subnet calculator"},
 			{"classify", "<value> [--json]", "classify an address or value"},
-			{"ipspace", "list|export|reconcile [--file <path>] [--passphrase <pw>]", "IP-space inventory (reconcile: diff vs a live ARP sweep)"},
+			{"ipspace", "list|export|import|reconcile [--format csv|netbox|terraform] [--file <p>] [--passphrase <pw>]", "IP-space inventory — import/export CSV · NetBox YAML · Terraform CIDR; reconcile vs a live ARP sweep"},
 		}},
 		{Name: "Local / environment", Commands: []CommandDoc{
 			{"ntp", "<server> [--json]", "query an NTP server"},

@@ -54,7 +54,9 @@ website, Meridian does it locally so the data never leaves your machine.
 - **IP space** — record your networks in up to 25 local, **passphrase-encrypted**,
   append-only inventories (argon2id + NaCl secretbox) with record tags, a nested
   block tree, **carve a block into subnets** + per-block **utilization %**, and
-  optional sync (local/S3/SFTP/git, encrypted blob). Nothing leaves your machine.
+  optional sync (local/S3/SFTP/git, encrypted blob). **Import/export CSV, NetBox
+  YAML and Terraform CIDR** to migrate from spreadsheets or IaC. Nothing leaves
+  your machine.
 
 **Local / environment** — **NTP** (stratum/offset/verdict), **DNS** (any record,
 any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / DNS-over-QUIC**),

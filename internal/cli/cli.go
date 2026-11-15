@@ -6,6 +6,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -860,6 +861,7 @@ func runIPSpace(args []string, stdout, stderr io.Writer) int {
 	fs.SetOutput(stderr)
 	file := fs.String("file", ipspace.DefaultPath(), "store file path")
 	pass := fs.String("passphrase", "", "store passphrase (or MERIDIAN_PASSPHRASE)")
+	format := fs.String("format", "csv", "import/export format: csv, netbox (YAML), or terraform")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
@@ -869,8 +871,13 @@ func runIPSpace(args []string, stdout, stderr io.Writer) int {
 	}
 	events, err := ipspace.Load(*file, passphrase)
 	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
+		// Importing into a store that doesn't exist yet starts a fresh one.
+		if sub == "import" && errors.Is(err, os.ErrNotExist) {
+			events = nil
+		} else {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
 	}
 	store := ipspace.FromEvents(ipspace.Actor(), events)
 	switch sub {
@@ -897,13 +904,53 @@ func runIPSpace(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	case "export":
-		if err := store.ExportCSV(stdout); err != nil {
+		var err error
+		switch strings.ToLower(*format) {
+		case "", "csv":
+			err = store.ExportCSV(stdout)
+		case "netbox", "yaml":
+			err = store.ExportNetBoxYAML(stdout)
+		case "terraform", "tf":
+			err = store.ExportTerraform(stdout)
+		default:
+			fmt.Fprintf(stderr, "unknown format %q (want csv, netbox, or terraform)\n", *format)
+			return 2
+		}
+		if err != nil {
 			fmt.Fprintln(stderr, err)
 			return 1
 		}
 		return 0
+	case "import":
+		var src io.Reader = os.Stdin // pipe the CSV/YAML/HCL in
+		var rep ipspace.ImportReport
+		var err error
+		switch strings.ToLower(*format) {
+		case "", "csv":
+			rep, err = store.ImportCSV(src)
+		case "netbox", "yaml":
+			rep, err = store.ImportNetBoxYAML(src)
+		case "terraform", "tf":
+			rep, err = store.ImportTerraform(src)
+		default:
+			fmt.Fprintf(stderr, "unknown format %q (want csv, netbox, or terraform)\n", *format)
+			return 2
+		}
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if err := ipspace.Save(*file, passphrase, store.Events()); err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		fmt.Fprintf(stderr, "imported %d record(s), skipped %d\n", rep.Added, rep.Skipped)
+		for _, e := range rep.Errors {
+			fmt.Fprintf(stderr, "  skipped %s\n", e)
+		}
+		return 0
 	default:
-		fmt.Fprintf(stderr, "unknown ipspace subcommand %q (want list or export)\n", sub)
+		fmt.Fprintf(stderr, "unknown ipspace subcommand %q (want list, export, import, or reconcile)\n", sub)
 		return 2
 	}
 }
