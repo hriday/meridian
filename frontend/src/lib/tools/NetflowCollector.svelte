@@ -77,7 +77,7 @@
     Set your device's NetFlow/IPFIX export destination to this machine on the <strong>Listen UDP</strong>
     port (2055 is common; also 9995/9996), then <strong>Start</strong> — these ports need no admin. Each row
     is a <strong>conversation</strong> (source → destination:port) aggregated over the window, ranked by
-    bytes or packets. NetFlow <strong>v5</strong> today; v9/IPFIX next. Read-only; stops on Stop.
+    bytes or packets. NetFlow <strong>v5, v9 and IPFIX</strong> (templates auto-learned per exporter). Read-only; stops on Stop.
   </p>
 
   <div class="row">

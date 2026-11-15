@@ -77,7 +77,7 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS**)
 **SNMP & monitoring** — **SNMP sweep**, **Device health**, **Switch-port mapper**
 (MAC→port), **MIB browser** (walk), **SNMP community audit** (authorization-gated).
 
-**Collectors** (local receivers) — **Syslog**, **SNMP traps**, **NetFlow v5**,
+**Collectors** (local receivers) — **Syslog**, **SNMP traps**, **NetFlow v5/v9/IPFIX**,
 **TFTP** (saves grabbed files).
 
 **Security**

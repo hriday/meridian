@@ -90,7 +90,7 @@ func Catalog() []CommandGroup {
 		{Name: "Collectors", Note: "receivers; Ctrl-C to stop. Ports <1024 need sudo or a high --port.", Commands: []CommandDoc{
 			{"syslog", "[--port 514] [--json]", "syslog receiver"},
 			{"traps", "[--port 162] [--json]", "SNMP trap receiver"},
-			{"netflow", "[--port 2055] [--json]", "NetFlow v5 receiver"},
+			{"netflow", "[--port 2055] [--json]", "NetFlow v5 / v9 / IPFIX receiver"},
 			{"tftp", "[--port 69] [--out <dir>] [--json]", "TFTP receiver — saves grabbed files"},
 		}},
 		{Name: "Security", Commands: []CommandDoc{
