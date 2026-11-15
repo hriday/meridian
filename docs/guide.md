@@ -203,7 +203,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | Tool | What it does | CLI |
 |---|---|---|
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
-| Runbook | composite audit — run a profile of tools into one report (audit-domain, triage-host; md/json/html) | `runbook` + GUI |
+| Runbook | composite audit — run a profile of tools into one report: built-in (audit-domain, triage-host) or your own YAML/TOML/JSON profile; md/json/html | `runbook` + GUI |
 
 ### Config insight
 

@@ -112,7 +112,7 @@ func Catalog() []CommandGroup {
 		}},
 		{Name: "Scripting", Note: "pipe a newline-delimited target list on stdin.", Commands: []CommandDoc{
 			{"batch", "<command> [flags]   (targets on stdin)", "run a single-target command over many targets — e.g. `cat hosts.txt | meridian-cli batch cipherscan --json` (NDJSON)"},
-			{"runbook", "<profile> <target> [--format md|json|html] [--out f] | list", "composite audit — runs a profile of tools into one report (audit-domain, triage-host)"},
+			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in profile (audit-domain, triage-host) or your own YAML/TOML/JSON"},
 		}},
 		{Name: "Config insight", Commands: []CommandDoc{
 			{"fwanalyze", "[<config-file>] [--json]", "firewall config analysis (stdin ok)"},

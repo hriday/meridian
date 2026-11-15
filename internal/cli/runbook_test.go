@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -48,5 +50,68 @@ func TestRenderRunbookHTMLEscapes(t *testing.T) {
 	}
 	if !strings.Contains(h, "&lt;script&gt;") {
 		t.Fatal("expected escaped output")
+	}
+}
+
+func TestLoadProfileYAML(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "myaudit.yaml")
+	content := "name: My Audit\ndesc: custom\nsteps:\n  - cmd: lookup\n    args: [\"{t}\"]\n  - cmd: dnsaudit\n    args: [\"{t}\"]\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := loadProfileFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.name != "My Audit" || len(p.steps) != 2 {
+		t.Fatalf("got name=%q steps=%d", p.name, len(p.steps))
+	}
+	if p.steps[0].cmd != "lookup" || p.steps[1].cmd != "dnsaudit" {
+		t.Fatalf("steps = %+v", p.steps)
+	}
+	if len(p.steps[0].args) != 1 || p.steps[0].args[0] != "{t}" {
+		t.Fatalf("args = %v", p.steps[0].args)
+	}
+}
+
+func TestLoadProfileTOML(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "hostcheck.toml")
+	content := "name = \"Host Check\"\n\n[[steps]]\ncmd = \"ping\"\nargs = [\"{t}\", \"--count\", \"3\"]\n\n[[steps]]\ncmd = \"tls\"\nargs = [\"{t}\"]\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	p, err := loadProfileFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.name != "Host Check" || len(p.steps) != 2 {
+		t.Fatalf("got name=%q steps=%d", p.name, len(p.steps))
+	}
+	if p.steps[0].cmd != "ping" || len(p.steps[0].args) != 3 {
+		t.Fatalf("step0 = %+v", p.steps[0])
+	}
+}
+
+func TestLoadProfileRejectsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "empty.yaml")
+	if err := os.WriteFile(path, []byte("name: nope\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadProfileFile(path); err == nil {
+		t.Fatal("profile with no steps should error")
+	}
+}
+
+func TestResolveProfileBuiltinVsFile(t *testing.T) {
+	// A built-in id resolves without touching disk.
+	if _, ok, err := resolveProfile("audit-domain"); err != nil || !ok {
+		t.Fatalf("builtin: ok=%v err=%v", ok, err)
+	}
+	// A path that looks like a file but doesn't exist is an error, not "unknown".
+	if _, _, err := resolveProfile("does-not-exist.yaml"); err == nil {
+		t.Fatal("missing file should error")
 	}
 }
