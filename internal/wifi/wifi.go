@@ -130,6 +130,19 @@ func finalize(info *Info) {
 	}
 }
 
+// finalizeSignalOnly flags co-channel neighbors when the platform reports a
+// signal but no noise (so SNR can't be computed) — used by the Linux/Windows
+// backends.
+func finalizeSignalOnly(info *Info) {
+	ch := info.Current.Channel
+	for i := range info.Neighbors {
+		if ch != 0 && info.Neighbors[i].Channel == ch {
+			info.Neighbors[i].CoChannel = true
+			info.CoChannel++
+		}
+	}
+}
+
 func snr(n Network) int {
 	if n.RSSI == 0 && n.Noise == 0 {
 		return 0

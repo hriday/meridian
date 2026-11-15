@@ -76,7 +76,7 @@ func Catalog() []CommandGroup {
 			{"discover", "[--seconds 8] [--json]", "find LAN devices via mDNS/Bonjour + SSDP/UPnP"},
 			{"rtp", "[--seconds 10] [--iface en0] [--json]", "analyze RTP streams — jitter/loss (sudo)"},
 			{"pktscan", "[--iface en0] [--seconds 8] [--top 10] [--json]", "live packet summary — top talkers, TCP resets/retransmits, DNS errors, TLS SNI (sudo)"},
-			{"wifi", "[--json]", "Wi-Fi/RF environment — channel, signal/SNR, neighbors, co-channel (macOS)"},
+			{"wifi", "[--json]", "Wi-Fi/RF environment — channel, signal, neighbors, co-channel (macOS / Linux nmcli / Windows netsh)"},
 			{"pingsweep", "<cidr> [--ports 22,80,443] [--json]", "ping / TCP sweep"},
 			{"portscan", "<host> <ports|--common> [--json]", "port scan"},
 			{"ptrsweep", "<cidr> [--concurrency 64] [--json]", "reverse-DNS sweep"},
