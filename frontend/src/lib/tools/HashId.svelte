@@ -1,7 +1,11 @@
 <script lang="ts">
   import { IdentifyHash } from "../../../wailsjs/go/app/App.js";
+  import { get } from "svelte/store";
+  import { requestedTool } from "../nav";
 
   let hash = "";
+  const _req = get(requestedTool);
+  if (_req && _req.tool === "hashid" && _req.value) { hash = _req.value; requestedTool.set(null); }
   let cands: any[] = [];
   let done = false;
   async function run() {

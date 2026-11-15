@@ -1,7 +1,11 @@
 <script lang="ts">
   import { MACVendor } from "../../../wailsjs/go/app/App.js";
+  import { get } from "svelte/store";
+  import { requestedTool } from "../nav";
 
   let query = "";
+  const _req = get(requestedTool);
+  if (_req && _req.tool === "macvendor" && _req.value) { query = _req.value; requestedTool.set(null); }
   let busy = false;
   let error = "";
   let result: any = null;

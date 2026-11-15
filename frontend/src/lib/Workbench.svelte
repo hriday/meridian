@@ -80,6 +80,7 @@
   import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
   import { requestedTool } from "./nav";
+  import CommandPalette from "./CommandPalette.svelte";
   import { AppVersion, CheckForUpdate, CLIInfo, InstallCLI } from "../../wailsjs/go/app/App.js";
   import { BrowserOpenURL } from "../../wailsjs/runtime/runtime.js";
 
@@ -240,14 +241,6 @@
     }
   }
 
-  function onKey(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-      e.preventDefault();
-      sideCollapsed = false;
-      searchEl?.focus();
-    }
-  }
-
   function toggleGroup(g: string) {
     closed = { ...closed, [g]: !closed[g] };
   }
@@ -260,7 +253,7 @@
   $: activeTool = tools.find((t) => t.id === active);
 </script>
 
-<svelte:window on:keydown={onKey} />
+<CommandPalette {tools} />
 
 <div class="wb">
   <header class="bar">

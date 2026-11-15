@@ -1,7 +1,11 @@
 <script lang="ts">
   import { JWTDecode, JWTVerify } from "../../../wailsjs/go/app/App.js";
+  import { get } from "svelte/store";
+  import { requestedTool } from "../nav";
 
   let token = "";
+  const _req = get(requestedTool);
+  if (_req && _req.tool === "jwt" && _req.value) { token = _req.value; requestedTool.set(null); }
   let decoded: any = null;
   let decodeErr = "";
 
