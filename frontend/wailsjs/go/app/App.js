@@ -414,6 +414,14 @@ export function PTRSweep(arg1) {
   return window['go']['app']['App']['PTRSweep'](arg1);
 }
 
+export function PacketScan(arg1) {
+  return window['go']['app']['App']['PacketScan'](arg1);
+}
+
+export function PacketScanSupported() {
+  return window['go']['app']['App']['PacketScanSupported']();
+}
+
 export function PathMTU(arg1) {
   return window['go']['app']['App']['PathMTU'](arg1);
 }

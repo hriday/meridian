@@ -38,6 +38,7 @@ import {macvendor} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
 import {ptrsweep} from '../models';
+import {pktscan} from '../models';
 import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
@@ -267,6 +268,10 @@ export function NetflowStop():Promise<void>;
 export function NetflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
 
 export function PTRSweep(arg1:string):Promise<Array<ptrsweep.Entry>>;
+
+export function PacketScan(arg1:number):Promise<pktscan.Summary>;
+
+export function PacketScanSupported():Promise<boolean>;
 
 export function PathMTU(arg1:string):Promise<mtu.Result>;
 
