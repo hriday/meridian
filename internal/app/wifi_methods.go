@@ -17,3 +17,9 @@ func (a *App) WifiStatus() (wifi.Info, error) {
 	defer cancel()
 	return wifi.Status(ctx)
 }
+
+// WifiRequestLocation asks macOS for Location Services authorization so the
+// Wi-Fi analyzer can show network names (SSIDs), which macOS otherwise hides.
+// The system prompt appears the first time; after that it's resolved in System
+// Settings. Returns immediately — the caller re-scans to pick up the result.
+func (a *App) WifiRequestLocation() { wifi.RequestLocation() }

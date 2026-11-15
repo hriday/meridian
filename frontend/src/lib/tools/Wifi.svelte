@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { WifiStatus } from "../../../wailsjs/go/app/App.js";
+  import { WifiStatus, WifiRequestLocation } from "../../../wailsjs/go/app/App.js";
 
   let loading = false;
   let error = "";
   let info: any = null;
+  let requesting = false;
 
   async function run() {
     if (loading) return;
@@ -19,6 +20,22 @@
     }
   }
   run();
+
+  // Ask macOS for Location Services access (so SSIDs become visible), then
+  // re-scan once the user has had a moment to respond to the system prompt.
+  async function grantLocation() {
+    if (requesting) return;
+    requesting = true;
+    try {
+      await WifiRequestLocation();
+    } catch { /* ignore */ }
+    setTimeout(async () => { await run(); requesting = false; }, 2500);
+  }
+
+  // Show the grant button only on macOS, when names are hidden and access isn't
+  // already authorized (or unsupported on this OS).
+  $: canGrant = info && info.ssidRedacted &&
+    info.locationStatus && info.locationStatus !== "authorized" && info.locationStatus !== "unsupported";
 
   // --- signal helpers ---
   const strengthPct = (rssi: number) => Math.max(0, Math.min(100, ((rssi + 90) / 60) * 100)); // -90..-30 → 0..100
@@ -74,7 +91,16 @@
   {#if error}<p class="err">{error}</p>{/if}
 
   {#if info}
-    {#if info.note}<div class="note">{info.note}</div>{/if}
+    {#if info.note}
+      <div class="note">
+        <span>{info.note}</span>
+        {#if canGrant}
+          <button class="grant" on:click={grantLocation} disabled={requesting}>
+            {requesting ? "Requesting…" : "Grant Location access"}
+          </button>
+        {/if}
+      </div>
+    {/if}
 
     <!-- Connected summary + gauges -->
     <div class="summary">
@@ -120,6 +146,16 @@
       </div>
     {/each}
 
+    {#if bands.length}
+      <p class="legend">
+        <strong>How to read this:</strong> each arc is one network. Its <strong>left–right position</strong> is the
+        channel, its <strong>width</strong> is the channel width (wider = more spectrum used), and its
+        <strong>height</strong> is signal strength (taller = stronger). Your network is the
+        <span class="sw cur"></span> highlighted arc. Where arcs <strong>overlap</strong> they interfere; arcs peaking on
+        <strong>your channel</strong> are co-channel contention. On 2.4 GHz only 1 / 6 / 11 don't overlap.
+      </p>
+    {/if}
+
     <!-- Neighbors -->
     {#if info.neighbors && info.neighbors.length}
       <div class="sec">
@@ -146,7 +182,13 @@
   .btn { background: var(--accent); color: var(--on-accent, #052e2b); border: 1px solid transparent; border-radius: 8px; padding: 8px 16px; font: inherit; font-size: 0.86rem; font-weight: 550; cursor: pointer; }
   .btn:disabled { opacity: .55; cursor: default; }
   .err { color: var(--danger, #e5484d); font-size: 0.82rem; margin: 12px 0 0; }
-  .note { margin: 14px 0 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font-size: 0.78rem; color: var(--text-dim); }
+  .note { margin: 14px 0 0; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font-size: 0.78rem; color: var(--text-dim); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .grant { flex: none; background: var(--accent); color: var(--on-accent, #052e2b); border: 1px solid transparent; border-radius: 7px; padding: 6px 12px; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+  .grant:disabled { opacity: .6; cursor: default; }
+  .legend { margin: 14px 0 0; padding: 9px 12px; border-left: 2px solid var(--accent); background: var(--well, var(--card)); border-radius: 0 7px 7px 0; font-size: 0.74rem; color: var(--text-dim); line-height: 1.55; }
+  .legend strong { color: var(--text); font-weight: 600; }
+  .legend .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin: 0 1px; }
+  .legend .sw.cur { background: color-mix(in srgb, var(--accent) 28%, transparent); border: 1.5px solid var(--accent); }
   .summary { margin: 16px 0 10px; }
   .ssid { font-size: 1rem; font-weight: 650; color: var(--text-strong, var(--text)); }
   .meta { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
