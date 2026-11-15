@@ -152,6 +152,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | HTTP check | HTTP(S) request/response check | `http` |
 | HTTP/3 reachability | QUIC handshake + Alt-Svc — is HTTP/3 reachable, or blocked on your path? | `http3` |
 | IKE / IPsec probe | IKEv2 VPN responder: accepted proposal (enc/PRF/integ/DH) + NAT-T | `ike` |
+| WireGuard probe | send a handshake initiation; a cookie/handshake reply confirms a responder (paste the peer public key for a meaningful probe) | `wg` |
 | Security headers | OWASP-mapped security header review | `sechdr` |
 | WHOIS | domain / IP / ASN whois | `whois` |
 | Subdomains | subdomains via Certificate Transparency | `subdomains` |
