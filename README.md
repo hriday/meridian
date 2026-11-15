@@ -239,6 +239,7 @@ meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 
 cat hosts.txt | meridian-cli batch cipherscan --json   # bulk audit — one JSON object per host (NDJSON)
+meridian-cli runbook org-recon acme.com                # everything about an org from its domain → one report
 meridian-cli runbook audit-domain acme.com             # composite audit — many tools → one report
 meridian-cli runbook ./my-profile.yaml acme.com        # …or your own YAML/TOML/JSON profile
 meridian-cli completion zsh > "${fpath[1]}/_meridian-cli"   # shell tab-completion (bash|zsh|fish|powershell)

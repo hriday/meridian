@@ -87,6 +87,22 @@ var rbProfiles = []rbProfile{
 		},
 	},
 	{
+		id: "org-recon", name: "Org Recon",
+		desc: "Everything about an organization from its domain: registration, DNS posture, email auth, DNS propagation, subdomains, TLS ciphers, HTTP/3, security headers, and certificate expiry.",
+		steps: []rbStep{
+			{"whois", []string{"{t}"}},
+			{"lookup", []string{"{t}"}},
+			{"dnsaudit", []string{"{t}"}},
+			{"emailauth", []string{"{t}"}},
+			{"dnspropagation", []string{"{t}"}},
+			{"subdomains", []string{"{t}"}},
+			{"cipherscan", []string{"{t}"}},
+			{"http3", []string{"{t}"}},
+			{"sechdr", []string{"https://{t}"}},
+			{"certexpiry", []string{"{t}"}},
+		},
+	},
+	{
 		id: "triage-host", name: "Triage Host",
 		desc: "Reachability, latency, path, TLS and common open ports for a host.",
 		steps: []rbStep{
