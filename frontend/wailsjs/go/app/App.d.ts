@@ -30,6 +30,7 @@ import {h3probe} from '../models';
 import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {hashid} from '../models';
+import {ikeprobe} from '../models';
 import {netif} from '../models';
 import {jwtinspect} from '../models';
 import {lldp} from '../models';
@@ -224,6 +225,8 @@ export function IPSpaceUndo():Promise<void>;
 export function IPSpaceUnlock(arg1:string):Promise<void>;
 
 export function IdentifyHash(arg1:string):Promise<Array<hashid.Candidate>>;
+
+export function IkeProbe(arg1:string):Promise<ikeprobe.Result>;
 
 export function InstallCLI():Promise<app.CLIInfo>;
 
