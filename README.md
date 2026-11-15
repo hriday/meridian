@@ -108,6 +108,10 @@ pfSense — vendor auto-detected), **Web-server analyzer** (nginx/Apache/Caddy),
 Meridian ships three themes — **dark**, **light**, and a green-on-black
 **terminal** mode (toggle in the top-right).
 
+![Command palette — press ⌘K, paste a MAC address, and Meridian detects the type and jumps to the right tool (dark theme)](docs/media/palette.png)
+
+<p align="center"><em>Command palette (⌘K / Ctrl-K) — fuzzy-jump to any of the 80+ tools, or paste a value (IP, CIDR, domain, URL, JWT, PEM, MAC, hash) and Meridian detects the type and jumps to the matching tool with it pre-filled. Dark theme.</em></p>
+
 ![Lookup — an entity page for an IP, with registration, routing and AS ownership (dark theme)](docs/media/lookup.png)
 
 <p align="center"><em>Lookup — paste any IP, ASN, prefix or domain and get registration (RDAP), routing (RIPEstat) and AS ownership, with RPKI status. Dark theme.</em></p>
