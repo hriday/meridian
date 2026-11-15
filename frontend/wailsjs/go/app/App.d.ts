@@ -22,6 +22,7 @@ import {dnsprop} from '../models';
 import {dnsx} from '../models';
 import {sysconf} from '../models';
 import {configdiff} from '../models';
+import {discover} from '../models';
 import {emailauth} from '../models';
 import {hibp} from '../models';
 import {httpcheck} from '../models';
@@ -135,6 +136,8 @@ export function DNSQuery(arg1:string,arg2:string,arg3:string):Promise<dnsx.Resul
 export function DNSSystem():Promise<sysconf.Found>;
 
 export function DiffConfigs(arg1:string,arg2:string):Promise<configdiff.Result>;
+
+export function DiscoverLAN(arg1:number):Promise<discover.Result>;
 
 export function EmailAuthCheck(arg1:string,arg2:string):Promise<emailauth.Report>;
 
