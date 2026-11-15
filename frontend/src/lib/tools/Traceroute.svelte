@@ -88,7 +88,7 @@
   <h2>Traceroute (AS-aware)</h2>
   <p class="sub">
     {#if mode === "tcp"}
-      TCP-SYN probes to a port — reaches through firewalls that drop UDP/ICMP traceroute. IPv4 only; needs admin rights (raw sockets).
+      TCP-SYN probes to a port — reaches through firewalls that drop UDP/ICMP traceroute. IPv4 only; runs without admin rights on macOS (Linux needs sudo).
     {:else}
       Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.
     {/if}
