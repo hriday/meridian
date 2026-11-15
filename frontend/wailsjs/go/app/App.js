@@ -322,6 +322,10 @@ export function IdentifyHash(arg1) {
   return window['go']['app']['App']['IdentifyHash'](arg1);
 }
 
+export function IkeProbe(arg1) {
+  return window['go']['app']['App']['IkeProbe'](arg1);
+}
+
 export function InstallCLI() {
   return window['go']['app']['App']['InstallCLI']();
 }

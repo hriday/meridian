@@ -133,6 +133,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runHTTP(args[1:], stdout, stderr)
 	case "http3":
 		return runHTTP3(args[1:], stdout, stderr)
+	case "ike", "vpnprobe":
+		return runIke(args[1:], stdout, stderr)
 	case "whois":
 		return runWhois(args[1:], stdout, stderr)
 	case "fwanalyze":
