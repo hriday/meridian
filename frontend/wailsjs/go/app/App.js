@@ -54,6 +54,10 @@ export function AppVersion() {
   return window['go']['app']['App']['AppVersion']();
 }
 
+export function ApplyReconcileLAN(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['App']['ApplyReconcileLAN'](arg1, arg2, arg3, arg4);
+}
+
 export function AtlasKeyStatus() {
   return window['go']['app']['App']['AtlasKeyStatus']();
 }
@@ -446,6 +450,10 @@ export function RTPSupported() {
   return window['go']['app']['App']['RTPSupported']();
 }
 
+export function ReconcileLAN() {
+  return window['go']['app']['App']['ReconcileLAN']();
+}
+
 export function RulesCatalog() {
   return window['go']['app']['App']['RulesCatalog']();
 }
@@ -596,6 +604,10 @@ export function SyslogStop() {
 
 export function TCPPing(arg1, arg2, arg3) {
   return window['go']['app']['App']['TCPPing'](arg1, arg2, arg3);
+}
+
+export function TCPTraceroute(arg1, arg2) {
+  return window['go']['app']['App']['TCPTraceroute'](arg1, arg2);
 }
 
 export function TLSCheck(arg1) {

@@ -69,6 +69,13 @@ type netfacRec struct {
 	Country string `json:"country"`
 }
 
+// Peering fetches a network's PeeringDB enrichment for asn ("13335" or
+// "AS13335"); (nil, nil) when the ASN isn't listed. Public accessor for callers
+// (e.g. trace enrichment) that want only the peering view, not a full ASN report.
+func (c *Client) Peering(ctx context.Context, asn string) (*Peering, error) {
+	return c.peeringDB(ctx, asn)
+}
+
 // peeringDB fetches a network's PeeringDB enrichment for asn ("13335" or
 // "AS13335"). It returns (nil, nil) when the ASN isn't in PeeringDB, (nil, err)
 // when the primary net fetch fails, and a populated *Peering otherwise. The IX

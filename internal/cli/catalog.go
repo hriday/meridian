@@ -29,6 +29,7 @@ func Catalog() []CommandGroup {
 		{Name: "Internet", Commands: []CommandDoc{
 			{"lookup", "<ip|asn> [--json]", "IP / ASN intelligence"},
 			{"trace", "<host> [--6] [--json]", "traceroute with AS lookups"},
+		{"tcptrace", "<host> <port> [--json]", "TCP-SYN traceroute (through firewalls that drop UDP/ICMP; no sudo on macOS)"},
 			{"bgp", "<prefix|ip> [--json]", "BGP looking glass"},
 			{"tls", "<host[:port]> [--json]", "inspect a server's certificate"},
 			{"certinfo", "[<file>] [--json]", "decode a PEM certificate / CSR (stdin ok)"},
@@ -52,7 +53,7 @@ func Catalog() []CommandGroup {
 		{Name: "Addressing", Commands: []CommandDoc{
 			{"subnet", "<cidr> [--split <prefixlen>] [--json]", "subnet calculator"},
 			{"classify", "<value> [--json]", "classify an address or value"},
-			{"ipspace", "list|export [--file <path>] [--passphrase <pw>]", "IP-space inventory"},
+			{"ipspace", "list|export|reconcile [--file <path>] [--passphrase <pw>]", "IP-space inventory (reconcile: diff vs a live ARP sweep)"},
 		}},
 		{Name: "Local / environment", Commands: []CommandDoc{
 			{"ntp", "<server> [--json]", "query an NTP server"},

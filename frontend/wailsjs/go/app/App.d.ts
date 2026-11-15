@@ -6,6 +6,7 @@ import {ciscopw} from '../models';
 import {fwconfig} from '../models';
 import {tfscan} from '../models';
 import {webconf} from '../models';
+import {lanrecon} from '../models';
 import {app} from '../models';
 import {atlas} from '../models';
 import {dnsbl} from '../models';
@@ -52,11 +53,11 @@ import {svcstatus} from '../models';
 import {subnet} from '../models';
 import {collector} from '../models';
 import {tcpping} from '../models';
+import {trace} from '../models';
 import {tlscheck} from '../models';
 import {tlsscan} from '../models';
 import {totp} from '../models';
 import {threatintel} from '../models';
-import {trace} from '../models';
 import {transcode} from '../models';
 import {voipcalc} from '../models';
 import {whois} from '../models';
@@ -86,6 +87,8 @@ export function AnalyzeTerraform(arg1:string,arg2:string):Promise<tfscan.Analysi
 export function AnalyzeWebServer(arg1:string,arg2:string):Promise<webconf.Analysis>;
 
 export function AppVersion():Promise<string>;
+
+export function ApplyReconcileLAN(arg1:Array<lanrecon.Finding>,arg2:boolean,arg3:boolean,arg4:boolean):Promise<lanrecon.ApplyResult>;
 
 export function AtlasKeyStatus():Promise<app.AtlasKeyStatus>;
 
@@ -283,6 +286,8 @@ export function RTPCapture(arg1:number):Promise<Array<rtp.Stream>>;
 
 export function RTPSupported():Promise<boolean>;
 
+export function ReconcileLAN():Promise<lanrecon.Report>;
+
 export function RulesCatalog():Promise<Array<wordlist.Entry>>;
 
 export function RulesDir():Promise<string>;
@@ -358,6 +363,8 @@ export function SyslogStart(arg1:number):Promise<void>;
 export function SyslogStop():Promise<void>;
 
 export function TCPPing(arg1:string,arg2:number,arg3:number):Promise<tcpping.Result>;
+
+export function TCPTraceroute(arg1:string,arg2:number):Promise<trace.Result>;
 
 export function TLSCheck(arg1:string):Promise<tlscheck.CertReport>;
 

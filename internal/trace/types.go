@@ -26,12 +26,27 @@ type Hop struct {
 
 // Result is a whole traceroute.
 type Result struct {
-	Target  string        `json:"target"`
-	Addr    string        `json:"addr"`
-	Hops    []Hop         `json:"hops"`
-	Reached bool          `json:"reached"`
-	Elapsed time.Duration `json:"elapsed"`
-	Verdict string        `json:"verdict"`
+	Target   string        `json:"target"`
+	Addr     string        `json:"addr"`
+	Hops     []Hop         `json:"hops"`
+	Reached  bool          `json:"reached"`
+	Elapsed  time.Duration `json:"elapsed"`
+	Verdict  string        `json:"verdict"`
+	Networks []NetInfo     `json:"networks,omitempty"` // PeeringDB view of each AS in the path
+}
+
+// NetInfo is the PeeringDB view of one network (AS) seen in the path: how it
+// peers and where, so the path reads as "whose networks did I cross, and are
+// they open to peering / present at exchanges".
+type NetInfo struct {
+	ASN      string   `json:"asn"`      // "AS13335"
+	Owner    string   `json:"owner"`    // AS owner (from the hop annotation)
+	Policy   string   `json:"policy"`   // open / selective / restrictive
+	Ratio    string   `json:"ratio"`    // mostly outbound / balanced / …
+	IXCount  int      `json:"ixCount"`  // number of internet-exchange presences
+	FacCount int      `json:"facCount"` // number of facility presences
+	IXPs     []string `json:"ixps"`     // notable IX names
+	IRRASSet string   `json:"irrAsSet"` // IRR AS-SET macro, if published
 }
 
 // rttStats returns the min, mean, and max of the non-timeout probe times

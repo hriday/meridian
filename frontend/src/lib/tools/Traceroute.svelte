@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
-  import { Traceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
+  import { Traceroute, TCPTraceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
 
   let target = "cloudflare.com";
   let useV6 = false;
+  let mode: "icmp" | "tcp" = "icmp";
+  let port = 443;
   let running = false;
   let error = "";
   let hops: any[] = [];
@@ -57,7 +59,10 @@
     const handler = (h: any) => (hops = [...hops, h]);
     EventsOn("trace:hop", handler);
     try {
-      result = await Traceroute(target.trim(), useV6);
+      result =
+        mode === "tcp"
+          ? await TCPTraceroute(target.trim(), Number(port) || 443)
+          : await Traceroute(target.trim(), useV6);
       if (result?.hops) hops = result.hops; // authoritative, fully annotated
     } catch (e) {
       error = String(e);
@@ -81,14 +86,28 @@
 
 <div class="tool">
   <h2>Traceroute (AS-aware)</h2>
-  <p class="sub">Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.</p>
+  <p class="sub">
+    {#if mode === "tcp"}
+      TCP-SYN probes to a port — reaches through firewalls that drop UDP/ICMP traceroute. IPv4 only; runs without admin rights on macOS (Linux needs sudo).
+    {:else}
+      Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.
+    {/if}
+  </p>
 
   <form on:submit|preventDefault={start} class="row">
     <input class="field mono" bind:value={target} placeholder="cloudflare.com  or  104.16.123.45" autocomplete="off" spellcheck="false" aria-label="Target host" />
-    <select class="sel" bind:value={useV6} aria-label="IP version">
-      <option value={false}>IPv4</option>
-      <option value={true}>IPv6</option>
+    <select class="sel" bind:value={mode} aria-label="Probe mode">
+      <option value="icmp">ICMP</option>
+      <option value="tcp">TCP</option>
     </select>
+    {#if mode === "tcp"}
+      <input class="field mono port" type="number" min="1" max="65535" bind:value={port} aria-label="TCP port" />
+    {:else}
+      <select class="sel" bind:value={useV6} aria-label="IP version">
+        <option value={false}>IPv4</option>
+        <option value={true}>IPv6</option>
+      </select>
+    {/if}
     {#if running}
       <button type="button" class="go stop" on:click={stop}>Stop</button>
     {:else}
@@ -105,6 +124,22 @@
       {#each asPath as a, i}
         {#if i > 0}<span class="arrow">→</span>{/if}
         <span class="asnode"><span class="n mono">AS{a.asn}</span><span class="o">{a.asOwner || ""}</span></span>
+      {/each}
+    </div>
+  {/if}
+
+  {#if result?.networks?.length}
+    <div class="nets">
+      <div class="netlabel">Networks in path · PeeringDB</div>
+      {#each result.networks as n}
+        <div class="net">
+          <span class="nasn mono">{n.asn}</span>
+          <span class="nowner">{n.owner || ""}</span>
+          {#if n.policy}<span class="pol {n.policy}">{n.policy}</span>{/if}
+          {#if n.ixCount}<span class="chip">{n.ixCount} IX</span>{/if}
+          {#if n.facCount}<span class="chip">{n.facCount} fac</span>{/if}
+          {#if n.ixps && n.ixps.length}<span class="ixps mono">{n.ixps.slice(0, 4).join(" · ")}</span>{/if}
+        </div>
       {/each}
     </div>
   {/if}
@@ -142,6 +177,7 @@
   .row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .field { flex: 1; min-width: 200px; background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 0.9rem; outline: none; }
   .field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .field.port { flex: 0 0 auto; min-width: 0; width: 92px; }
   .sel { background: var(--well); border: 1px solid var(--field-border); border-radius: 7px; padding: 9px 10px; color: var(--text); font: inherit; font-size: 0.86rem; cursor: pointer; }
   .go { background: var(--btn); border: 1px solid var(--btn-border); color: var(--on-accent); border-radius: 7px; padding: 0 16px; font: inherit; font-size: 0.9rem; cursor: pointer; }
   .go.stop { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
@@ -152,6 +188,18 @@
   .asnode { display: flex; flex-direction: column; gap: 1px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 7px; }
   .asnode .n { font-size: 0.78rem; color: var(--accent); }
   .asnode .o { font-size: 0.64rem; color: var(--text-dim); }
+  .nets { background: var(--card); border: 1px solid var(--border-soft); border-radius: 9px; padding: 10px 13px; margin-bottom: 14px; }
+  .netlabel { font-size: 0.6rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); margin-bottom: 7px; }
+  .net { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 4px 0; font-size: 0.8rem; }
+  .net + .net { border-top: 1px solid var(--border-soft); }
+  .nasn { color: var(--accent); min-width: 72px; }
+  .nowner { color: var(--text); flex: 0 1 auto; }
+  .pol { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-dim); }
+  .pol.Open, .pol.open { background: var(--accent); color: var(--on-accent, #052e2b); border-color: transparent; }
+  .pol.Selective, .pol.selective { background: var(--well); color: var(--text); }
+  .pol.Restrictive, .pol.restrictive { background: var(--well); color: var(--text-dim); }
+  .chip { font-size: 0.64rem; background: var(--well); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--text-dim); }
+  .ixps { font-size: 0.66rem; color: var(--text-dim); }
   .arrow { color: var(--text-faint); }
   table.tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   .tbl th { text-align: left; color: var(--text-dim); font-weight: 500; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .04em; padding: 7px 10px; border-bottom: 1px solid var(--border); }

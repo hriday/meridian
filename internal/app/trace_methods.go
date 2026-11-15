@@ -23,6 +23,21 @@ func (a *App) Traceroute(target string, useV6 bool) (trace.Result, error) {
 	})
 }
 
+// TCPTraceroute traces the path to target over TCP to port (IPv4), reaching
+// through middleboxes that drop UDP/ICMP traceroute. It emits the same
+// "trace:hop" event per hop. Needs elevated privileges (raw sockets).
+func (a *App) TCPTraceroute(target string, port int) (trace.Result, error) {
+	ctx, cancel := context.WithCancel(a.lookupCtx())
+	gen := a.startTrace(cancel)
+	defer a.endTrace(gen)
+
+	return tracerun.RunTCP(ctx, target, port, func(h trace.Hop) {
+		if a.ctx != nil {
+			wruntime.EventsEmit(a.ctx, "trace:hop", h)
+		}
+	})
+}
+
 // StopTrace cancels the trace currently in flight, if any.
 func (a *App) StopTrace() {
 	a.traceMu.Lock()

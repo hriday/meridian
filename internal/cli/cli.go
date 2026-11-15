@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -99,6 +100,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runDNS(args[1:], stdout, stderr)
 	case "trace":
 		return runTrace(args[1:], stdout, stderr)
+	case "tcptrace":
+		return runTCPTrace(args[1:], stdout, stderr)
 	case "ping":
 		return runPing(args[1:], stdout, stderr)
 	case "tcpping":
@@ -709,6 +712,11 @@ func runTrace(args []string, stdout, stderr io.Writer) int {
 	if *asJSON {
 		return writeJSON(stdout, stderr, r)
 	}
+	printTrace(stdout, r)
+	return 0
+}
+
+func printTrace(stdout io.Writer, r trace.Result) {
 	for _, h := range r.Hops {
 		host := h.Addr
 		if h.Timeout {
@@ -731,6 +739,54 @@ func runTrace(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "%2d  %-40s %-26s %s\n", h.TTL, host, as, rtt)
 	}
 	fmt.Fprintln(stdout, trace.Verdict(r))
+
+	if len(r.Networks) > 0 {
+		fmt.Fprintln(stdout, "\nNetworks in path (PeeringDB):")
+		for _, n := range r.Networks {
+			line := fmt.Sprintf("  %-9s %s", n.ASN, n.Owner)
+			if n.Policy != "" {
+				line += "  · peering " + n.Policy
+			}
+			if n.IXCount > 0 {
+				line += fmt.Sprintf("  · %d IX", n.IXCount)
+			}
+			if n.FacCount > 0 {
+				line += fmt.Sprintf("  · %d fac", n.FacCount)
+			}
+			fmt.Fprintln(stdout, line)
+			if len(n.IXPs) > 0 {
+				fmt.Fprintf(stdout, "      IX: %s\n", strings.Join(n.IXPs, ", "))
+			}
+		}
+	}
+}
+
+func runTCPTrace(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("tcptrace", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	asJSON := fs.Bool("json", false, "output JSON")
+	pos, ok := parsePositionals(fs, args)
+	if !ok {
+		return 2
+	}
+	if len(pos) != 2 {
+		fmt.Fprintf(stderr, "tcptrace needs a host and a port\n%s", usage)
+		return 2
+	}
+	port, err := strconv.Atoi(pos[1])
+	if err != nil || port < 1 || port > 65535 {
+		fmt.Fprintf(stderr, "invalid port %q\n", pos[1])
+		return 2
+	}
+	r, err := tracerun.RunTCP(context.Background(), pos[0], port, nil)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if *asJSON {
+		return writeJSON(stdout, stderr, r)
+	}
+	printTrace(stdout, r)
 	return 0
 }
 
@@ -758,10 +814,13 @@ func traceRTT(d []time.Duration) (min, avg, max time.Duration) {
 
 func runIPSpace(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintf(stderr, "ipspace needs a subcommand (list or export)\n%s", usage)
+		fmt.Fprintf(stderr, "ipspace needs a subcommand (list, export, or reconcile)\n%s", usage)
 		return 2
 	}
 	sub := args[0]
+	if sub == "reconcile" {
+		return runReconcile(args[1:], stdout, stderr)
+	}
 	fs := flag.NewFlagSet("ipspace", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	file := fs.String("file", ipspace.DefaultPath(), "store file path")
