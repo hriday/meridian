@@ -39,8 +39,10 @@ website, Meridian does it locally so the data never leaves your machine.
   host-key and MAC algorithms, its host-key fingerprints, and whether its key
   exchange is post-quantum. **Cert expiry** — bulk days-to-expiry. **Let's
   Encrypt** — one-shot DNS-01 issuance for firewalled sites.
-- **HTTP check**, **Security headers** (OWASP-mapped), **Service status**
-  (Statuspage outage check), **WHOIS**, **Subdomains** (Certificate Transparency).
+- **HTTP check**, **HTTP/3 (QUIC) reachability** (handshake + Alt-Svc — tells
+  "no h3 support" from "h3 blocked on your path"), **Security headers**
+  (OWASP-mapped), **Service status** (Statuspage outage check), **WHOIS**,
+  **Subdomains** (Certificate Transparency).
 - **DNS blocklist** (DNSBL), **DNS audit** (SPF/DMARC/DNSSEC), **DNS propagation**
   (one record across a dozen global resolvers), **Email auth** (SPF/DKIM/DMARC).
 - **SMTP probe** (banner / STARTTLS / cert), **SIP OPTIONS ping** (is VoIP

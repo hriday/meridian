@@ -36,6 +36,7 @@ func Catalog() []CommandGroup {
 			{"cipherscan", "<host[:port]> [--json]", "TLS versions + cipher suites, graded"},
 			{"sshaudit", "<host[:port]> [--json]", "SSH algorithms + host keys + post-quantum readiness"},
 			{"http", "<url> [--json]", "HTTP(S) check"},
+			{"http3", "<host> [--port 443] [--json]", "HTTP/3 (QUIC) reachability — handshake + Alt-Svc"},
 			{"sechdr", "<url> [--json]", "security headers (OWASP-mapped)"},
 			{"whois", "<domain|ip|asn> [--json]", "whois"},
 			{"subdomains", "<domain> [--json]", "subdomains via Certificate Transparency"},

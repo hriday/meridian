@@ -106,6 +106,7 @@ cat hosts.txt | meridian-cli batch cipherscan --json
 | Cipher scan | TLS versions + ciphers, graded, with post-quantum readiness | `cipherscan` |
 | SSH audit | SSH algorithms, host keys, post-quantum readiness | `sshaudit` |
 | HTTP check | HTTP(S) request/response check | `http` |
+| HTTP/3 reachability | QUIC handshake + Alt-Svc — is HTTP/3 reachable, or blocked on your path? | `http3` |
 | Security headers | OWASP-mapped security header review | `sechdr` |
 | WHOIS | domain / IP / ASN whois | `whois` |
 | Subdomains | subdomains via Certificate Transparency | `subdomains` |

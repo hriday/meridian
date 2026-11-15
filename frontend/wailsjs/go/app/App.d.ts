@@ -26,6 +26,7 @@ import {configdiff} from '../models';
 import {discover} from '../models';
 import {emailauth} from '../models';
 import {hibp} from '../models';
+import {h3probe} from '../models';
 import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {hashid} from '../models';
@@ -150,6 +151,8 @@ export function EmailBreachCheck(arg1:string):Promise<Array<string>>;
 export function HIBPBreaches():Promise<Array<hibp.Breach>>;
 
 export function HIBPLatestBreach():Promise<hibp.Breach>;
+
+export function HTTP3Probe(arg1:string,arg2:number):Promise<h3probe.Result>;
 
 export function HTTPCheck(arg1:string):Promise<httpcheck.Result>;
 

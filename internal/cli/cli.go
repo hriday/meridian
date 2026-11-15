@@ -131,6 +131,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runTLS(args[1:], stdout, stderr)
 	case "http":
 		return runHTTP(args[1:], stdout, stderr)
+	case "http3":
+		return runHTTP3(args[1:], stdout, stderr)
 	case "whois":
 		return runWhois(args[1:], stdout, stderr)
 	case "fwanalyze":
