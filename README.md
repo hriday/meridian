@@ -43,8 +43,9 @@ website, Meridian does it locally so the data never leaves your machine.
   "no h3 support" from "h3 blocked on your path"), **Security headers**
   (OWASP-mapped), **Service status** (Statuspage outage check), **WHOIS**,
   **Subdomains** (Certificate Transparency).
-- **DNS blocklist** (DNSBL), **DNS audit** (SPF/DMARC/DNSSEC), **DNS propagation**
-  (one record across a dozen global resolvers), **Email auth** (SPF/DKIM/DMARC).
+- **DNS blocklist** (DNSBL), **DNS audit** (SPF/DMARC/CAA/DNSSEC), **Zone transfer**
+  (AXFR exposure), **Open resolver** test, **DNS propagation** (one record across a
+  dozen global resolvers), **Email auth** (SPF/DKIM/DMARC).
 - **SMTP probe** (banner / STARTTLS / cert), **SIP OPTIONS ping** (is VoIP
   signaling up?), and **STUN** (your public IP + NAT type, symmetric-NAT warning).
 - **IKE / IPsec probe** (IKEv2 VPN responder — accepted proposal + NAT-T, UDP/500)

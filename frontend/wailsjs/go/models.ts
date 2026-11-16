@@ -534,6 +534,67 @@ export namespace atlas {
 
 }
 
+export namespace axfr {
+	
+	export class NSResult {
+	    nameserver: string;
+	    status: string;
+	    records?: number;
+	    sample?: string[];
+	    detail?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new NSResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.nameserver = source["nameserver"];
+	        this.status = source["status"];
+	        this.records = source["records"];
+	        this.sample = source["sample"];
+	        this.detail = source["detail"];
+	    }
+	}
+	export class Report {
+	    domain: string;
+	    nameservers: NSResult[];
+	    exposed: boolean;
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.domain = source["domain"];
+	        this.nameservers = this.convertValues(source["nameservers"], NSResult);
+	        this.exposed = source["exposed"];
+	        this.summary = source["summary"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace certexpiry {
 	
 	export class Result {
@@ -1087,6 +1148,7 @@ export namespace ctlog {
 	    certs: number;
 	    firstSeen: string;
 	    lastSeen: string;
+	    stale: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Subdomain(source);
@@ -1099,6 +1161,7 @@ export namespace ctlog {
 	        this.certs = source["certs"];
 	        this.firstSeen = source["firstSeen"];
 	        this.lastSeen = source["lastSeen"];
+	        this.stale = source["stale"];
 	    }
 	}
 
@@ -3280,6 +3343,37 @@ export namespace ntp {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace openresolver {
+	
+	export class Report {
+	    resolver: string;
+	    probe: string;
+	    open: boolean;
+	    recursionAvailable: boolean;
+	    answered: boolean;
+	    rcode: string;
+	    responseBytes: number;
+	    summary: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.resolver = source["resolver"];
+	        this.probe = source["probe"];
+	        this.open = source["open"];
+	        this.recursionAvailable = source["recursionAvailable"];
+	        this.answered = source["answered"];
+	        this.rcode = source["rcode"];
+	        this.responseBytes = source["responseBytes"];
+	        this.summary = source["summary"];
+	    }
 	}
 
 }

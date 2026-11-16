@@ -76,10 +76,11 @@ type rbProfile struct {
 var rbProfiles = []rbProfile{
 	{
 		id: "audit-domain", name: "Audit Domain",
-		desc: "Registration, DNS posture, email auth, subdomains, TLS ciphers and HTTP security headers for a domain.",
+		desc: "Registration, DNS posture, zone-transfer exposure, email auth, subdomains, TLS ciphers and HTTP security headers for a domain.",
 		steps: []rbStep{
 			{"lookup", []string{"{t}"}},
 			{"dnsaudit", []string{"{t}"}},
+			{"axfr", []string{"{t}"}},
 			{"emailauth", []string{"{t}"}},
 			{"subdomains", []string{"{t}"}},
 			{"cipherscan", []string{"{t}"}},
@@ -88,11 +89,12 @@ var rbProfiles = []rbProfile{
 	},
 	{
 		id: "org-recon", name: "Org Recon",
-		desc: "Everything about an organization from its domain: registration, DNS posture, email auth, DNS propagation, subdomains, TLS ciphers, HTTP/3, security headers, and certificate expiry.",
+		desc: "Everything about an organization from its domain: registration, DNS posture, zone-transfer exposure, email auth, DNS propagation, subdomains, TLS ciphers, HTTP/3, security headers, and certificate expiry.",
 		steps: []rbStep{
 			{"whois", []string{"{t}"}},
 			{"lookup", []string{"{t}"}},
 			{"dnsaudit", []string{"{t}"}},
+			{"axfr", []string{"{t}"}},
 			{"emailauth", []string{"{t}"}},
 			{"dnspropagation", []string{"{t}"}},
 			{"subdomains", []string{"{t}"}},
@@ -123,13 +125,14 @@ var rbProfiles = []rbProfile{
 	},
 	{
 		id: "triage-host", name: "Triage Host",
-		desc: "Reachability, latency, path, TLS and common open ports for a host.",
+		desc: "Reachability, latency, path, TLS, common open ports and open-resolver exposure for a host.",
 		steps: []rbStep{
 			{"ping", []string{"{t}", "--count", "3"}},
 			{"tcpping", []string{"{t}", "443"}},
 			{"trace", []string{"{t}"}},
 			{"tls", []string{"{t}"}},
 			{"portscan", []string{"{t}", "--common"}},
+			{"openresolver", []string{"{t}"}},
 		},
 	},
 }
