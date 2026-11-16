@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PacketScan } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let seconds = 8;
   let loading = false;
@@ -42,6 +43,13 @@
     group (e.g. Wireshark's <span class="mono">ChmodBPF</span>) — if a capture just worked, you already have it, no admin
     needed. On a switched LAN you only see traffic you're in the path of.
   </p>
+
+  <ToolHelp sudo="needs sudo or BPF-group access">
+    A snapshot, not every packet. <strong>Top talkers</strong> are the busiest hosts — an unexpected one can mean
+    something is phoning home. A spike in <strong>TCP resets / retransmits</strong> points to a flaky or congested path
+    (or a firewall cutting connections mid-stream). <strong>DNS errors</strong> and the <strong>TLS SNIs</strong> show what
+    names are being resolved and reached — handy for spotting what a device actually talks to.
+  </ToolHelp>
 
   <div class="row">
     <label>Capture for <input class="field" type="number" min="1" max="60" bind:value={seconds} /> s</label>
