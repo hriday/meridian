@@ -65,3 +65,20 @@ func TestGetJSONErrorsOnBadBody(t *testing.T) {
 	err := c.GetJSON(context.Background(), "https://x/bad", &out)
 	require.Error(t, err)
 }
+
+func TestPeeringNotListedOn404(t *testing.T) {
+	d := doerFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResp(404, `{"message":"Not Found"}`), nil
+	})
+	p, err := lookup.NewClient(d, time.Minute).Peering(context.Background(), "399098")
+	require.NoError(t, err, "a 404 means the ASN isn't listed, not an outage")
+	require.Nil(t, p)
+}
+
+func TestPeeringErrorsOnOutage(t *testing.T) {
+	d := doerFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResp(503, `unavailable`), nil
+	})
+	_, err := lookup.NewClient(d, time.Minute).Peering(context.Background(), "13335")
+	require.Error(t, err, "a real outage (5xx) is still surfaced as an error")
+}

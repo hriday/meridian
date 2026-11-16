@@ -1048,6 +1048,8 @@ func printASNReport(stdout io.Writer, r lookup.ASNReport) {
 		reportRow(stdout, "Website", p.Website)
 		reportRow(stdout, "IXPs", peeringPresence(len(p.IXPs), "IXP", "IXPs", topIXNames(p.IXPs)))
 		reportRow(stdout, "Facilities", peeringPresence(len(p.Facilities), "facility", "facilities", topFacNames(p.Facilities)))
+	} else if r.PeeringSrc.Label != "" && r.PeeringSrc.Err == "" {
+		reportRow(stdout, "Peering", "not listed in PeeringDB (expected for non-IX networks)")
 	}
 	printSourceErrs(stdout, r.RoutingSrc, r.RegistrySrc, r.PeeringSrc)
 }

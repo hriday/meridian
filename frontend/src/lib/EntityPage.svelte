@@ -236,6 +236,11 @@
             <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
             <p class="err">PeeringDB was unavailable: {data.peeringSrc.err}</p>
           </div>
+        {:else if data.peeringSrc}
+          <div class="card span">
+            <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
+            <p class="notlisted">Not listed in PeeringDB — networks that aren't present at an internet exchange usually aren't, so this is expected for most enterprise/end-user ASNs.</p>
+          </div>
         {/if}
       </div>
     {:else}
@@ -359,6 +364,7 @@
   .rec .rt { color: var(--accent); width: 60px; }
   .rec .rv { word-break: break-all; }
   .err { color: var(--warn-text); font-size: 0.78rem; margin: 8px 0 0; }
+  .notlisted { color: var(--text-dim); font-size: 0.78rem; margin: 8px 0 0; line-height: 1.5; }
   .cap { color: var(--text-dim); font-size: 0.78rem; margin: 6px 0 0; }
   .pblock { margin-top: 12px; }
   .phead { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); margin-bottom: 6px; }
