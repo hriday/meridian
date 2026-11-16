@@ -16,6 +16,49 @@ var sensitivePorts = map[int]string{
 
 // check runs the AWS exposure/misconfiguration checks over the parsed resources
 // and returns a single Analysis (findings sorted by severity, counts filled).
+// fixFor returns the concrete Terraform remediation for a finding title. Titles
+// are stable strings defined in this file, so a map keeps the fix next to the
+// problem without threading an extra argument through every add() call.
+func fixFor(title string) string {
+	switch title {
+	case "Database is publicly accessible":
+		return "Set publicly_accessible = false and place the instance in private subnets reached via VPC peering/VPN."
+	case "Database storage encryption not confirmed":
+		return "Set storage_encrypted = true (with a kms_key_id) so data is encrypted at rest."
+	case "S3 bucket is public":
+		return "Set acl = \"private\" and attach an aws_s3_bucket_public_access_block with all four block_public_* = true."
+	case "S3 public access block is weakened":
+		return "Set block_public_acls, block_public_policy, ignore_public_acls and restrict_public_buckets all = true."
+	case "Instance gets a public IP":
+		return "Set associate_public_ip_address = false; reach the instance via a bastion or SSM Session Manager in private subnets."
+	case "EBS volume is not encrypted":
+		return "Set encrypted = true on the volume (or enable EBS encryption-by-default for the account/region)."
+	case "Firewall open to the internet":
+		return "Replace the 0.0.0.0/0 CIDR with your office/VPN range or a referenced security group."
+	case "Firewall exposes a sensitive port", "NSG rule exposes a sensitive port":
+		return "Don't expose admin ports (SSH/RDP/DB) to the internet — use a bastion / SSM / Azure Bastion and scope the source to known IPs."
+	case "Storage bucket is public": // GCS
+		return "Remove the allUsers / allAuthenticatedUsers IAM member from the bucket binding."
+	case "Cloud SQL open to the internet":
+		return "Drop the 0.0.0.0/0 authorized network; use Private Service Connect or the Cloud SQL Auth Proxy."
+	case "Instance gets an external IP":
+		return "Remove the access_config {} block so no external IP is assigned; reach the VM via IAP or a bastion."
+	case "NSG rule open to the internet":
+		return "Restrict source_address_prefix from * / Internet to your specific IP ranges."
+	case "Storage account permits public blobs":
+		return "Set allow_nested_items_to_be_public = false on the storage account."
+	case "Storage container is public":
+		return "Set container_access_type = \"private\"."
+	case "Managed database allows public network access":
+		return "Set public_network_access_enabled = false and connect via a private endpoint."
+	case "Database firewall allows the whole internet":
+		return "Scope the firewall rule to known IPs — don't span 0.0.0.0–255.255.255.255."
+	case "Public IP allocated":
+		return "Only allocate a public IP when the resource must be internet-facing; otherwise remove it."
+	}
+	return ""
+}
+
 func check(resources []rawResource) Analysis {
 	a := newAnalysis("")
 	sgCount := 0
@@ -28,7 +71,7 @@ func check(resources []rawResource) Analysis {
 	add := func(sev, cat, title, detail string, r rawResource) {
 		a.Findings = append(a.Findings, Finding{
 			Severity: sev, Category: cat, Title: title, Detail: detail,
-			Resource: r.typ + "." + r.name, File: r.file, Line: r.line,
+			Fix: fixFor(title), Resource: r.typ + "." + r.name, File: r.file, Line: r.line,
 		})
 	}
 

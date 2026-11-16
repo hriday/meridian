@@ -56,7 +56,7 @@ func spfVerdict(apexTXT []string) (Status, string, []string) {
 	}
 	switch {
 	case len(spf) == 0:
-		return StatusMissing, "No SPF record — senders aren't constrained, so anyone can spoof mail from this domain.", nil
+		return StatusMissing, "No SPF record — senders aren't constrained, so anyone can spoof mail from this domain. Publish a TXT record like \"v=spf1 include:<your-mail-provider> -all\" (e.g. include:_spf.google.com).", nil
 	case len(spf) > 1:
 		return StatusWarn, "More than one v=spf1 record — SPF is invalid when duplicated (RFC 7208); keep exactly one.", spf
 	}
@@ -100,7 +100,7 @@ func dmarcVerdict(txt []string) (Status, string, []string) {
 		}
 	}
 	if len(dmarc) == 0 {
-		return StatusMissing, "No DMARC record — nothing tells receivers what to do with spoofed mail; add one at _dmarc.", nil
+		return StatusMissing, "No DMARC record — nothing tells receivers what to do with spoofed mail. Publish a TXT record at _dmarc like \"v=DMARC1; p=reject; rua=mailto:dmarc@<domain>\" (start at p=none to monitor, then tighten).", nil
 	}
 	switch dmarcPolicy(dmarc[0]) {
 	case "reject":
@@ -132,7 +132,7 @@ func dmarcPolicy(record string) string {
 // "letsencrypt.org"`.
 func caaVerdict(records []string) (Status, string, []string) {
 	if len(records) == 0 {
-		return StatusWarn, "No CAA record — any certificate authority may issue a certificate for this domain. Add CAA to limit issuance to the CAs you actually use.", nil
+		return StatusWarn, "No CAA record — any certificate authority may issue a certificate for this domain. Add a CAA record to limit issuance to the CAs you use, e.g. 0 issue \"letsencrypt.org\" (plus 0 iodef \"mailto:security@<domain>\").", nil
 	}
 	var issuers []string
 	seen := map[string]bool{}

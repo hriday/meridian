@@ -55,6 +55,7 @@ type Report struct {
 	CertSignature string     `json:"certSignature"` // leaf cert signature algorithm (classical today)
 	Grade         string     `json:"grade"`         // A–F
 	Findings      []string   `json:"findings"`
+	Remediation   []string   `json:"remediation,omitempty"` // concrete TLS config fixes to raise the grade
 	Summary       string     `json:"summary"`
 }
 
@@ -134,6 +135,7 @@ func Scan(ctx context.Context, hs Handshaker, host string) (Report, error) {
 	if supported(r.Protocols, tls.VersionTLS13) && !r.PQ.Supported {
 		r.Findings = append(r.Findings, "No post-quantum key exchange — recorded traffic is exposed to harvest-now-decrypt-later. TLS PQ (X25519MLKEM768) is still rolling out, so this is common today; enable it when your stack supports it.")
 	}
+	r.Remediation = remediate(r.Protocols, r.Ciphers)
 	r.Summary = summarize(r)
 	return r, nil
 }
@@ -224,6 +226,34 @@ func grade(protos []Protocol, ciphers []Cipher) (string, []string) {
 	default:
 		return "A", findings
 	}
+}
+
+// remediate returns concrete TLS server directives that would raise the grade,
+// derived from the weaknesses actually present. Empty when nothing needs fixing.
+func remediate(protos []Protocol, ciphers []Cipher) []string {
+	var out []string
+	needProto := !supported(protos, tls.VersionTLS13)
+	for _, p := range protos {
+		if p.Supported && p.Legacy {
+			needProto = true
+		}
+	}
+	if needProto {
+		out = append(out, "Restrict protocols to TLS 1.2+ and enable 1.3 (nginx):\n    ssl_protocols TLSv1.2 TLSv1.3;")
+	}
+	weakCipher := false
+	for _, c := range ciphers {
+		if !c.Secure {
+			weakCipher = true
+		}
+	}
+	if weakCipher {
+		out = append(out, "Offer only AEAD suites with forward secrecy, dropping CBC/broken ciphers (nginx):\n    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;\n    ssl_prefer_server_ciphers on;")
+	}
+	if len(out) > 0 {
+		out = append(out, "Then validate and reload: sudo nginx -t && sudo systemctl reload nginx")
+	}
+	return out
 }
 
 func summarize(r Report) string {

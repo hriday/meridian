@@ -80,6 +80,12 @@
         </div>
       {/each}
     </div>
+    {#if rep.remediation && rep.remediation.length}
+      <div class="improve">
+        <div class="ih">How to improve — toward grade A</div>
+        {#each rep.remediation as s}<pre class="fix">{s}</pre>{/each}
+      </div>
+    {/if}
     <p class="foot">OWASP tags reference the <a href="https://owasp.org/Top10/" target="_blank" rel="noreferrer">OWASP Top 10 (2021)</a>. Good headers reduce risk but aren't a full assessment.</p>
   {/if}
 </div>
@@ -110,5 +116,8 @@
   .howasp { margin-left: auto; font-size: 0.68rem; color: var(--text-faint, var(--text-dim)); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; }
   .hval { font-size: 0.76rem; color: var(--text-dim); margin-top: 4px; overflow-wrap: anywhere; }
   .hnote { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; line-height: 1.5; }
+  .improve { max-width: 820px; margin-top: 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 11px; padding: 10px 14px; background: var(--card); }
+  .improve .ih { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .improve .fix { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; color: var(--text); background: var(--well); border-radius: 6px; padding: 7px 10px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
   .foot { max-width: 820px; font-size: 0.74rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; }
 </style>

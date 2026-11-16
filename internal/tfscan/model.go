@@ -122,6 +122,7 @@ type Finding struct {
 	Category string `json:"category"` // exposure | encryption | best-practice
 	Title    string `json:"title"`
 	Detail   string `json:"detail"`
+	Fix      string `json:"fix,omitempty"` // concrete remediation for this finding
 	Resource string `json:"resource"`
 	File     string `json:"file"`
 	Line     int    `json:"line"`

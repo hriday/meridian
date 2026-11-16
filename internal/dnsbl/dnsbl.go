@@ -83,6 +83,22 @@ func mustCIDR(s string) *net.IPNet {
 // classify maps the A-record answer IPs of a DNSBL query to a status and a
 // plain-language note. The error band (127.255.255.0/24) is checked before the
 // listing range so a refused query is never read as a listing.
+// delistingHint returns the remediation for an IP found on a blocklist: fix the
+// cause, then request removal at the list operator's page.
+func delistingHint(name string) string {
+	url := map[string]string{
+		"Spamhaus":  "check.spamhaus.org",
+		"SpamCop":   "spamcop.net/bl.shtml",
+		"Barracuda": "barracudacentral.org/rbl/removal-request",
+		"DroneBL":   "dronebl.org/lookup",
+	}[name]
+	base := "To clear it: fix the root cause first (open relay, compromised host, bad rDNS/PTR, missing SPF/DKIM), then request delisting"
+	if url != "" {
+		return base + " at " + url + "."
+	}
+	return base + " on the list operator's removal page."
+}
+
 func classify(codes []string) (Status, string) {
 	if len(codes) == 0 {
 		return StatusClean, ""
@@ -198,6 +214,7 @@ func Check(ctx context.Context, ip, resolver string, zones []Zone, timeout time.
 				}
 				l.Reason = strings.Join(reasons, " ")
 			}
+			l.Note = delistingHint(z.Name)
 		}
 		rep.Listings = append(rep.Listings, l)
 	}

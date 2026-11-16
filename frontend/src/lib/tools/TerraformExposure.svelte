@@ -148,6 +148,7 @@
             <div class="fbody">
               <div class="ftitle">{f.title}</div>
               <div class="fdetail">{f.detail}</div>
+              {#if f.fix}<div class="ffix"><span class="fixlabel">Fix</span> {f.fix}</div>{/if}
               <div class="fres mono">{f.resource}</div>
             </div>
           </div>
@@ -236,6 +237,8 @@
   .sev.info { color: var(--text-dim); background: color-mix(in srgb, var(--text-dim) 14%, transparent); }
   .ftitle { color: var(--text-strong); font-weight: 600; font-size: 0.86rem; }
   .fdetail { color: var(--text-dim); font-size: 0.79rem; margin-top: 2px; }
+  .ffix { color: var(--text); font-size: 0.79rem; margin-top: 5px; line-height: 1.45; }
+  .fixlabel { display: inline-block; font-size: 0.62rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; margin-right: 6px; vertical-align: 1px; }
   .fres { color: var(--accent); font-size: 0.74rem; margin-top: 2px; }
 
   .tbl { overflow-x: auto; }

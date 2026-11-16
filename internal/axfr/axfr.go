@@ -41,7 +41,8 @@ type NSResult struct {
 type Report struct {
 	Domain      string     `json:"domain"`
 	Nameservers []NSResult `json:"nameservers"`
-	Exposed     bool       `json:"exposed"` // any nameserver allowed the transfer
+	Exposed     bool       `json:"exposed"`               // any nameserver allowed the transfer
+	Remediation []string   `json:"remediation,omitempty"` // how to close an exposed transfer
 	Summary     string     `json:"summary"`
 }
 
@@ -85,6 +86,13 @@ func Test(ctx context.Context, domain, resolver string) (Report, error) {
 		rep.Nameservers = append(rep.Nameservers, classify(ns, n, sample, terr))
 	}
 	rep.Exposed = countExposed(rep.Nameservers) > 0
+	if rep.Exposed {
+		rep.Remediation = []string{
+			"Deny transfers to the public — BIND, in named.conf:\n    options { allow-transfer { none; }; };\n  then allow only your secondaries per zone:\n    zone \"" + domain + "\" { allow-transfer { <secondary-ip>; <secondary-ip>; }; };",
+			"On other servers, restrict AXFR to your secondary nameservers' IPs (Knot: acl + remote; PowerDNS: allow-axfr-ips; NSD: provide-xfr), and prefer TSIG keys over IP allow-lists.",
+			"Then reload the nameserver and re-test.",
+		}
+	}
 	rep.Summary = summarize(rep)
 	return rep, nil
 }
