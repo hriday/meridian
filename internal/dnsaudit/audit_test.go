@@ -18,6 +18,7 @@ type serverOpts struct {
 	ad         bool // set the AuthenticatedData (DNSSEC) flag
 	splitSPF   bool // apex SPF returned as a multi-string TXT split before -all
 	nullMX     bool // MX is a null MX (0 .)
+	noCAA      bool // CAA query returns NOERROR with no records
 }
 
 // auditServer starts a DNS server answering a healthy example domain, tweaked
@@ -61,6 +62,11 @@ func auditServer(t *testing.T, opts serverOpts) string {
 				break
 			}
 			m.Answer = []mdns.RR{&mdns.TXT{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeTXT, Ttl: 3600}, Txt: []string{"v=spf1 -all"}}}
+		case q.Qtype == mdns.TypeCAA:
+			if opts.noCAA {
+				break // NOERROR, no records
+			}
+			m.Answer = []mdns.RR{&mdns.CAA{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeCAA, Ttl: 3600}, Flag: 0, Tag: "issue", Value: "letsencrypt.org"}}
 		default:
 			m.Rcode = mdns.RcodeNameError
 		}
@@ -87,7 +93,7 @@ func TestAuditHealthy(t *testing.T) {
 	addr := auditServer(t, serverOpts{ad: true})
 	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
 	require.NoError(t, err)
-	for _, name := range []string{"Nameservers", "Mail (MX)", "SPF", "DMARC", "DNSSEC"} {
+	for _, name := range []string{"Nameservers", "Mail (MX)", "SPF", "DMARC", "CAA", "DNSSEC"} {
 		c, ok := checkByName(r, name)
 		require.True(t, ok, name)
 		require.Equal(t, StatusOK, c.Status, name+": "+c.Note)
@@ -161,6 +167,16 @@ func TestAuditSummaryPrefersMissingOverWarn(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, r.Summary, "DMARC")
 	require.NotContains(t, r.Summary, "Mail (MX) needs attention")
+}
+
+func TestAuditMissingCAAWarns(t *testing.T) {
+	addr := auditServer(t, serverOpts{ad: true, noCAA: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	c, ok := checkByName(r, "CAA")
+	require.True(t, ok)
+	require.Equal(t, StatusWarn, c.Status, "no CAA is a soft warning, not an error or missing")
+	require.Contains(t, strings.ToLower(c.Note), "any certificate authority")
 }
 
 func TestAuditRejectsEmpty(t *testing.T) {

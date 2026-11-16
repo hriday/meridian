@@ -1,5 +1,5 @@
 // Package dnsaudit resolves a domain's core DNS and email records —
-// nameservers, MX, SPF, DMARC, and DNSSEC — and grades each in plain language,
+// nameservers, MX, SPF, DMARC, CAA, and DNSSEC — and grades each in plain language,
 // with an overall posture summary. The classifiers (spfVerdict, dmarcVerdict)
 // are pure; Audit does the network exchange via the dnsx seam. The CLI and
 // Wails controller are thin adapters over Audit.
@@ -125,6 +125,59 @@ func dmarcPolicy(record string) string {
 	return ""
 }
 
+// caaVerdict classifies a domain's CAA records (which CAs may issue certificates
+// for it). Absence is a soft warning, not "missing": CAA is optional, but
+// without it any CA in the world may issue for the domain. A record naming
+// issuers is healthy. Records arrive in dnsx string form, e.g. `0 issue
+// "letsencrypt.org"`.
+func caaVerdict(records []string) (Status, string, []string) {
+	if len(records) == 0 {
+		return StatusWarn, "No CAA record — any certificate authority may issue a certificate for this domain. Add CAA to limit issuance to the CAs you actually use.", nil
+	}
+	var issuers []string
+	seen := map[string]bool{}
+	forbidAll, hasIodef := false, false
+	for _, r := range records {
+		tag, val := parseCAA(r)
+		switch tag {
+		case "issue", "issuewild":
+			ca := strings.TrimSpace(strings.SplitN(val, ";", 2)[0]) // drop CA params
+			switch {
+			case ca == "" || ca == ";":
+				forbidAll = true
+			case !seen[ca]:
+				seen[ca] = true
+				issuers = append(issuers, ca)
+			}
+		case "iodef":
+			hasIodef = true
+		}
+	}
+	var note string
+	switch {
+	case len(issuers) > 0:
+		note = "Issuance restricted to: " + strings.Join(issuers, ", ") + "."
+	case forbidAll:
+		note = "CAA forbids all certificate issuance (issue \";\")."
+	default:
+		note = "CAA present but names no issuer."
+	}
+	if hasIodef {
+		note += " Policy violations are reported via iodef."
+	}
+	return StatusOK, note, records
+}
+
+// parseCAA splits a CAA record string ("<flag> <tag> \"<value>\"") into its
+// lowercased tag and unquoted value.
+func parseCAA(record string) (tag, value string) {
+	f := strings.Fields(record)
+	if len(f) < 3 {
+		return "", ""
+	}
+	return strings.ToLower(f[1]), strings.Trim(strings.Join(f[2:], " "), `"`)
+}
+
 // queryFn is the DNS exchange, behind a package var so tests can inject a fake.
 var queryFn = dnsx.Query
 
@@ -209,6 +262,18 @@ func Audit(ctx context.Context, domain, resolver string, timeout time.Duration) 
 	}
 	rep.Checks = append(rep.Checks, dmarc)
 
+	// CAA (which CAs may issue certificates for the domain).
+	caaRes, caaErr := queryFn(ctx, domain, "CAA", resolver)
+	caa := Check{Name: "CAA"}
+	if caaErr != nil {
+		caa.Status, caa.Note = StatusError, "Couldn't query CAA: "+caaErr.Error()
+	} else if refused(caaRes.Rcode) {
+		caa.Status, caa.Note = StatusError, "The resolver returned "+caaRes.Rcode+" for CAA — the check couldn't be performed."
+	} else {
+		caa.Status, caa.Note, caa.Records = caaVerdict(values(caaRes, "CAA"))
+	}
+	rep.Checks = append(rep.Checks, caa)
+
 	// DNSSEC (AD flag from the NS response).
 	sec := Check{Name: "DNSSEC"}
 	switch {
@@ -286,7 +351,7 @@ func summarize(r *Report) string {
 	if best >= 0 {
 		return r.Checks[best].Name + " needs attention — " + r.Checks[best].Note
 	}
-	return "Posture looks healthy — nameservers, mail, SPF, DMARC and DNSSEC all check out."
+	return "Posture looks healthy — nameservers, mail, SPF, DMARC, CAA and DNSSEC all check out."
 }
 
 // severityRank ranks grades for the "fix first" headline: a missing record or a

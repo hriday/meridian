@@ -43,7 +43,7 @@ func Catalog() []CommandGroup {
 			{"whois", "<domain|ip|asn> [--json]", "whois"},
 			{"subdomains", "<domain> [--json]", "subdomains via Certificate Transparency"},
 			{"blocklist", "<ip> [--resolver <ip>] [--json]", "DNS blocklist (DNSBL) check"},
-			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/DNSSEC)"},
+			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/CAA/DNSSEC)"},
 			{"dnspropagation", "<name> [--type A] [--json]", "check a record across global resolvers"},
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
 			{"smtp", "<host|domain> [--mx] [--tls] [--port N] [--json]", "SMTP banner / STARTTLS / cert probe"},

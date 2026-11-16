@@ -51,7 +51,7 @@
 
 <div class="tool">
   <p class="lede">
-    Grades a domain's DNS and email posture — nameservers, mail (MX), SPF, DMARC and
+    Grades a domain's DNS and email posture — nameservers, mail (MX), SPF, DMARC, CAA and
     DNSSEC — each in plain language. Read-only lookups through your resolver; the
     query carries only the domain.
   </p>
