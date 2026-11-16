@@ -39,6 +39,33 @@ type Result struct {
 	Answers       []Record `json:"answers"`
 }
 
+// JoinTXT turns a TXT answer Value — which this package formats as
+// space-separated quoted character-strings (`"part1" "part2"`) — into the single
+// string DNS defines it to be: the character-strings' contents concatenated with
+// no added separator, so a long SPF/DKIM record split across strings reassembles
+// correctly. A value with no quotes is returned trimmed.
+func JoinTXT(value string) string {
+	if !strings.Contains(value, "\"") {
+		return strings.TrimSpace(value)
+	}
+	var b strings.Builder
+	inQuote, esc := false, false
+	for _, r := range value {
+		switch {
+		case esc:
+			b.WriteRune(r)
+			esc = false
+		case r == '\\':
+			esc = true
+		case r == '"':
+			inQuote = !inQuote
+		case inQuote:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 // Query asks server (host or host:port; port 53 assumed) for name's rtype
 // records over classic UDP (with a TCP retry on truncation), with EDNS0 and the
 // DNSSEC-OK bit set. The deadline comes from ctx, else a 5s default.

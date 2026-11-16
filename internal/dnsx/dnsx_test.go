@@ -189,3 +189,17 @@ func TestDoQDecodeRejectsTruncated(t *testing.T) {
 		t.Fatal("length(16) with only 2 bytes should be rejected")
 	}
 }
+
+func TestJoinTXT(t *testing.T) {
+	cases := map[string]string{
+		`"hello"`: "hello",
+		`"v=spf1 mx ip4:1.2.3.0/24" " ip4:5.6.7.0/24 ~all"`: "v=spf1 mx ip4:1.2.3.0/24 ip4:5.6.7.0/24 ~all",
+		`google-site-verification=abc`:                      "google-site-verification=abc",
+		`"a" "b" "c"`:                                       "abc",
+	}
+	for in, want := range cases {
+		if got := JoinTXT(in); got != want {
+			t.Errorf("JoinTXT(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

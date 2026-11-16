@@ -2,6 +2,7 @@ package emailauth
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -82,4 +83,16 @@ func TestNormalizeDomainStripsSchemeAndMailto(t *testing.T) {
 	require.Equal(t, "example.com", normalizeDomain("https://example.com/path"))
 	require.Equal(t, "example.com", normalizeDomain("user@example.com"))
 	require.Equal(t, "example.com", normalizeDomain("  Example.com.  "))
+}
+
+func TestFailedLookupIsErrorNotFail(t *testing.T) {
+	// A TXT lookup error must NOT be reported as "no SPF/DMARC record" (which
+	// reads as "this domain can be spoofed") — it's StatusError.
+	failing := func(ctx context.Context, name string) ([]string, error) {
+		return nil, errors.New("cannot unmarshal DNS message")
+	}
+	r := Check(context.Background(), failing, "example.com", nil)
+	require.Equal(t, StatusError, r.SPF.Status)
+	require.Equal(t, StatusError, r.DMARC.Status)
+	require.Contains(t, r.SPF.Note, "Couldn't check")
 }
