@@ -12,6 +12,7 @@ require (
 	github.com/aws/smithy-go v1.28.9
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
+	github.com/go-pdf/fpdf v0.9.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/hashicorp/hcl/v2 v2.25.0

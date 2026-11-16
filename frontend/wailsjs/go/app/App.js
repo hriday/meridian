@@ -546,6 +546,10 @@ export function SaveReport(arg1, arg2) {
   return window['go']['app']['App']['SaveReport'](arg1, arg2);
 }
 
+export function SaveRunbookPDF(arg1) {
+  return window['go']['app']['App']['SaveRunbookPDF'](arg1);
+}
+
 export function ScanCommonPorts() {
   return window['go']['app']['App']['ScanCommonPorts']();
 }

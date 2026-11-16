@@ -342,6 +342,8 @@ export function STUNDiscover(arg1:string):Promise<stun.Result>;
 
 export function SaveReport(arg1:string,arg2:string):Promise<string>;
 
+export function SaveRunbookPDF(arg1:cli.RunbookData):Promise<string>;
+
 export function ScanCommonPorts():Promise<Array<number>>;
 
 export function ScanStop():Promise<void>;

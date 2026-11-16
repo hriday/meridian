@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport, ImportRunbook } from "../../../wailsjs/go/app/App.js";
+  import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport, SaveRunbookPDF, ImportRunbook } from "../../../wailsjs/go/app/App.js";
   import ToolHelp from "../ToolHelp.svelte";
 
   let profiles: any[] = [];
@@ -24,24 +24,13 @@
     }
   }
 
-  // PDF: render the report's HTML into an off-screen iframe and print it, so the
-  // OS "Save as PDF" captures just the report (not the whole app window).
+  // PDF: generated in Go and saved to disk. (The old browser print-to-PDF was a
+  // no-op in the macOS webview, which doesn't implement window.print.)
   async function exportPDF() {
     exportMsg = "";
     try {
-      const html = await RunbookRender(res, "html");
-      const iframe = document.createElement("iframe");
-      iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
-      iframe.onload = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } finally {
-          setTimeout(() => iframe.remove(), 1500);
-        }
-      };
-      document.body.appendChild(iframe);
-      iframe.srcdoc = html;
+      const path = await SaveRunbookPDF(res);
+      if (path) exportMsg = "Saved " + path;
     } catch (e: any) {
       exportMsg = String(e?.message ?? e);
     }
