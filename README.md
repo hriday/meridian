@@ -216,6 +216,18 @@ output; the streaming ones (receivers, live monitors) run until **Ctrl-C**.
 - **macOS** — the CLI ships *inside* the app. Open Meridian and click
   **"Install command-line tool"** in the sidebar footer; it symlinks
   `meridian-cli` onto your `PATH`.
+- **Linux — including the [Flipper One](https://flipperzero.one/) (ARM64), Raspberry Pi, and any ARM/x86 box** —
+  download a pre-built, **statically-linked** binary from the
+  [latest release](https://github.com/hriday/meridian/releases/latest) (no runtime deps, no install):
+  - `meridian-cli-*-linux-arm64` — **Flipper One** (Rockchip RK3576), Pi 4/5, ARM64 servers/cloud
+  - `meridian-cli-*-linux-amd64` — x86-64 Linux servers / desktops
+  - `meridian-cli-*-linux-arm` — 32-bit ARM (older Pi, embedded)
+
+  Drop it on the box (over SSH, no display needed), then:
+  ```bash
+  chmod +x meridian-cli-*-linux-arm64
+  ./meridian-cli-*-linux-arm64 lookup 1.1.1.1
+  ```
 - **Any platform** — build it from the repo:
   ```bash
   go build -o ~/.local/bin/meridian-cli ./cmd/meridian-cli   # or: go run ./cmd/meridian-cli <command>

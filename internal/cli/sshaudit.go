@@ -64,4 +64,10 @@ func printSSHAudit(w io.Writer, r sshaudit.Report) {
 		}
 		reportRow(w, label, f)
 	}
+	if len(r.Remediation) > 0 {
+		fmt.Fprintf(w, "\nHow to improve (toward grade A):\n")
+		for _, s := range r.Remediation {
+			fmt.Fprintf(w, "  • %s\n", s)
+		}
+	}
 }

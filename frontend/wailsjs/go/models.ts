@@ -4431,6 +4431,7 @@ export namespace sshaudit {
 	    pq: PQStatus;
 	    grade: string;
 	    findings: string[];
+	    remediation?: string[];
 	    summary: string;
 	
 	    static createFrom(source: any = {}) {
@@ -4450,6 +4451,7 @@ export namespace sshaudit {
 	        this.pq = this.convertValues(source["pq"], PQStatus);
 	        this.grade = source["grade"];
 	        this.findings = source["findings"];
+	        this.remediation = source["remediation"];
 	        this.summary = source["summary"];
 	    }
 	

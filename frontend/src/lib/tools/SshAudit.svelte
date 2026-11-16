@@ -37,12 +37,16 @@
   </p>
 
   <ToolHelp>
-    The letter grade reflects the <strong>key exchange</strong> — <code>A</code>/<code>B</code> good, down to
-    <code>F</code>. The post-quantum panel is the main signal: green <code>Quantum-safe (default)</code> means a PQ key
-    exchange (<code>sntrup761x25519</code> or ML-KEM) is preferred, amber means it's offered but not default, and red
-    means none — leaving today's traffic open to <strong>harvest-now-decrypt-later</strong>. Work the
-    <strong>Findings</strong> list to clear weak ciphers/MACs; classical RSA/ECDSA/Ed25519 host-key signatures are
-    expected and not a problem.
+    The letter grade is <strong>weakest-link</strong>: it reflects the weakest algorithm the server still offers across
+    its <strong>ciphers, MACs, key exchanges and host-key signatures</strong> — not the key exchange alone.
+    <code>A</code> = clean and a post-quantum key exchange; <code>B</code> = clean but no PQ; <code>C</code> = one
+    <em>moderate</em> weakness (a legacy/SHA-1 MAC, a SHA-1 key exchange, or <code>ssh-rsa</code> with no
+    <code>rsa-sha2</code>); <code>F</code> = something broken. So a server with an excellent key exchange can still land
+    at <code>C</code> over a single legacy MAC — the <strong>Findings</strong> list names exactly what capped it.
+    The <strong>post-quantum panel</strong> is the separate PQ signal: green <code>Quantum-safe (default)</code> means a
+    PQ exchange (<code>sntrup761x25519</code> or ML-KEM) is preferred, amber means offered-but-not-default, red means none
+    (open to <strong>harvest-now-decrypt-later</strong>). Classical RSA/ECDSA/Ed25519 host-key signatures are expected and
+    not a problem.
   </ToolHelp>
 
   <div class="row">
@@ -99,10 +103,17 @@
     {:else}
       <p class="foot">No weak algorithms, and a post-quantum key exchange is in use — a clean, future-proof configuration.</p>
     {/if}
+    {#if rep.remediation && rep.remediation.length}
+      <div class="improve">
+        <div class="h">How to improve — toward grade A</div>
+        {#each rep.remediation as s}<pre class="fix">{s}</pre>{/each}
+      </div>
+    {/if}
     <p class="foot">
       Authentication (host-key signatures) is still classical RSA/ECDSA/Ed25519 across the board — post-quantum
-      signature algorithms are standardized but not yet fielded in SSH, so that isn't a finding. The grade reflects the
-      <em>key exchange</em>, which is what protects a recorded session.
+      signature algorithms are standardized but not yet fielded in SSH, so that isn't a finding. The grade is
+      <em>weakest-link</em> across the ciphers, MACs, key exchange and host-key signatures, so a single legacy algorithm
+      can cap it — the <em>Findings</em> above name what did.
     </p>
   {/if}
 </div>
@@ -148,5 +159,8 @@
   .av { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.72rem; color: var(--text); word-break: break-word; line-height: 1.5; }
   .findings { max-width: 820px; margin-top: 14px; border: 1px solid var(--border); border-left: 3px solid var(--warn, #f5a623); border-radius: 10px; padding: 10px 14px; background: var(--card); }
   .finding { font-size: 0.82rem; color: var(--text); line-height: 1.6; }
+  .improve { max-width: 820px; margin-top: 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; background: var(--card); }
+  .improve .h { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .fix { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; color: var(--text); background: var(--well); border-radius: 6px; padding: 7px 10px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
   .foot { max-width: 820px; font-size: 0.76rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; line-height: 1.6; }
 </style>
