@@ -94,18 +94,21 @@ func DefaultRouters(ctx context.Context) ([]Router, error) {
 }
 
 // raListenerFn solicits and parses Router Advertisements, set only on platforms
-// with a raw ICMPv6 socket (macOS/Linux).
-var raListenerFn func(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, error)
+// with a raw ICMPv6 socket (macOS/Linux). It also returns how many ICMPv6
+// packets of any type it saw in the window, as a diagnostic.
+var raListenerFn func(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, int, error)
 
 // errRAUnsupported is returned when RA listening isn't built for this OS.
 var errRAUnsupported = errors.New("listening for Router Advertisements needs a raw ICMPv6 socket (macOS or Linux, as root)")
 
 // ListenRA sends a Router Solicitation and collects the Router Advertisements
-// that arrive within timeout. iface optionally restricts it to one interface.
-// It needs a raw ICMPv6 socket, so it requires root and is macOS/Linux only.
-func ListenRA(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, error) {
+// that arrive within timeout. iface optionally restricts it to one interface. It
+// also returns the total number of ICMPv6 packets observed (a diagnostic: zero
+// means the socket received nothing; a positive count with no RAs means the
+// router isn't answering). Needs a raw ICMPv6 socket, so root, macOS/Linux only.
+func ListenRA(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, int, error) {
 	if raListenerFn == nil {
-		return nil, errRAUnsupported
+		return nil, 0, errRAUnsupported
 	}
 	return raListenerFn(ctx, iface, timeout)
 }

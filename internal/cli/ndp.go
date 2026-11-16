@@ -37,8 +37,10 @@ func runNDP(args []string, stdout, stderr io.Writer) int {
 	if *withRA {
 		if !ndp.RASupported() {
 			res.RANote = "Router Advertisement listening isn't available on this OS."
-		} else if ras, rerr := ndp.ListenRA(ctx, *iface, *wait); rerr != nil {
+		} else if ras, seen, rerr := ndp.ListenRA(ctx, *iface, *wait); rerr != nil {
 			res.RANote = rerr.Error()
+		} else if len(ras) == 0 {
+			res.RANote = fmt.Sprintf("none captured (%d ICMPv6 packet(s) seen in the window). If that count is 0 the socket received nothing; if it's >0 the router isn't answering solicitations — try a longer --wait. The unprivileged routers above still show it.", seen)
 		} else {
 			res.Routers = ras
 		}

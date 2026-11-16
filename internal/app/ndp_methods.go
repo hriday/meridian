@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"time"
 
@@ -25,12 +26,15 @@ func (a *App) NDPScan(withRA bool) (ndp.Result, error) {
 			res.RANote = "Router Advertisement listening isn't available on this OS."
 			return res, nil
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 		defer cancel()
-		ras, rerr := ndp.ListenRA(ctx, "", 4*time.Second)
-		if rerr != nil {
+		ras, seen, rerr := ndp.ListenRA(ctx, "", 6*time.Second)
+		switch {
+		case rerr != nil:
 			res.RANote = rerr.Error()
-		} else {
+		case len(ras) == 0:
+			res.RANote = fmt.Sprintf("No Router Advertisements captured (%d ICMPv6 packets seen). The router may not answer solicitations in-window — the unprivileged routers above still show it.", seen)
+		default:
 			res.Routers = ras
 		}
 	}

@@ -20,25 +20,23 @@ var allRouters = net.ParseIP("ff02::2")
 
 // listenRA opens a raw ICMPv6 socket, solicits routers on each eligible
 // interface, and parses the Router Advertisements that arrive within timeout.
-func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, error) {
+func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]RouterAdvert, int, error) {
 	conn, err := icmp.ListenPacket("ip6:ipv6-icmp", "::")
 	if err != nil {
-		return nil, fmt.Errorf("raw ICMPv6 socket (re-run with sudo): %w", err)
+		return nil, 0, fmt.Errorf("raw ICMPv6 socket (re-run with sudo): %w", err)
 	}
 	defer conn.Close()
 
 	pc := conn.IPv6PacketConn()
-	// Receive only Router Advertisements.
-	var filter ipv6.ICMPFilter
-	filter.SetAll(true)
-	filter.Accept(ipv6.ICMPTypeRouterAdvertisement)
-	_ = pc.SetICMPFilter(&filter)
+	// No kernel ICMP type filter — it behaves inconsistently across OSes and can
+	// silently drop the RAs we want; we filter for Router Advertisements in
+	// userspace below instead.
 	_ = pc.SetControlMessage(ipv6.FlagInterface, true)
 	_ = pc.SetHopLimit(255) // RFC 4861: RS leaves with hop limit 255
 
 	ifaces := raInterfaces(iface)
 	if len(ifaces) == 0 {
-		return nil, fmt.Errorf("no IPv6-capable interface to solicit on")
+		return nil, 0, fmt.Errorf("no IPv6-capable interface to solicit on")
 	}
 	// Routers answer a solicitation (and send periodic RAs) to the all-nodes
 	// group ff02::1 — join it on each interface or the replies are dropped.
@@ -50,14 +48,14 @@ func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]Route
 			defer pc.LeaveGroup(&ifaces[i], allNodes)
 		}
 		_ = pc.SetMulticastInterface(&ifaces[i])
-		if _, werr := conn.WriteTo(buildRS(ifaces[i].HardwareAddr), &net.IPAddr{IP: allRouters, Zone: ifaces[i].Name}); werr != nil {
+		if _, werr := conn.WriteTo(buildRS(), &net.IPAddr{IP: allRouters, Zone: ifaces[i].Name}); werr != nil {
 			lastSendErr = werr
 			continue
 		}
 		sent++
 	}
 	if sent == 0 {
-		return nil, fmt.Errorf("couldn't send a Router Solicitation: %v", lastSendErr)
+		return nil, 0, fmt.Errorf("couldn't send a Router Solicitation: %v", lastSendErr)
 	}
 
 	deadline := time.Now().Add(timeout)
@@ -68,12 +66,17 @@ func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]Route
 
 	seen := map[string]bool{}
 	var out []RouterAdvert
+	icmpSeen := 0
 	buf := make([]byte, 1500)
 	for time.Now().Before(deadline) {
 		n, cm, src, rerr := pc.ReadFrom(buf)
 		if rerr != nil {
-			break // timeout or closed
+			if ne, ok := rerr.(net.Error); ok && ne.Timeout() {
+				break // window elapsed
+			}
+			continue // a transient read error — keep listening until the deadline
 		}
+		icmpSeen++
 		msg, perr := icmp.ParseMessage(ipv6.ICMPTypeRouterAdvertisement.Protocol(), buf[:n])
 		if perr != nil || msg.Type != ipv6.ICMPTypeRouterAdvertisement {
 			continue
@@ -99,18 +102,16 @@ func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]Route
 		seen[key] = true
 		out = append(out, ra)
 	}
-	return out, nil
+	return out, icmpSeen, nil
 }
 
-// buildRS marshals a Router Solicitation, carrying the interface's MAC as a
-// Source Link-Layer Address option so the router can unicast the reply back.
-func buildRS(mac net.HardwareAddr) []byte {
-	body := []byte{0, 0, 0, 0} // 4 reserved bytes
-	if len(mac) == 6 {
-		body = append(body, 1, 1) // option type 1 (source LL addr), length 1 (8 bytes)
-		body = append(body, mac...)
-	}
-	m := &icmp.Message{Type: ipv6.ICMPTypeRouterSolicitation, Code: 0, Body: &icmp.RawBody{Data: body}}
+// buildRS marshals a bare Router Solicitation (just the 4 reserved bytes, no
+// options). We deliberately omit the Source Link-Layer Address option: if the
+// kernel sources the packet from the unspecified address, RFC 4861 §4.1 forbids
+// that option and a strict router drops the whole solicitation. The reply is
+// caught via the ff02::1 group we joined regardless.
+func buildRS() []byte {
+	m := &icmp.Message{Type: ipv6.ICMPTypeRouterSolicitation, Code: 0, Body: &icmp.RawBody{Data: []byte{0, 0, 0, 0}}}
 	wb, _ := m.Marshal(nil)
 	return wb
 }
