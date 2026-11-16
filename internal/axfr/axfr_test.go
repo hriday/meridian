@@ -19,15 +19,20 @@ func TestClassify(t *testing.T) {
 	require.Equal(t, StatusTransferred, r.Status)
 	require.Equal(t, 42, r.Records)
 
-	// A DNS-level refusal => secure.
+	// A DNS-level refusal (an rcode response) => refused/secure.
 	r = classify("ns2.", 0, nil, errors.New("dns: bad xfr rcode: 5"))
 	require.Equal(t, StatusRefused, r.Status)
 
-	// A connection-level failure => couldn't test.
+	// A connection-level failure (net type) => couldn't test, never "secure".
 	r = classify("ns3.", 0, nil, &net.OpError{Op: "dial", Err: errors.New("connection refused")})
 	require.Equal(t, StatusError, r.Status)
 
-	// No records, no error => treated as refused, never exposed.
+	// A transport failure that isn't a net.* type (e.g. a wrapped syscall string)
+	// must still be "error", not fall through to "refused".
+	r = classify("ns3b.", 0, nil, errors.New("write tcp 1.2.3.4:53: broken pipe"))
+	require.Equal(t, StatusError, r.Status, "a broken-pipe transport error is not a refusal")
+
+	// No records, no error => connected but served nothing; refused, never exposed.
 	r = classify("ns4.", 0, nil, nil)
 	require.Equal(t, StatusRefused, r.Status)
 }
