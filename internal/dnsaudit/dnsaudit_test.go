@@ -37,6 +37,27 @@ func TestSPFVerdict(t *testing.T) {
 	}
 }
 
+func TestCAAVerdict(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      []string
+		want    Status
+		noteSub string
+	}{
+		{"none", nil, StatusWarn, "any certificate authority"},
+		{"single", []string{`0 issue "letsencrypt.org"`}, StatusOK, "letsencrypt.org"},
+		{"multi-dedup", []string{`0 issue "letsencrypt.org"`, `0 issuewild "letsencrypt.org"`, `0 issue "digicert.com"`}, StatusOK, "digicert.com"},
+		{"params-stripped", []string{`0 issue "sectigo.com; account=12345"`}, StatusOK, "sectigo.com"},
+		{"forbid-all", []string{`0 issue ";"`}, StatusOK, "forbids all"},
+		{"iodef", []string{`0 issue "letsencrypt.org"`, `0 iodef "mailto:sec@x.com"`}, StatusOK, "iodef"},
+	}
+	for _, c := range cases {
+		st, note, _ := caaVerdict(c.in)
+		require.Equal(t, c.want, st, c.name)
+		require.Contains(t, strings.ToLower(note), strings.ToLower(c.noteSub), c.name)
+	}
+}
+
 func TestDMARCVerdict(t *testing.T) {
 	cases := []struct {
 		name string

@@ -2,6 +2,7 @@ package dnsaudit
 
 import (
 	"context"
+	"crypto"
 	"net"
 	"strings"
 	"testing"
@@ -11,6 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// signTestZone generates a KSK for name, signs the DNSKEY set, and returns the
+// records a signed zone would serve: the key, its RRSIG, and the matching DS.
+func signTestZone(t *testing.T, name string) (*mdns.DNSKEY, *mdns.RRSIG, *mdns.DS) {
+	t.Helper()
+	now := time.Now()
+	key := &mdns.DNSKEY{
+		Hdr:   mdns.RR_Header{Name: name, Rrtype: mdns.TypeDNSKEY, Class: mdns.ClassINET, Ttl: 3600},
+		Flags: 257, Protocol: 3, Algorithm: mdns.ECDSAP256SHA256,
+	}
+	priv, err := key.Generate(256)
+	require.NoError(t, err)
+	sig := &mdns.RRSIG{
+		Hdr:         mdns.RR_Header{Name: name, Rrtype: mdns.TypeRRSIG, Class: mdns.ClassINET, Ttl: 3600},
+		KeyTag:      key.KeyTag(),
+		SignerName:  name,
+		Algorithm:   key.Algorithm,
+		TypeCovered: mdns.TypeDNSKEY,
+		Labels:      uint8(mdns.CountLabel(name)),
+		OrigTtl:     3600,
+		Inception:   uint32(now.Add(-time.Hour).Unix()),
+		Expiration:  uint32(now.Add(24 * time.Hour).Unix()),
+	}
+	require.NoError(t, sig.Sign(priv.(crypto.Signer), []mdns.RR{key}))
+	return key, sig, key.ToDS(mdns.SHA256)
+}
+
 // auditServer options per test.
 type serverOpts struct {
 	nsServfail bool // NS query returns SERVFAIL
@@ -18,12 +45,15 @@ type serverOpts struct {
 	ad         bool // set the AuthenticatedData (DNSSEC) flag
 	splitSPF   bool // apex SPF returned as a multi-string TXT split before -all
 	nullMX     bool // MX is a null MX (0 .)
+	noCAA      bool // CAA query returns NOERROR with no records
+	unsigned   bool // zone serves no DNSKEY/DS (DNSSEC off)
 }
 
 // auditServer starts a DNS server answering a healthy example domain, tweaked
 // by opts, and returns its address.
 func auditServer(t *testing.T, opts serverOpts) string {
 	t.Helper()
+	zoneKey, zoneSig, zoneDS := signTestZone(t, "example.test.")
 	mux := mdns.NewServeMux()
 	mux.HandleFunc(".", func(w mdns.ResponseWriter, r *mdns.Msg) {
 		m := new(mdns.Msg)
@@ -61,6 +91,19 @@ func auditServer(t *testing.T, opts serverOpts) string {
 				break
 			}
 			m.Answer = []mdns.RR{&mdns.TXT{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeTXT, Ttl: 3600}, Txt: []string{"v=spf1 -all"}}}
+		case q.Qtype == mdns.TypeCAA:
+			if opts.noCAA {
+				break // NOERROR, no records
+			}
+			m.Answer = []mdns.RR{&mdns.CAA{Hdr: mdns.RR_Header{Name: name, Rrtype: mdns.TypeCAA, Ttl: 3600}, Flag: 0, Tag: "issue", Value: "letsencrypt.org"}}
+		case q.Qtype == mdns.TypeDNSKEY:
+			if !opts.unsigned {
+				m.Answer = []mdns.RR{zoneKey, zoneSig}
+			}
+		case q.Qtype == mdns.TypeDS:
+			if !opts.unsigned {
+				m.Answer = []mdns.RR{zoneDS}
+			}
 		default:
 			m.Rcode = mdns.RcodeNameError
 		}
@@ -87,11 +130,13 @@ func TestAuditHealthy(t *testing.T) {
 	addr := auditServer(t, serverOpts{ad: true})
 	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
 	require.NoError(t, err)
-	for _, name := range []string{"Nameservers", "Mail (MX)", "SPF", "DMARC", "DNSSEC"} {
+	for _, name := range []string{"Nameservers", "Mail (MX)", "SPF", "DMARC", "CAA", "DNSSEC"} {
 		c, ok := checkByName(r, name)
 		require.True(t, ok, name)
 		require.Equal(t, StatusOK, c.Status, name+": "+c.Note)
 	}
+	sec, _ := checkByName(r, "DNSSEC")
+	require.Contains(t, sec.Note, "validated", "DNSSEC should be verified by chain, not the AD flag")
 	require.Equal(t, 0, r.Warns)
 	require.Equal(t, 0, r.Missing)
 	require.Equal(t, 0, r.Errors)
@@ -161,6 +206,26 @@ func TestAuditSummaryPrefersMissingOverWarn(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, r.Summary, "DMARC")
 	require.NotContains(t, r.Summary, "Mail (MX) needs attention")
+}
+
+func TestAuditMissingCAAWarns(t *testing.T) {
+	addr := auditServer(t, serverOpts{ad: true, noCAA: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	c, ok := checkByName(r, "CAA")
+	require.True(t, ok)
+	require.Equal(t, StatusWarn, c.Status, "no CAA is a soft warning, not an error or missing")
+	require.Contains(t, strings.ToLower(c.Note), "any certificate authority")
+}
+
+func TestAuditUnsignedZoneWarns(t *testing.T) {
+	addr := auditServer(t, serverOpts{unsigned: true})
+	r, err := Audit(context.Background(), "example.test", addr, 3*time.Second)
+	require.NoError(t, err)
+	c, ok := checkByName(r, "DNSSEC")
+	require.True(t, ok)
+	require.Equal(t, StatusWarn, c.Status, "an unsigned zone is a warning, not OK")
+	require.Contains(t, strings.ToLower(c.Note), "not dnssec-signed")
 }
 
 func TestAuditRejectsEmpty(t *testing.T) {
