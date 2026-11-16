@@ -182,6 +182,17 @@
           </dl>
         </div>
 
+        {#if data.prefixes && data.prefixes.length}
+          <div class="card span">
+            <div class="chead"><h3>Announced blocks <span class="count">{data.prefixes.length}</span></h3><span class="src">{chip(data.routingSrc)}</span></div>
+            <div class="blocks">
+              {#each data.prefixes as p}
+                <button class="block mono" on:click={() => onpivot(p)} title={`Look up ${p}`}>{p}</button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
         {#if data.peering}
           <div class="card span">
             <div class="chead"><h3>Peering</h3><span class="src">{chip(data.peeringSrc)}</span></div>
@@ -327,6 +338,10 @@
   .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; gap: 8px; }
   .chead h3 { margin: 0; font-size: 0.68rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); font-weight: 600; }
   .src { font-size: 0.62rem; color: var(--text-faint); font-family: var(--font-mono); }
+  .chead h3 .count { margin-left: 6px; background: var(--well); border: 1px solid var(--border); border-radius: 20px; padding: 0 7px; font-size: 0.62rem; color: var(--text-dim); font-weight: 600; }
+  .blocks { display: flex; flex-wrap: wrap; gap: 6px; max-height: 260px; overflow: auto; padding: 2px; }
+  .block { background: var(--well); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 0.78rem; color: var(--text); cursor: pointer; }
+  .block:hover { border-color: var(--accent); color: var(--text-strong, var(--text)); }
   .srcs { display: flex; flex-wrap: wrap; gap: 4px 10px; justify-content: flex-end; }
   dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 0; font-size: 0.85rem; }
   dt { color: var(--text-dim); }

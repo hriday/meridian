@@ -33,9 +33,10 @@ type ASNReport struct {
 	ASN         string `json:"asn"`
 	Holder      string `json:"holder"`
 	Registry    string `json:"registry"`
-	V4Prefixes  int    `json:"v4Prefixes"`
-	V6Prefixes  int    `json:"v6Prefixes"`
-	Neighbours  int    `json:"neighbours"`
+	V4Prefixes  int      `json:"v4Prefixes"`
+	V6Prefixes  int      `json:"v6Prefixes"`
+	Prefixes    []string `json:"prefixes,omitempty"` // the announced IP blocks (v4 + v6)
+	Neighbours  int      `json:"neighbours"`
 	RoutingSrc  Source   `json:"routingSrc"`
 	RegistrySrc Source   `json:"registrySrc"`
 	Peering     *Peering `json:"peering,omitempty"`
@@ -121,6 +122,10 @@ func (c *Client) LookupASN(ctx context.Context, asn string) (ASNReport, error) {
 		r.RoutingSrc.Err = err.Error()
 	} else {
 		r.V4Prefixes, r.V6Prefixes, r.Neighbours = v4, v6, nb
+	}
+	// The actual blocks (best-effort; a missing list doesn't fail the lookup).
+	if prefixes, err := c.ripeAnnouncedPrefixes(ctx, r.ASN); err == nil {
+		r.Prefixes = prefixes
 	}
 	if holder, err := c.ripeASOverview(ctx, r.ASN); err == nil {
 		r.Holder = holder

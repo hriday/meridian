@@ -1026,6 +1026,13 @@ func printASNReport(stdout io.Writer, r lookup.ASNReport) {
 	reportRow(stdout, "Holder", strings.TrimSpace(r.Holder+registrySuffix(r.Registry)))
 	reportRow(stdout, "Prefixes", fmt.Sprintf("%d IPv4, %d IPv6", r.V4Prefixes, r.V6Prefixes))
 	reportRow(stdout, "Neighbours", fmt.Sprintf("%d", r.Neighbours))
+	for i, p := range r.Prefixes {
+		label := ""
+		if i == 0 {
+			label = "Blocks"
+		}
+		reportRow(stdout, label, p)
+	}
 	if p := r.Peering; p != nil {
 		summary := p.Type
 		if p.Policy != "" {

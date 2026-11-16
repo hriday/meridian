@@ -70,3 +70,12 @@ func TestRipeNetworkInfoNoOrigin(t *testing.T) {
 	require.Equal(t, "", prefix)
 	require.Empty(t, origin)
 }
+
+func TestRipeAnnouncedPrefixes(t *testing.T) {
+	c := ripeServer(t, map[string]string{
+		"announced-prefixes": `{"data":{"prefixes":[{"prefix":"142.165.0.0/16"},{"prefix":"207.195.0.0/16"},{"prefix":"2620:10a::/32"}]}}`,
+	})
+	got, err := c.ripeAnnouncedPrefixes(context.Background(), "AS803")
+	require.NoError(t, err)
+	require.Equal(t, []string{"142.165.0.0/16", "207.195.0.0/16", "2620:10a::/32"}, got)
+}
