@@ -1,8 +1,9 @@
 // Package ctlog discovers the subdomains of a domain from public Certificate
-// Transparency logs via crt.sh. CT logs record every TLS certificate issued, so
-// this surfaces hosts that have ever had a cert — a fast, free, keyless way to
-// map a domain's attack surface. It finds only names that appear in a cert, not
-// every host that exists. User-initiated; nothing runs automatically.
+// Transparency logs — crt.sh first, with a certSpotter fallback if crt.sh is
+// unresponsive. CT logs record every TLS certificate issued, so this surfaces
+// hosts that have ever had a cert — a fast, free, keyless way to map a domain's
+// attack surface. It finds only names that appear in a cert, not every host that
+// exists. User-initiated; nothing runs automatically.
 package ctlog
 
 import (
@@ -13,6 +14,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 )
 
 const userAgent = "meridian (+https://github.com/hriday/meridian)"
@@ -38,13 +40,37 @@ type entry struct {
 	NotAfter   string `json:"not_after"`
 }
 
-// Subdomains returns the domain's subdomains found in CT logs (via crt.sh),
-// sorted by name. The apex domain itself is included if it appears.
+// Subdomains returns the domain's subdomains found in CT logs, sorted by name.
+// It queries crt.sh first and, if crt.sh is unreachable or errors (it's often
+// flaky), falls back to the certSpotter API so a single slow source doesn't
+// break the lookup. The apex domain itself is included if it appears.
 func Subdomains(ctx context.Context, client Doer, domain string) ([]Subdomain, error) {
 	domain = normalizeDomain(domain)
 	if domain == "" {
 		return nil, fmt.Errorf("enter a domain, e.g. example.com")
 	}
+	// Bound the crt.sh attempt to half the budget, so a *slow* (not just down)
+	// crt.sh still leaves time for the backup.
+	crtCtx := ctx
+	if dl, ok := ctx.Deadline(); ok {
+		var cancel context.CancelFunc
+		crtCtx, cancel = context.WithTimeout(ctx, time.Until(dl)/2)
+		defer cancel()
+	}
+	entries, err := fetchCrtSh(crtCtx, client, domain)
+	if err != nil {
+		// crt.sh down/flaky/slow → try the backup with the remaining budget.
+		cs, csErr := fetchCertSpotter(ctx, client, domain)
+		if csErr != nil {
+			return nil, fmt.Errorf("CT lookup failed (crt.sh: %v; certSpotter: %v)", err, csErr)
+		}
+		entries = cs
+	}
+	return aggregate(entries, domain), nil
+}
+
+// fetchCrtSh queries crt.sh for every cert mentioning *.domain.
+func fetchCrtSh(ctx context.Context, client Doer, domain string) ([]entry, error) {
 	u := url.URL{Scheme: "https", Host: "crt.sh", Path: "/"}
 	q := u.Query()
 	q.Set("q", "%."+domain) // % wildcard → every sub.domain
@@ -63,14 +89,56 @@ func Subdomains(ctx context.Context, client Doer, domain string) ([]Subdomain, e
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("crt.sh returned %s (it can be flaky — try again)", resp.Status)
+		return nil, fmt.Errorf("crt.sh returned %s", resp.Status)
 	}
-
 	var entries []entry
 	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
-		return nil, fmt.Errorf("couldn't read the CT log results")
+		return nil, fmt.Errorf("couldn't read the crt.sh results")
 	}
-	return aggregate(entries, domain), nil
+	return entries, nil
+}
+
+// fetchCertSpotter queries the certSpotter API (free, keyless) and maps its
+// issuances into the same entry shape aggregate expects.
+func fetchCertSpotter(ctx context.Context, client Doer, domain string) ([]entry, error) {
+	u := url.URL{Scheme: "https", Host: "api.certspotter.com", Path: "/v1/issuances"}
+	q := u.Query()
+	q.Set("domain", domain)
+	q.Set("include_subdomains", "true")
+	q.Set("expand", "dns_names")
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't reach certSpotter")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("certSpotter returned %s", resp.Status)
+	}
+	var items []struct {
+		DNSNames  []string `json:"dns_names"`
+		NotBefore string   `json:"not_before"`
+		NotAfter  string   `json:"not_after"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		return nil, fmt.Errorf("couldn't read the certSpotter results")
+	}
+	entries := make([]entry, 0, len(items))
+	for _, it := range items {
+		entries = append(entries, entry{
+			NameValue: strings.Join(it.DNSNames, "\n"),
+			NotBefore: it.NotBefore,
+			NotAfter:  it.NotAfter,
+		})
+	}
+	return entries, nil
 }
 
 // aggregate folds raw cert entries into one record per hostname. A name is
