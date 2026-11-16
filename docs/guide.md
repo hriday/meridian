@@ -290,6 +290,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | DHCP discover | find DHCP servers / rogues | `dhcpdiscover` |
 | LLDP/CDP | what switch & port am I on (raw capture: sudo or BPF group) | `lldp` |
 | ARP scan | live MAC↔IP + vendor (raw capture: sudo or BPF group) | `arpscan` |
+| IPv6 neighbors (NDP) | IPv6 neighbor cache + Router Advertisements (`--ra` needs sudo) | `ndp` |
 | Service discovery | mDNS/Bonjour + SSDP/UPnP — what's on the LAN | `discover` |
 | RTP analyzer | per-stream jitter/loss/codec (raw capture: sudo or BPF group) | `rtp` |
 | Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (raw capture: sudo or BPF group) | `pktscan` |

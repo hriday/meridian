@@ -38,6 +38,7 @@ import {lldp} from '../models';
 import {snmp} from '../models';
 import {lookup} from '../models';
 import {macvendor} from '../models';
+import {ndp} from '../models';
 import {ntp} from '../models';
 import {netcat} from '../models';
 import {openresolver} from '../models';
@@ -268,6 +269,8 @@ export function MACVendor(arg1:string):Promise<macvendor.Result>;
 export function MIBWalk(arg1:string,arg2:string,arg3:string):Promise<Array<snmp.MIBRow>>;
 
 export function MTUSupported():Promise<boolean>;
+
+export function NDPScan(arg1:boolean):Promise<ndp.Result>;
 
 export function NTPQuery(arg1:string):Promise<ntp.Reply>;
 
