@@ -72,7 +72,8 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   when ICMP is blocked.
 - **MTR** (continuous path + per-hop loss), **Path MTU** (find MTU black holes),
   **DHCP discover** (find servers / rogues), **LLDP/CDP** (what switch & port am
-  I on), **ARP scan** (live MAC↔IP + vendor), **RTP analyzer** (per-stream
+  I on), **ARP scan** (live MAC↔IP + vendor), **IPv6 neighbors** (NDP cache +
+  Router Advertisements), **RTP analyzer** (per-stream
   jitter/loss/codec from captured media), **Packet summary** (tcpdump-lite: top
   talkers, TCP resets/retransmits, DNS errors, TLS SNIs seen), **Wi-Fi analyzer**
   (channel, signal/SNR, neighbors + a channel map showing co-channel contention —

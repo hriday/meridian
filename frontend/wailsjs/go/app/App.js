@@ -402,6 +402,10 @@ export function MTUSupported() {
   return window['go']['app']['App']['MTUSupported']();
 }
 
+export function NDPScan(arg1) {
+  return window['go']['app']['App']['NDPScan'](arg1);
+}
+
 export function NTPQuery(arg1) {
   return window['go']['app']['App']['NTPQuery'](arg1);
 }

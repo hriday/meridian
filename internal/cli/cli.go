@@ -204,6 +204,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runLLDP(args[1:], stdout, stderr)
 	case "arpscan", "arp":
 		return runARP(args[1:], stdout, stderr)
+	case "ndp":
+		return runNDP(args[1:], stdout, stderr)
 	case "rtp":
 		return runRTP(args[1:], stdout, stderr)
 	case "pktscan":

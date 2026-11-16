@@ -76,6 +76,7 @@ func Catalog() []CommandGroup {
 			{"dhcpdiscover", "[--wait 5s] [--json]", "find DHCP servers / rogues on the LAN"},
 			{"lldp", "[--wait 35s] [--iface en0] [--json]", "LLDP/CDP neighbor — what switch/port (raw capture: sudo or BPF group)"},
 			{"arpscan", "[--wait 2s] [--max 1024] [--json]", "ARP sweep the LAN — live MAC/IP + vendor"},
+			{"ndp", "[--ra] [--iface N] [--json]", "IPv6 neighbor cache + Router Advertisements (--ra needs sudo)"},
 			{"discover", "[--seconds 8] [--json]", "find LAN devices via mDNS/Bonjour + SSDP/UPnP"},
 			{"rtp", "[--seconds 10] [--iface en0] [--json]", "analyze RTP streams — jitter/loss (raw capture: sudo or BPF group)"},
 			{"pktscan", "[--iface en0] [--seconds 8] [--top 10] [--json]", "live packet summary — top talkers, TCP resets/retransmits, DNS errors, TLS SNI (raw capture: sudo or BPF group)"},

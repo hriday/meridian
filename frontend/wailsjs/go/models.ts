@@ -3187,6 +3187,141 @@ export namespace mtu {
 
 }
 
+export namespace ndp {
+	
+	export class Neighbor {
+	    ip: string;
+	    mac?: string;
+	    interface: string;
+	    state?: string;
+	    router?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Neighbor(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.mac = source["mac"];
+	        this.interface = source["interface"];
+	        this.state = source["state"];
+	        this.router = source["router"];
+	    }
+	}
+	export class Prefix {
+	    prefix: string;
+	    onLink: boolean;
+	    autonomous: boolean;
+	    validLifetime: number;
+	    preferredLifetime: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Prefix(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.prefix = source["prefix"];
+	        this.onLink = source["onLink"];
+	        this.autonomous = source["autonomous"];
+	        this.validLifetime = source["validLifetime"];
+	        this.preferredLifetime = source["preferredLifetime"];
+	    }
+	}
+	export class RouterAdvert {
+	    router: string;
+	    interface?: string;
+	    sourceMAC?: string;
+	    hopLimit: number;
+	    managed: boolean;
+	    otherConfig: boolean;
+	    routerLifetime: number;
+	    reachableTime: number;
+	    retransTimer: number;
+	    mtu?: number;
+	    prefixes?: Prefix[];
+	    dns?: string[];
+	    dnsSearch?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new RouterAdvert(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.router = source["router"];
+	        this.interface = source["interface"];
+	        this.sourceMAC = source["sourceMAC"];
+	        this.hopLimit = source["hopLimit"];
+	        this.managed = source["managed"];
+	        this.otherConfig = source["otherConfig"];
+	        this.routerLifetime = source["routerLifetime"];
+	        this.reachableTime = source["reachableTime"];
+	        this.retransTimer = source["retransTimer"];
+	        this.mtu = source["mtu"];
+	        this.prefixes = this.convertValues(source["prefixes"], Prefix);
+	        this.dns = source["dns"];
+	        this.dnsSearch = source["dnsSearch"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Result {
+	    os: string;
+	    neighbors: Neighbor[];
+	    routers: RouterAdvert[];
+	    raNote?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.os = source["os"];
+	        this.neighbors = this.convertValues(source["neighbors"], Neighbor);
+	        this.routers = this.convertValues(source["routers"], RouterAdvert);
+	        this.raNote = source["raNote"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace netcat {
 	
 	export class CertInfo {
