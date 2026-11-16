@@ -20,16 +20,18 @@ import (
 
 // Result is one HTTP/3 reachability probe.
 type Result struct {
-	Host            string `json:"host"`
-	Port            int    `json:"port"`
-	QUICReachable   bool   `json:"quicReachable"`   // the QUIC handshake succeeded over UDP
-	ALPN            string `json:"alpn"`            // protocol negotiated in the handshake (e.g. "h3")
-	TLSVersion      string `json:"tlsVersion"`      // QUIC is always TLS 1.3
-	HandshakeMillis int    `json:"handshakeMillis"` // QUIC handshake round-trip
-	AdvertisesH3    bool   `json:"advertisesH3"`    // server sent Alt-Svc advertising h3
-	AltSvc          string `json:"altSvc"`          // the Alt-Svc header, if any
-	QUICError       string `json:"quicError,omitempty"`
-	Verdict         string `json:"verdict"`
+	Host            string       `json:"host"`
+	Port            int          `json:"port"`
+	QUICReachable   bool         `json:"quicReachable"`         // the QUIC handshake succeeded over UDP
+	ALPN            string       `json:"alpn"`                  // protocol negotiated in the handshake (e.g. "h3")
+	QUICVersion     string       `json:"quicVersion,omitempty"` // negotiated QUIC version (v1, v2)
+	TLSVersion      string       `json:"tlsVersion"`            // QUIC is always TLS 1.3
+	HandshakeMillis int          `json:"handshakeMillis"`       // QUIC handshake round-trip
+	AdvertisesH3    bool         `json:"advertisesH3"`          // server sent Alt-Svc advertising h3
+	AltSvc          string       `json:"altSvc"`                // the Alt-Svc header, if any
+	HTTPS           *HTTPSRecord `json:"https,omitempty"`       // the DNS HTTPS record (RFC 9460), if resolvable
+	QUICError       string       `json:"quicError,omitempty"`
+	Verdict         string       `json:"verdict"`
 }
 
 // Probe runs both checks against host:port (port 0 → 443).
@@ -38,13 +40,16 @@ func Probe(ctx context.Context, host string, port int) Result {
 		port = 443
 	}
 	r := Result{Host: host, Port: port}
-	r.QUICReachable, r.ALPN, r.TLSVersion, r.HandshakeMillis, r.QUICError = quicHandshake(ctx, host, port)
+	r.QUICReachable, r.ALPN, r.TLSVersion, r.QUICVersion, r.HandshakeMillis, r.QUICError = quicHandshake(ctx, host, port)
 	r.AdvertisesH3, r.AltSvc = altSvcAdvertisesH3(ctx, host, port)
+	if net.ParseIP(host) == nil { // an HTTPS record is keyed by name, not IP
+		r.HTTPS = lookupHTTPS(ctx, host)
+	}
 	r.Verdict = verdict(r)
 	return r
 }
 
-func quicHandshake(ctx context.Context, host string, port int) (ok bool, alpn, tlsVer string, ms int, errStr string) {
+func quicHandshake(ctx context.Context, host string, port int) (ok bool, alpn, tlsVer, quicVer string, ms int, errStr string) {
 	addr := net.JoinHostPort(host, strconv.Itoa(port))
 	hctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
@@ -57,11 +62,12 @@ func quicHandshake(ctx context.Context, host string, port int) (ok bool, alpn, t
 	t0 := time.Now()
 	conn, err := quic.DialAddr(hctx, addr, tlsConf, &quic.Config{HandshakeIdleTimeout: 7 * time.Second})
 	if err != nil {
-		return false, "", "", 0, err.Error()
+		return false, "", "", "", 0, err.Error()
 	}
 	defer conn.CloseWithError(0, "")
-	st := conn.ConnectionState().TLS
-	return true, st.NegotiatedProtocol, tlsVersionName(st.Version), int(time.Since(t0).Milliseconds()), ""
+	cs := conn.ConnectionState()
+	st := cs.TLS
+	return true, st.NegotiatedProtocol, tlsVersionName(st.Version), cs.Version.String(), int(time.Since(t0).Milliseconds()), ""
 }
 
 func altSvcAdvertisesH3(ctx context.Context, host string, port int) (bool, string) {
@@ -82,15 +88,16 @@ func altSvcAdvertisesH3(ctx context.Context, host string, port int) (bool, strin
 }
 
 func verdict(r Result) string {
+	advertised := r.AdvertisesH3 || (r.HTTPS != nil && r.HTTPS.AdvertisesH3)
 	switch {
 	case r.QUICReachable && r.ALPN == "h3":
-		return fmt.Sprintf("HTTP/3 works — the QUIC handshake succeeded (h3, %s) in %d ms.", r.TLSVersion, r.HandshakeMillis)
+		return fmt.Sprintf("HTTP/3 works — the QUIC handshake succeeded (h3 over QUIC %s) in %d ms.", r.QUICVersion, r.HandshakeMillis)
 	case r.QUICReachable:
 		return fmt.Sprintf("QUIC is reachable but negotiated %q, not h3.", r.ALPN)
-	case r.AdvertisesH3:
-		return "The server advertises HTTP/3 (Alt-Svc) but the QUIC handshake failed — UDP/443 is likely blocked on your path (firewall / NAT)."
+	case advertised:
+		return "The server advertises HTTP/3 (via Alt-Svc or a DNS HTTPS record) but the QUIC handshake failed — UDP/443 is likely blocked on your path (firewall / NAT)."
 	default:
-		return "No HTTP/3 — the QUIC handshake failed and the server doesn't advertise h3."
+		return "No HTTP/3 — the QUIC handshake failed and neither Alt-Svc nor a DNS HTTPS record advertises h3."
 	}
 }
 

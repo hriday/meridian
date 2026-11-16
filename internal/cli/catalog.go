@@ -38,7 +38,7 @@ func Catalog() []CommandGroup {
 			{"ike", "<host> [--json]", "IKE/IPsec VPN probe — IKEv2 accepted proposal + NAT-T (UDP/500)"},
 			{"wg", "<host> [--port 51820] [--pubkey <b64>] [--json]", "WireGuard probe — handshake initiation; cookie/handshake reply confirms a responder"},
 			{"http", "<url> [--json]", "HTTP(S) check"},
-			{"http3", "<host> [--port 443] [--json]", "HTTP/3 (QUIC) reachability — handshake + Alt-Svc"},
+			{"http3", "<host> [--port 443] [--json]", "HTTP/3: QUIC handshake + version, Alt-Svc, and the DNS HTTPS record (ALPN/ECH)"},
 			{"sechdr", "<url> [--json]", "security headers (OWASP-mapped)"},
 			{"whois", "<domain|ip|asn> [--json]", "whois"},
 			{"subdomains", "<domain> [--json]", "subdomains via Certificate Transparency"},

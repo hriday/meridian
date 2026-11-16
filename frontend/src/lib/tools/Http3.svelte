@@ -40,7 +40,8 @@
     end to end from where you are. <strong>Advertises h3: yes</strong> but <strong>QUIC reachable: no</strong> is the
     telling case — the server offers HTTP/3 but UDP/443 is blocked on your path (firewall or network), not the server's
     fault. Both <code>no</code> means the server simply doesn't do HTTP/3. The amber verdict flags that blocked-path case
-    specifically.
+    specifically. The <strong>HTTPS record</strong> section reads the domain's DNS <code>HTTPS</code> record (RFC 9460),
+    the other way HTTP/3 is advertised — and whether it publishes an <strong>ECH</strong> (Encrypted ClientHello) config.
   </ToolHelp>
 
   <form class="row" on:submit|preventDefault={run}>
@@ -57,13 +58,26 @@
       <div class="k">QUIC reachable</div><div class="v">{res.quicReachable ? "yes" : "no"}</div>
       {#if res.quicReachable}
         <div class="k">ALPN</div><div class="v mono">{res.alpn || "—"}</div>
+        <div class="k">QUIC version</div><div class="v mono">{res.quicVersion || "—"}</div>
         <div class="k">TLS</div><div class="v">{res.tlsVersion}</div>
         <div class="k">Handshake</div><div class="v">{res.handshakeMillis} ms</div>
       {:else if res.quicError}
         <div class="k">QUIC error</div><div class="v mono small">{res.quicError}</div>
       {/if}
-      <div class="k">Advertises h3</div><div class="v">{res.advertisesH3 ? "yes" : "no"}</div>
+      <div class="k">Alt-Svc h3</div><div class="v">{res.advertisesH3 ? "yes" : "no"}</div>
       {#if res.altSvc}<div class="k">Alt-Svc</div><div class="v mono small">{res.altSvc}</div>{/if}
+
+      {#if res.https && res.https.found}
+        <div class="k">HTTPS record</div><div class="v mono">{(res.https.alpn || []).join(", ") || "—"}</div>
+        <div class="k">h3 via DNS</div><div class="v">{res.https.advertisesH3 ? "yes" : "no"}</div>
+        <div class="k">ECH</div><div class="v">{res.https.ech ? "yes — Encrypted ClientHello published" : "no"}</div>
+        {#if res.https.port}<div class="k">HTTPS port</div><div class="v">{res.https.port}</div>{/if}
+        {#if (res.https.ipv4Hint || []).length || (res.https.ipv6Hint || []).length}
+          <div class="k">Address hints</div><div class="v mono small">{[...(res.https.ipv4Hint || []), ...(res.https.ipv6Hint || [])].join(", ")}</div>
+        {/if}
+      {:else if res.https}
+        <div class="k">HTTPS record</div><div class="v dim">none published</div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -86,5 +100,6 @@
   .k { color: var(--text-dim); }
   .v { color: var(--text); word-break: break-word; }
   .v.small { font-size: 0.76rem; }
+  .v.dim { color: var(--text-dim); }
   .mono { font-family: var(--font-mono, ui-monospace, monospace); }
 </style>
