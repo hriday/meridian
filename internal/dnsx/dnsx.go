@@ -73,6 +73,23 @@ func Query(ctx context.Context, name, rtype, server string) (Result, error) {
 	return QueryVia(ctx, name, rtype, server, "udp")
 }
 
+// QueryMsg is like Query but returns the raw DNS message, so callers that need
+// the actual resource records — not their string form — can reach them (e.g.
+// DNSSEC signature verification needs the DNSKEY/DS/RRSIG RRs themselves). UDP
+// with the same TCP-retry-on-truncation as Query; the DNSSEC-OK bit is set.
+func QueryMsg(ctx context.Context, name, rtype, server string) (*mdns.Msg, error) {
+	m, err := buildQuery(name, rtype)
+	if err != nil {
+		return nil, err
+	}
+	timeout := 5 * time.Second
+	if dl, ok := ctx.Deadline(); ok {
+		timeout = time.Until(dl)
+	}
+	resp, _, err := exchangeUDP(ctx, m, server, timeout)
+	return resp, err
+}
+
 // QueryVia is Query over a chosen transport: "udp" (default), "tcp", "dot"
 // (DNS-over-TLS, port 853), "doh" (DNS-over-HTTPS, RFC 8484), or "doq"
 // (DNS-over-QUIC, RFC 9250, port 853). For dot/doq, server may be a hostname

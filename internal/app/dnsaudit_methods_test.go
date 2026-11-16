@@ -45,7 +45,7 @@ func TestDNSAuditMethod(t *testing.T) {
 	rep, err := New().DNSAudit("example.test", addr)
 	require.NoError(t, err)
 	require.Equal(t, addr, rep.Resolver)
-	require.Len(t, rep.Checks, 5)
+	require.Len(t, rep.Checks, 6) // NS, MX, SPF, DMARC, CAA, DNSSEC
 	require.NotEmpty(t, rep.Summary)
 }
 

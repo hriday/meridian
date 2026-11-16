@@ -274,20 +274,46 @@ func Audit(ctx context.Context, domain, resolver string, timeout time.Duration) 
 	}
 	rep.Checks = append(rep.Checks, caa)
 
-	// DNSSEC (AD flag from the NS response).
+	// DNSSEC — validate the chain ourselves (DNSKEY + DS + RRSIG), rather than
+	// trusting the resolver's AD flag, which can't tell an unsigned zone from a
+	// non-validating resolver.
 	sec := Check{Name: "DNSSEC"}
-	switch {
-	case nsErr != nil || refused(nsRes.Rcode):
-		sec.Status, sec.Note = StatusError, "Couldn't determine DNSSEC — the apex query didn't complete."
-	case nsRes.Authenticated:
-		sec.Status, sec.Note = StatusOK, "Answers are DNSSEC-validated (your resolver set the AD flag)."
-	default:
-		sec.Status, sec.Note = StatusWarn, "Not DNSSEC-validated. This reflects your resolver: an unsigned zone and a non-validating resolver look the same, so this is a signal, not a proof."
+	if secRes, secErr := dnsx.ValidateDNSSEC(ctx, domain, resolver); secErr != nil {
+		sec.Status, sec.Note = StatusError, "Couldn't validate DNSSEC: "+secErr.Error()
+	} else {
+		sec.Status, sec.Note = gradeDNSSEC(secRes)
 	}
 	rep.Checks = append(rep.Checks, sec)
 
 	rep.Summary = summarize(&rep)
 	return rep, nil
+}
+
+// gradeDNSSEC turns a validation result into a grade and a plain-language note,
+// distinguishing "not signed" (common, mild) from "signed but unanchored" and
+// "signed but broken" (which breaks resolution for validators), and never
+// claiming more than was actually verified.
+func gradeDNSSEC(r dnsx.DNSSECResult) (Status, string) {
+	alg := ""
+	if r.Algorithm != "" {
+		alg = " (" + r.Algorithm + ")"
+	}
+	switch {
+	case !r.Signed:
+		return StatusWarn, "Zone is not DNSSEC-signed — responses can't be cryptographically verified. Signing it lets resolvers detect tampered answers."
+	case !r.HasDS:
+		return StatusWarn, "Zone is signed but the parent publishes no DS record — the chain of trust isn't anchored, so validators treat it as insecure. Add a DS record at the registrar."
+	case !r.SecureDelegation:
+		return StatusWarn, "DNSSEC appears broken — the parent DS matches no current DNSKEY, so validating resolvers may return SERVFAIL. Re-check the DS after any key rollover."
+	case r.SignaturesValid:
+		return StatusOK, "DNSSEC validated" + alg + " — signed zone, the parent DS matches a DNSKEY, and the key signatures verify."
+	default:
+		note := "Delegation is secure (the DS matches a DNSKEY), but the DNSKEY signature couldn't be verified here"
+		if r.Detail != "" {
+			note += " — " + r.Detail
+		}
+		return StatusWarn, note + "."
+	}
 }
 
 // refused reports whether a DNS rcode means the query was refused/failed rather
