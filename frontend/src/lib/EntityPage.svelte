@@ -178,7 +178,7 @@
             <dt>Holder</dt><dd class="big">{data.holder || "—"}</dd>
             <dt>Prefixes (v4)</dt><dd>{data.v4Prefixes} announced</dd>
             <dt>Prefixes (v6)</dt><dd>{data.v6Prefixes} announced</dd>
-            <dt>Neighbours</dt><dd>{data.neighbours} observed</dd>
+            <dt>Neighbours</dt><dd>{#if data.routingSrc?.err}<span class="dim">unavailable</span>{:else}{data.neighbours} observed{/if}</dd>
           </dl>
         </div>
 

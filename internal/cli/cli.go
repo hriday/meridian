@@ -1031,7 +1031,11 @@ func printASNReport(stdout io.Writer, r lookup.ASNReport) {
 	reportRow(stdout, "ASN", r.ASN)
 	reportRow(stdout, "Holder", strings.TrimSpace(r.Holder+registrySuffix(r.Registry)))
 	reportRow(stdout, "Prefixes", fmt.Sprintf("%d IPv4, %d IPv6", r.V4Prefixes, r.V6Prefixes))
-	reportRow(stdout, "Neighbours", fmt.Sprintf("%d", r.Neighbours))
+	if r.RoutingSrc.Err != "" {
+		reportRow(stdout, "Neighbours", "unavailable (routing data unreachable)")
+	} else {
+		reportRow(stdout, "Neighbours", fmt.Sprintf("%d", r.Neighbours))
+	}
 	for i, p := range r.Prefixes {
 		label := ""
 		if i == 0 {
