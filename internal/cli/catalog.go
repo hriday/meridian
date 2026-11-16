@@ -29,7 +29,7 @@ func Catalog() []CommandGroup {
 		{Name: "Internet", Commands: []CommandDoc{
 			{"lookup", "<ip|asn> [--json]", "IP / ASN intelligence"},
 			{"trace", "<host> [--6] [--json]", "traceroute with AS lookups"},
-		{"tcptrace", "<host> <port> [--json]", "TCP-SYN traceroute (through firewalls that drop UDP/ICMP; no sudo on macOS)"},
+			{"tcptrace", "<host> <port> [--json]", "TCP-SYN traceroute (through firewalls that drop UDP/ICMP; no sudo on macOS)"},
 			{"bgp", "<prefix|ip> [--json]", "BGP looking glass"},
 			{"tls", "<host[:port]> [--json]", "inspect a server's certificate"},
 			{"certinfo", "[<file>] [--json]", "decode a PEM certificate / CSR (stdin ok)"},
@@ -44,6 +44,8 @@ func Catalog() []CommandGroup {
 			{"subdomains", "<domain> [--json]", "subdomains via Certificate Transparency"},
 			{"blocklist", "<ip> [--resolver <ip>] [--json]", "DNS blocklist (DNSBL) check"},
 			{"dnsaudit", "<domain> [--resolver <ip>] [--json]", "DNS posture audit (SPF/DMARC/CAA/DNSSEC)"},
+			{"axfr", "<domain> [--resolver <ip>] [--json]", "zone-transfer (AXFR) exposure test across the domain's nameservers"},
+			{"openresolver", "<ip|host> [--json]", "is a resolver open (recurses for anyone)? amplification risk"},
 			{"dnspropagation", "<name> [--type A] [--json]", "check a record across global resolvers"},
 			{"emailauth", "<domain> [--selectors a,b,c] [--json]", "SPF / DKIM / DMARC"},
 			{"smtp", "<host|domain> [--mx] [--tls] [--port N] [--json]", "SMTP banner / STARTTLS / cert probe"},

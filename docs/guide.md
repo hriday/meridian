@@ -152,9 +152,9 @@ Longer, real-world combinations — building on the three workflows at the top.
 Each runs from the CLI (and every step is a tool in the GUI too).
 
 **Everything about an organization, from its domain.** One built-in runbook
-sweeps the whole external footprint — registration, DNS posture, email auth, DNS
-propagation, subdomains, TLS ciphers, HTTP/3, security headers and certificate
-expiry — into a single report:
+sweeps the whole external footprint — registration, DNS posture, zone-transfer
+exposure, email auth, DNS propagation, subdomains, TLS ciphers, HTTP/3, security
+headers and certificate expiry — into a single report:
 
 ```bash
 meridian-cli runbook org-recon example.com                    # one report, 10 tools
@@ -248,7 +248,9 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | WHOIS | domain / IP / ASN whois | `whois` |
 | Subdomains | subdomains via Certificate Transparency | `subdomains` |
 | DNS blocklist | DNSBL check for an IP | `blocklist` |
-| DNS audit | SPF / DMARC / DNSSEC posture | `dnsaudit` |
+| DNS audit | SPF / DMARC / CAA / DNSSEC posture | `dnsaudit` |
+| Zone transfer (AXFR) | zone-transfer exposure across a domain's nameservers | `axfr` |
+| Open resolver | is a DNS server open to recursion (amplification risk)? | `openresolver` |
 | DNS propagation | one record across global resolvers | `dnspropagation` |
 | Email auth | SPF / DKIM / DMARC | `emailauth` |
 | SMTP probe | banner / STARTTLS / cert | `smtp` |

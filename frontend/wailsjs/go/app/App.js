@@ -34,6 +34,10 @@ export function ARPSupported() {
   return window['go']['app']['App']['ARPSupported']();
 }
 
+export function AXFRTest(arg1, arg2) {
+  return window['go']['app']['App']['AXFRTest'](arg1, arg2);
+}
+
 export function AnalyzeCiscoPasswords(arg1) {
   return window['go']['app']['App']['AnalyzeCiscoPasswords'](arg1);
 }
@@ -432,6 +436,10 @@ export function NetflowStop() {
 
 export function NetflowTop(arg1, arg2) {
   return window['go']['app']['App']['NetflowTop'](arg1, arg2);
+}
+
+export function OpenResolverTest(arg1) {
+  return window['go']['app']['App']['OpenResolverTest'](arg1);
 }
 
 export function PTRSweep(arg1) {

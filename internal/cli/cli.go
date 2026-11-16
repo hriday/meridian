@@ -150,6 +150,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runBlocklist(args[1:], stdout, stderr)
 	case "dnsaudit":
 		return runDNSAudit(args[1:], stdout, stderr)
+	case "axfr":
+		return runAXFR(args[1:], stdout, stderr)
+	case "openresolver":
+		return runOpenResolver(args[1:], stdout, stderr)
 	case "adaudit":
 		return runADAudit(args[1:], stdout, stderr)
 	case "ipspace":
