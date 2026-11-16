@@ -33,6 +33,7 @@ func runNDP(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	res.Neighbors = ns
+	res.DefaultRouters, _ = ndp.DefaultRouters(ctx) // unprivileged, best-effort
 	if *withRA {
 		if !ndp.RASupported() {
 			res.RANote = "Router Advertisement listening isn't available on this OS."
@@ -63,12 +64,34 @@ func printNDP(stdout io.Writer, r ndp.Result, withRA bool) {
 		}
 		fmt.Fprintf(stdout, "%-42s %-18s %-8s %s%s\n", n.IP, mac, n.Interface, n.State, flag)
 	}
+
+	// Learned routers — unprivileged, from the OS's own RA-derived routing tables.
+	fmt.Fprintf(stdout, "\nIPv6 routers (%d)\n\n", len(r.DefaultRouters))
+	for _, rt := range r.DefaultRouters {
+		addr := rt.Address
+		if rt.Interface != "" {
+			addr += "%" + rt.Interface
+		}
+		extra := ""
+		if rt.Preference != "" {
+			extra += "  pref=" + rt.Preference
+		}
+		if rt.Expire != "" {
+			extra += "  expire=" + rt.Expire
+		}
+		fmt.Fprintf(stdout, "%-42s%s\n", addr, extra)
+	}
+
 	if !withRA {
 		return
 	}
 	fmt.Fprintln(stdout)
 	if r.RANote != "" {
 		fmt.Fprintln(stdout, "Router Advertisements:", r.RANote)
+		return
+	}
+	if len(r.Routers) == 0 {
+		fmt.Fprintln(stdout, "Router Advertisements (0) — none captured in the window. Routers also send them periodically; try a longer --wait, or rely on the unprivileged routers above.")
 		return
 	}
 	fmt.Fprintf(stdout, "Router Advertisements (%d)\n", len(r.Routers))
