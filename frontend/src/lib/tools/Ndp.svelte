@@ -1,10 +1,16 @@
 <script lang="ts">
   import { NDPScan } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let rep: any = null;
   let loading = false;
   let error = "";
   let withRA = false;
+
+  // macOS returns a masked placeholder MAC to unprivileged callers; show that
+  // honestly rather than as a real-looking address.
+  const fmtMac = (m: string) => (!m ? "(incomplete)" : m === "2:0:0:0:0:0" ? "(hidden)" : m);
+  $: masked = (rep?.neighbors || []).filter((n: any) => n.mac === "2:0:0:0:0:0").length;
 
   async function run() {
     loading = true;
@@ -29,6 +35,14 @@
     exact lifetimes.
   </p>
 
+  <ToolHelp sudo="sudo for real MACs + live RA">
+    Two sections. <strong>IPv6 neighbors</strong> is every device on your local IPv6 link — the v6 equivalent of an ARP
+    table: address, MAC, interface and reachability. <strong>IPv6 routers</strong> is your gateway(s), learned from Router
+    Advertisements; <code>expire</code> is how long that advertisement stays valid. A neighbor flagged <code>router</code>
+    that shouldn't be one is a red flag (a rogue Router Advertisement). On macOS, neighbor MACs read <code>(hidden)</code>
+    unless you run with <code>sudo</code>.
+  </ToolHelp>
+
   <div class="row">
     <button class="btn" on:click={run} disabled={loading}>{loading ? "Scanning…" : "Scan link"}</button>
     <label class="toggle"><input type="checkbox" bind:checked={withRA} /> live RA capture (sudo)</label>
@@ -46,7 +60,7 @@
             {#each rep.neighbors as n}
               <tr>
                 <td class="mono">{n.ip}</td>
-                <td class="mono dim">{n.mac || "(incomplete)"}</td>
+                <td class="mono dim">{fmtMac(n.mac)}</td>
                 <td class="dim">{n.interface}</td>
                 <td class="dim">{n.state}</td>
                 <td>{#if n.router}<span class="tag">router</span>{/if}</td>
@@ -57,6 +71,9 @@
       </div>
     {:else}
       <p class="empty">No IPv6 neighbors cached.</p>
+    {/if}
+    {#if masked}
+      <p class="masknote">🔒 {masked} MAC{masked === 1 ? "" : "s"} hidden by macOS — run the app with <code>sudo</code> for the real hardware addresses.</p>
     {/if}
 
     <h3 class="sec">IPv6 routers <span class="count">{rep.defaultRouters?.length ?? 0}</span></h3>
@@ -129,6 +146,8 @@
   .dim { color: var(--text-dim); }
   .tag { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 5px; padding: 0 5px; }
   .empty { font-size: 0.82rem; color: var(--text-faint, var(--text-dim)); max-width: 820px; }
+  .masknote { font-size: 0.76rem; color: var(--warn, #d6a531); max-width: 820px; margin: 8px 0 0; }
+  .masknote :global(code) { font-family: var(--font-mono, ui-monospace, monospace); }
   .note { font-size: 0.82rem; max-width: 820px; padding: 9px 13px; border-radius: 9px; border: 1px solid var(--border); border-left-width: 3px; }
   .note.neu { border-left-color: var(--text-faint, var(--text-dim)); color: var(--text-dim); }
   .cards { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }

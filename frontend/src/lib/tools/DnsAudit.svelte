@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DNSAudit, DNSSystem } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let domain = "";
   let resolver = "";
@@ -55,6 +56,13 @@
     DNSSEC — each in plain language. Read-only lookups through your resolver; the
     query carries only the domain.
   </p>
+
+  <ToolHelp>
+    Each row is one posture check, graded <strong>ok / warn / missing / error</strong>. Green across SPF, DMARC, CAA and
+    DNSSEC means the domain is hard to spoof and its certificates and zone are locked down. A <code>warn</code> or
+    <code>missing</code> is exactly where a spoofer, a mis-issued certificate, or a tampered DNS answer gets in —
+    <code>error</code> means the check couldn't run, not that it passed.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input

@@ -53,16 +53,24 @@ func runNDP(args []string, stdout, stderr io.Writer) int {
 
 func printNDP(stdout io.Writer, r ndp.Result, withRA bool) {
 	fmt.Fprintf(stdout, "IPv6 neighbors (%d)\n\n", len(r.Neighbors))
+	masked := 0
 	for _, n := range r.Neighbors {
 		mac := n.MAC
-		if mac == "" {
+		switch {
+		case mac == "":
 			mac = "(incomplete)"
+		case mac == "2:0:0:0:0:0": // macOS masks MACs for an unprivileged caller
+			mac = "(hidden)"
+			masked++
 		}
 		flag := ""
 		if n.Router {
 			flag = "  router"
 		}
 		fmt.Fprintf(stdout, "%-42s %-18s %-8s %s%s\n", n.IP, mac, n.Interface, n.State, flag)
+	}
+	if masked > 0 {
+		fmt.Fprintf(stdout, "\n%d MAC(s) hidden by macOS — re-run with sudo for the real hardware addresses.\n", masked)
 	}
 
 	// Learned routers — unprivileged, from the OS's own RA-derived routing tables.

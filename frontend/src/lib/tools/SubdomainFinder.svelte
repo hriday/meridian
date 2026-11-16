@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CTSubdomains, DNSQuery, DNSSystem } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let domain = "";
   let subs: any[] = [];
@@ -53,6 +54,14 @@
     that's ever been issued a TLS certificate. A fast, free, keyless way to map the attack surface, then pivot into
     Lookup, TLS, or HTTP.
   </p>
+
+  <ToolHelp>
+    Every hostname a domain has ever been issued a TLS certificate for, from public <strong>Certificate Transparency</strong>
+    logs — a fast map of its external attack surface without touching the target. It finds only names that appear in a
+    certificate, not every host that exists. The <strong>retired?</strong> tag flags hosts whose newest certificate expired
+    over two years ago (likely decommissioned); use <strong>Resolves?</strong> to tell a dead record from one still
+    lingering in DNS.
+  </ToolHelp>
 
   <div class="searchrow">
     <input class="field mono" bind:value={domain} placeholder="example.com" spellcheck="false" autocomplete="off"

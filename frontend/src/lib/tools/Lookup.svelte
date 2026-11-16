@@ -2,6 +2,7 @@
   import { get } from "svelte/store";
   import { Classify, LookupIP, LookupASN, LookupPrefix, LookupDomain } from "../../../wailsjs/go/app/App.js";
   import { Kind, kindLabel } from "../kinds";
+  import ToolHelp from "../ToolHelp.svelte";
   import EntityPage from "../EntityPage.svelte";
   import { requestedTool } from "../nav";
 
@@ -62,6 +63,12 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    Enter an <strong>IP</strong>, an <strong>AS number</strong>, a <strong>CIDR prefix</strong>, or a <strong>domain</strong> —
+    Meridian detects which. You get who owns it and how it's routed: for an IP, its network, owner and ASN; for an ASN,
+    the organisation and the IP blocks it announces to the internet. Use it to see who really controls an address and
+    what else sits behind the same operator.
+  </ToolHelp>
   <form on:submit|preventDefault={() => run()} class="row">
     <input
       class="field mono"
