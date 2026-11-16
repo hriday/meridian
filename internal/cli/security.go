@@ -308,13 +308,30 @@ func runSubdomains(args []string, stdout, stderr io.Writer) int {
 }
 
 func printSubdomains(stdout io.Writer, subs []ctlog.Subdomain) {
-	fmt.Fprintf(stdout, "%d subdomains from Certificate Transparency\n\n", len(subs))
+	stale := 0
+	for _, s := range subs {
+		if s.Stale {
+			stale++
+		}
+	}
+	fmt.Fprintf(stdout, "%d subdomains from Certificate Transparency", len(subs))
+	if stale > 0 {
+		fmt.Fprintf(stdout, " — %d likely retired", stale)
+	}
+	fmt.Fprint(stdout, "\n\n")
 	for _, s := range subs {
 		name := s.Name
 		if s.Wildcard {
 			name = "*." + name
 		}
-		fmt.Fprintf(stdout, "%-40s %3d certs  (%s → %s)\n", name, s.Certs, s.FirstSeen, s.LastSeen)
+		marker := " "
+		if s.Stale {
+			marker = "×"
+		}
+		fmt.Fprintf(stdout, "%s %-40s %3d certs  (%s → %s)\n", marker, name, s.Certs, s.FirstSeen, s.LastSeen)
+	}
+	if stale > 0 {
+		fmt.Fprint(stdout, "\n× = newest certificate expired over 2 years ago — likely a decommissioned host\n    whose DNS record can probably be pulled. Confirm it no longer resolves first.\n")
 	}
 }
 

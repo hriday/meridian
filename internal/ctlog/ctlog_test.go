@@ -6,9 +6,25 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestMarkStale(t *testing.T) {
+	now := time.Date(2026, 11, 15, 0, 0, 0, 0, time.UTC)
+	subs := []Subdomain{
+		{Name: "old.example.com", LastSeen: "2017-04-07"},    // ~9y ago → stale
+		{Name: "recent.example.com", LastSeen: "2026-06-01"}, // this year → active
+		{Name: "edge.example.com", LastSeen: "2024-11-30"},   // ~1y ago, under 2y → active
+		{Name: "nodate.example.com", LastSeen: ""},           // unparseable → left alone
+	}
+	markStale(subs, now)
+	require.True(t, subs[0].Stale, "a cert that expired 9 years ago is stale")
+	require.False(t, subs[1].Stale, "a cert from this year is active")
+	require.False(t, subs[2].Stale, "just under the 2-year threshold stays active")
+	require.False(t, subs[3].Stale, "an unparseable date is never flagged")
+}
 
 type fakeDoer struct {
 	body   string
