@@ -79,7 +79,44 @@ func TestSubdomainsNormalizesInput(t *testing.T) {
 }
 
 func TestSubdomainsHTTPError(t *testing.T) {
+	// Both sources fail (the fake returns 502 for every host) → error.
 	f := &fakeDoer{status: 502, body: ""}
 	_, err := Subdomains(context.Background(), f, "example.com")
 	require.Error(t, err)
+}
+
+type routeResp struct {
+	status int
+	body   string
+}
+
+type routeDoer struct{ m map[string]routeResp }
+
+func (d *routeDoer) Do(req *http.Request) (*http.Response, error) {
+	r := d.m[req.URL.Host]
+	st := r.status
+	if st == 0 {
+		st = 500
+	}
+	return &http.Response{StatusCode: st, Body: io.NopCloser(strings.NewReader(r.body)), Header: make(http.Header)}, nil
+}
+
+func TestSubdomainsFallsBackToCertSpotter(t *testing.T) {
+	// crt.sh errors (502); certSpotter answers → its names are used.
+	d := &routeDoer{m: map[string]routeResp{
+		"crt.sh": {status: 502},
+		"api.certspotter.com": {status: 200, body: `[
+		  {"dns_names":["www.example.com","api.example.com"],"not_before":"2024-01-01T00:00:00Z","not_after":"2024-04-01T00:00:00Z"},
+		  {"dns_names":["other.notours.com"],"not_before":"2024-01-01T00:00:00Z","not_after":"2024-02-01T00:00:00Z"}
+		]`},
+	}}
+	subs, err := Subdomains(context.Background(), d, "example.com")
+	require.NoError(t, err)
+	names := map[string]bool{}
+	for _, s := range subs {
+		names[s.Name] = true
+	}
+	require.True(t, names["www.example.com"], "should include www from certSpotter")
+	require.True(t, names["api.example.com"], "should include api from certSpotter")
+	require.False(t, names["other.notours.com"], "out-of-scope name dropped")
 }

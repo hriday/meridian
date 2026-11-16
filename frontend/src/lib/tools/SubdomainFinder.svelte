@@ -28,8 +28,10 @@
 <div class="tool">
   <p class="lede">
     Discover a domain's <strong>subdomains from Certificate Transparency logs</strong> (via
-    <a href="https://crt.sh" target="_blank" rel="noreferrer">crt.sh</a>) — every host that's ever been issued a TLS
-    certificate. A fast, free, keyless way to map the attack surface, then pivot into Lookup, TLS, or HTTP.
+    <a href="https://crt.sh" target="_blank" rel="noreferrer">crt.sh</a>, with a
+    <a href="https://sslmate.com/certspotter/" target="_blank" rel="noreferrer">certSpotter</a> fallback) — every host
+    that's ever been issued a TLS certificate. A fast, free, keyless way to map the attack surface, then pivot into
+    Lookup, TLS, or HTTP.
   </p>
 
   <div class="searchrow">
@@ -37,7 +39,7 @@
       on:keydown={(e) => e.key === "Enter" && find()} />
     <button class="btn" on:click={find} disabled={loading || !domain.trim()}>{loading ? "Searching CT logs…" : "Find subdomains"}</button>
   </div>
-  <div class="note">Finds only names that appear in a certificate — not every host that exists. crt.sh can be slow (or flaky) on large domains; just retry if it errors.</div>
+  <div class="note">Finds only names that appear in a certificate — not every host that exists. crt.sh can be slow or flaky on large domains; Meridian falls back to certSpotter automatically when it is.</div>
 
   {#if err}
     <div class="banner bad"><span>{err}</span><button class="link" on:click={find}>Retry</button></div>
