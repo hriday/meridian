@@ -90,38 +90,53 @@ func Test(ctx context.Context, domain, resolver string) (Report, error) {
 }
 
 // classify turns one transfer attempt into a graded result. Any records returned
-// means the zone was handed over, regardless of a trailing error. Otherwise a
-// connection-level failure is "error" (we couldn't test), while a DNS-level
-// denial is "refused" (the server correctly said no).
+// means the zone was handed over. With no records, the status turns on WHY: only
+// a nameserver that answered and declined is "refused" (secure); a transport
+// failure (we never learned the server's policy) is "error", never a false
+// "secure" — the same discipline as the emailauth/DNS graders.
 func classify(ns string, records int, sample []string, err error) NSResult {
 	r := NSResult{Nameserver: ns}
 	switch {
 	case records > 0:
 		r.Status, r.Records, r.Sample = StatusTransferred, records, sample
 		r.Detail = "Zone transfer allowed — " + strconv.Itoa(records) + " records exposed to any client."
-	case err != nil && isConnError(err):
-		r.Status, r.Detail = StatusError, "Couldn't reach this nameserver over TCP/53: "+err.Error()
+	case err == nil:
+		// Connected, completed, served nothing — allowed but empty; never exposed.
+		r.Status, r.Detail = StatusRefused, "Zone transfer refused (empty response)."
+	case isDNSRefusal(err):
+		r.Status, r.Detail = StatusRefused, "Zone transfer refused by the nameserver."
 	default:
-		r.Status, r.Detail = StatusRefused, "Zone transfer refused."
+		r.Status, r.Detail = StatusError, "Couldn't complete the transfer, so exposure is unknown (not a refusal): "+err.Error()
 	}
 	return r
 }
 
-// isConnError reports whether err is a network-level failure (dial/timeout),
-// as opposed to a DNS-level refusal the server returned.
-func isConnError(err error) bool {
+// isDNSRefusal reports whether err is the nameserver answering and declining the
+// transfer (a DNS rcode such as REFUSED/NOTAUTH/NOTIMP), as opposed to a
+// transport failure (dial/timeout/reset/broken pipe) where the server's policy
+// never became known. Unknown errors are treated as transport failures, so the
+// default is "couldn't test", never a false "secure".
+func isDNSRefusal(err error) bool {
 	var ne net.Error
 	if errors.As(err, &ne) {
-		return true
+		return false
 	}
 	var oe *net.OpError
 	if errors.As(err, &oe) {
-		return true
+		return false
 	}
 	s := strings.ToLower(err.Error())
-	return strings.Contains(s, "connection refused") || strings.Contains(s, "no such host") ||
-		strings.Contains(s, "timeout") || strings.Contains(s, "unreachable") ||
-		strings.Contains(s, "connection reset")
+	for _, transport := range []string{"broken pipe", "bad file descriptor", "connection refused",
+		"connection reset", "timeout", "unreachable", "no such host", "no route", "i/o"} {
+		if strings.Contains(s, transport) {
+			return false
+		}
+	}
+	// A miekg transfer error carrying an rcode / authority verdict = the server
+	// responded and declined.
+	return strings.Contains(s, "rcode") || strings.Contains(s, "xfr") ||
+		strings.Contains(s, "refused") || strings.Contains(s, "not authoritative") ||
+		strings.Contains(s, "notauth")
 }
 
 func countExposed(rs []NSResult) int {
@@ -135,13 +150,30 @@ func countExposed(rs []NSResult) int {
 }
 
 func summarize(r Report) string {
-	exposed := countExposed(r.Nameservers)
+	exposed, refused, errs := 0, 0, 0
+	for _, n := range r.Nameservers {
+		switch n.Status {
+		case StatusTransferred:
+			exposed++
+		case StatusRefused:
+			refused++
+		case StatusError:
+			errs++
+		}
+	}
+	total := len(r.Nameservers)
 	switch {
 	case exposed > 0:
-		return "EXPOSED — " + strconv.Itoa(exposed) + " of " + strconv.Itoa(len(r.Nameservers)) +
+		return "EXPOSED — " + strconv.Itoa(exposed) + " of " + strconv.Itoa(total) +
 			" nameserver(s) allow a full zone transfer to anyone. Restrict AXFR to your secondaries."
+	case refused == total:
+		return "Secure — all " + strconv.Itoa(total) + " nameserver(s) refused the zone transfer."
+	case refused > 0:
+		return "Likely secure — " + strconv.Itoa(refused) + " refused, " + strconv.Itoa(errs) +
+			" couldn't be tested (transport error, exposure unknown)."
 	default:
-		return "Secure — all " + strconv.Itoa(len(r.Nameservers)) + " nameserver(s) refused the zone transfer."
+		return "Inconclusive — none of the " + strconv.Itoa(total) +
+			" nameserver(s) could be tested (transport error, exposure unknown)."
 	}
 }
 
