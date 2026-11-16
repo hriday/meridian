@@ -3283,10 +3283,29 @@ export namespace ndp {
 		    return a;
 		}
 	}
+	export class Router {
+	    address: string;
+	    interface?: string;
+	    preference?: string;
+	    expire?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Router(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.interface = source["interface"];
+	        this.preference = source["preference"];
+	        this.expire = source["expire"];
+	    }
+	}
 	export class Result {
 	    os: string;
 	    neighbors: Neighbor[];
-	    routers: RouterAdvert[];
+	    defaultRouters: Router[];
+	    routers?: RouterAdvert[];
 	    raNote?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -3297,6 +3316,7 @@ export namespace ndp {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.os = source["os"];
 	        this.neighbors = this.convertValues(source["neighbors"], Neighbor);
+	        this.defaultRouters = this.convertValues(source["defaultRouters"], Router);
 	        this.routers = this.convertValues(source["routers"], RouterAdvert);
 	        this.raNote = source["raNote"];
 	    }
@@ -3319,6 +3339,7 @@ export namespace ndp {
 		    return a;
 		}
 	}
+	
 
 }
 

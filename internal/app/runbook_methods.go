@@ -64,6 +64,34 @@ func (a *App) RunbookRender(d cli.RunbookData, format string) string {
 	return cli.RenderRunbook(d, format)
 }
 
+// SaveRunbookPDF renders an already-run runbook to a PDF in Go and saves it via
+// a Save dialog, returning the path (or "" if cancelled). The GUI uses this
+// instead of browser print-to-PDF, which is a no-op in the macOS webview.
+func (a *App) SaveRunbookPDF(d cli.RunbookData) (string, error) {
+	data, err := cli.RenderRunbookPDF(d)
+	if err != nil {
+		return "", err
+	}
+	name := d.Profile
+	if name == "" {
+		name = "runbook"
+	}
+	if d.Target != "" {
+		name += "-" + d.Target
+	}
+	path, err := wruntime.SaveFileDialog(a.lookupCtx(), wruntime.SaveDialogOptions{
+		DefaultFilename: name + ".pdf",
+		Title:           "Save report as PDF",
+	})
+	if err != nil || path == "" {
+		return "", err
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 // SaveReport opens a Save dialog seeded with defaultName and writes content to
 // the chosen path, returning it (or "" if the user cancelled). Used by the GUI
 // to export a runbook report as text/JSON/HTML.
