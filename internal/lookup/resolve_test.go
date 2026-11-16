@@ -88,9 +88,9 @@ func TestLookupPartialOnSourceError(t *testing.T) {
 		"/ip/":         {body: arinIPBody},
 	})
 	r, err := c.LookupIP(context.Background(), "104.16.123.45")
-	require.NoError(t, err)                      // partial, not fatal
-	require.NotEmpty(t, r.RoutingSrc.Err)        // routing failed
-	require.Empty(t, r.OriginASN)                // no routing data
+	require.NoError(t, err)                               // partial, not fatal
+	require.NotEmpty(t, r.RoutingSrc.Err)                 // routing failed
+	require.Empty(t, r.OriginASN)                         // no routing data
 	require.Equal(t, "Cloudflare, Inc.", r.RegisteredOrg) // registry still populated
 	require.Empty(t, r.RegistrySrc.Err)
 }
@@ -127,6 +127,22 @@ func TestLookupASNCombines(t *testing.T) {
 	require.Equal(t, 712, r.V6Prefixes)
 	require.Equal(t, 8400, r.Neighbours)
 	require.Equal(t, "ARIN", r.Registry)
+}
+
+func TestLookupASNDerivesPrefixesWhenRoutingFails(t *testing.T) {
+	// routing-status times out/5xx (common for huge ASNs), but announced-prefixes
+	// succeeds — the counts must come from the blocks, not be shown as 0.
+	c := lookupServer(t, map[string]srvResp{
+		"routing-status":     {code: 503, body: "down"},
+		"announced-prefixes": {body: `{"data":{"prefixes":[{"prefix":"1.2.3.0/24"},{"prefix":"5.6.7.0/24"},{"prefix":"2001:db8::/32"}]}}`},
+		"as-overview":        {body: `{"data":{"holder":"TEST"}}`},
+	})
+	r, err := c.LookupASN(context.Background(), "AS65000")
+	require.NoError(t, err)
+	require.NotEmpty(t, r.RoutingSrc.Err, "routing-status failure is flagged")
+	require.Len(t, r.Prefixes, 3, "the announced blocks still come through")
+	require.Equal(t, 2, r.V4Prefixes, "v4 count derived from the blocks, not left at 0")
+	require.Equal(t, 1, r.V6Prefixes)
 }
 
 func TestLookupASNIncludesPeering(t *testing.T) {
