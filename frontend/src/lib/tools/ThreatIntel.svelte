@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ThreatIntelCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let input = "";
   let hits: any[] = [];
@@ -33,6 +34,14 @@
     seen acting as malware C2 infrastructure. The blocklist is a free, keyless public feed; only the IPs you paste
     are looked up.
   </p>
+
+  <ToolHelp>
+    Each row is one IP. A red <strong><code>BOTNET C2</code></strong> verdict means abuse.ch has seen that IP running
+    malware command-and-control — treat it as hostile: block it and hunt for any host that talked to it. The
+    <strong>Malware</strong> and <strong>Last online</strong> columns tell you which family and how recent. A
+    <code>clean</code> result only means the IP isn't a <em>known</em> C2 on this one feed — not that it's safe, so
+    cross-check anything suspicious with the <strong>Blocklist check</strong> tool.
+  </ToolHelp>
 
   <textarea
     class="field mono"

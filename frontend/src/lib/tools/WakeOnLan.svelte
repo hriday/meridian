@@ -1,5 +1,6 @@
 <script lang="ts">
   import { WakeOnLAN } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let mac = "";
   let bcast = "255.255.255.255";
@@ -32,6 +33,14 @@
     broadcast <b>doesn't cross subnets</b> — send from the same LAN, or set the
     broadcast address of the target's subnet (e.g. <span class="mono">192.168.1.255</span>).
   </p>
+
+  <ToolHelp>
+    A green <strong>"sent"</strong> only confirms the magic packet left this machine — it is <strong>not proof the
+    target woke</strong>, since nothing replies to Wake-on-LAN. Wait a few seconds, then verify with a
+    <strong>ping</strong> or by checking the service. If it stays dark, the usual causes are WOL <strong>not enabled</strong>
+    in the target's BIOS/NIC, or the broadcast <strong>not reaching its subnet</strong> — set the target subnet's
+    broadcast address and send from the same LAN.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="grid">
     <label>MAC address

@@ -4,6 +4,7 @@
   import { subnet } from "../../../wailsjs/go/models";
   import { isPrefix, kindLabel } from "../kinds";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "10.0.0.0/24";
   let info: subnet.Info | null = null;
@@ -60,6 +61,13 @@
 <div class="tool">
   <h2>Subnet calculator</h2>
   <p class="sub">IPv4 and IPv6. Enter a CIDR block to see its range, mask, and usable addresses.</p>
+
+  <ToolHelp>
+    <strong>Addresses</strong> is every address in the block; <strong>Usable</strong> is the host range you can actually
+    assign — for IPv4 that's the total minus the network and broadcast addresses. Use <strong>First</strong> and
+    <strong>Last</strong> as the pool bounds and the <strong>Netmask</strong> when configuring an interface.
+    <strong>Split into /n</strong> carves the block into equal smaller subnets — handy for planning how a range divides.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input

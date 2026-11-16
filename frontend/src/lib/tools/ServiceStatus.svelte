@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ServiceStatus, ServiceStatusKnown } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
   import { BrowserOpenURL } from "../../../wailsjs/runtime/runtime.js";
 
   let target = "";
@@ -35,6 +36,14 @@
     <strong>Statuspage</strong> feed (authoritative status, not crowd reports). Pick a known service or paste any
     status-page URL (e.g. <span class="mono">status.example.com</span>). Free — no account.
   </p>
+
+  <ToolHelp>
+    A green dot with "No active incidents" means the provider reports everything operational — so if you're seeing
+    trouble, it's likely your side or the network between you. A red dot lists the <strong>affected components</strong>
+    and any <strong>active incidents</strong>, graded by impact (<code>minor</code> → <code>major</code>/<code>critical</code>)
+    — that's confirmation the outage is on their end, not yours. Open the incident details for the provider's own
+    timeline and ETA.
+  </ToolHelp>
 
   <div class="row">
     <input class="field mono" bind:value={target} placeholder="github  ·  or  https://status.example.com" spellcheck="false"

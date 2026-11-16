@@ -1,5 +1,6 @@
 <script lang="ts">
   import { WifiStatus, WifiRequestLocation } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
   let error = "";
@@ -83,6 +84,15 @@
     and the neighboring APs — with a <strong>channel map</strong> that makes <strong>co-channel contention</strong> and
     adjacent-channel overlap obvious at a glance. No admin rights.
   </p>
+
+  <ToolHelp>
+    <strong>Signal</strong> (RSSI) is better closer to zero: roughly <code>-60 dBm</code> or higher is strong, around
+    <code>-72</code> is marginal, and below that is weak. <strong>SNR</strong> is signal above noise — aim for
+    <strong>25 dB+</strong>; under ~15 is where throughput suffers even if the signal bar looks fine. The
+    <strong>co-channel</strong> warning is the common culprit for a fast-signal-but-slow connection: neighbors sharing
+    your channel force everyone to take turns, so switching to a less crowded channel (on 2.4 GHz, stick to 1 / 6 / 11)
+    often helps more than chasing signal.
+  </ToolHelp>
 
   <div class="row">
     <button class="btn" on:click={run} disabled={loading}>{loading ? "Reading…" : "Refresh"}</button>

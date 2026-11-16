@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AnalyzeFirewall } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const VENDORS = [
     { id: "fortigate", label: "FortiGate" },
@@ -122,6 +123,14 @@
     leaves your machine — and shows the network segments, what talks to what, and the
     counts. It's a reading of the ruleset at the segment level, not a live device.
   </p>
+
+  <ToolHelp>
+    The tiles count what the config contains; below them, <strong>Segments</strong> lists your networks and
+    <strong>What talks to what</strong> is the real payoff — each flow shows a source reaching a destination over a
+    service, marked <code>allow</code> (green) or <code>deny</code> (red). Scan for allows you didn't expect, especially
+    broad <code>any</code> services or paths into sensitive segments. Click a flow to see the exact policies behind it; a
+    <strong>policies not fully analysed</strong> warning means some rules use negation and aren't reflected here.
+  </ToolHelp>
 
   <div class="card span">
     <div class="row vendorrow">

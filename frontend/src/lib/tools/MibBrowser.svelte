@@ -1,5 +1,6 @@
 <script lang="ts">
   import { MIBWalk } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const CAP = 5000;
   const presets: { label: string; oid: string }[] = [
@@ -50,6 +51,13 @@
     the dashboards — what a device actually exposes, the OID behind a number, or why a monitor reads what
     it reads. Read-only; the community is never shown back.
   </p>
+
+  <ToolHelp>
+    Each row is one <strong>OID</strong> with its SNMP <strong>type</strong> (Counter32, TimeTicks, OctetString…)
+    and current <strong>value</strong> — the raw truth under the dashboards. A <strong>Walk</strong> returns
+    everything beneath a branch; a full instance OID (ending like <code>…1.5.0</code>) returns one value.
+    <strong>Nothing under…</strong> means the device doesn't implement that branch, not that it's unreachable.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={walk}>
     <input class="field dev mono" bind:value={device} placeholder="10.0.0.1  ·  device" aria-label="Device" spellcheck="false" autocomplete="off" />

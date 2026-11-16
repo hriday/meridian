@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AXFRTest } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let domain = "";
   let rep: any = null;
@@ -30,6 +31,13 @@
     correctly configured server refuses; one that allows it hands over the <strong>entire zone</strong> — every host and
     subdomain — in one query. Read-only: it asks for the transfer and reports whether the server would have given it.
   </p>
+
+  <ToolHelp>
+    One card per nameserver. You want every one marked <code>refused</code> — that's a server correctly turning the
+    transfer down. <strong><code>EXPOSED</code></strong> is the finding to act on: that server handed over the zone, and
+    the sampled records below it are the hostnames anyone could pull. <code>error</code> means the test couldn't reach a
+    verdict (timeout or no response), not that the server is safe. One EXPOSED nameserver is enough to leak the zone.
+  </ToolHelp>
 
   <div class="row">
     <input class="field mono" bind:value={domain} placeholder="example.com" spellcheck="false" autocomplete="off"

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SwitchPortMap } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let device = "";
   let community = "";
@@ -34,6 +35,14 @@
     table. SNMPv2c read-only; the community string is used only to connect and is
     never logged.
   </p>
+
+  <ToolHelp>
+    Each row ties a <strong>MAC</strong> (and its IP, where ARP knew it) to the physical <strong>switch
+    port</strong> and VLAN it's learned on — that's how you find where a device is actually plugged in.
+    <strong>Several MACs on one port</strong> usually means a downstream switch, AP or hypervisor behind it.
+    <strong>No forwarding entries</strong> means SNMP didn't return the bridge table — check access, and that
+    this really is a switch.
+  </ToolHelp>
 
   <div class="card span">
     <div class="grid">

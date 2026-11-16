@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SMTPProbe } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let mode = "auto"; // auto(25/starttls) | submission(587) | implicit(465) | mx
@@ -42,6 +43,14 @@
     check <strong>STARTTLS</strong>, and inspect the <strong>TLS certificate</strong>. Complements the email-auth
     tool (which only reads DNS). Never authenticates or sends mail. Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp>
+    Read the <strong>TLS</strong> row first: <strong>STARTTLS offered</strong> or <strong>implicit TLS</strong> is
+    what you want — <strong>No TLS</strong> means mail to this host can cross in the clear. Then check
+    <strong>Valid for host</strong> is <code>yes</code> and <strong>Expires</strong> isn't near zero: a mismatch
+    or a soon-to-expire cert warns or breaks delivery. The <strong>EHLO capabilities</strong> and
+    <strong>auth mechanisms</strong> list what the server supports.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={host} placeholder="mail.example.com  or  example.com (with MX)" autocomplete="off" spellcheck="false" aria-label="Host or domain" />

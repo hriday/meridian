@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SnmpBruteCommunities } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const DEFAULTS = [
     "public", "private", "cisco", "admin", "snmp", "read", "write",
@@ -44,6 +45,13 @@
     one read-only <span class="mono">sysDescr</span> GET (SNMPv2c); it never writes and
     never changes the device, and the strings are used only to connect.
   </p>
+
+  <ToolHelp>
+    <strong>No community string granted read access</strong> is the result you want — none of the tested strings
+    worked. Any <strong>working string</strong> listed (red) is a weak or default community that grants SNMP read
+    on your gear: rotate it to something non-guessable, or move to SNMPv3. The audit is only as thorough as the
+    word list you give it.
+  </ToolHelp>
 
   <div class="warn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>

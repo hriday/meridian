@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SSHAudit } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let rep: any = null;
@@ -34,6 +35,15 @@
     exchange</strong> (sntrup761x25519 or ML-KEM). Nothing is authenticated and nothing is stored — the algorithm list
     comes from the server's cleartext KEXINIT, and host keys from handshakes aborted the instant the key arrives.
   </p>
+
+  <ToolHelp>
+    The letter grade reflects the <strong>key exchange</strong> — <code>A</code>/<code>B</code> good, down to
+    <code>F</code>. The post-quantum panel is the main signal: green <code>Quantum-safe (default)</code> means a PQ key
+    exchange (<code>sntrup761x25519</code> or ML-KEM) is preferred, amber means it's offered but not default, and red
+    means none — leaving today's traffic open to <strong>harvest-now-decrypt-later</strong>. Work the
+    <strong>Findings</strong> list to clear weak ciphers/MACs; classical RSA/ECDSA/Ed25519 host-key signatures are
+    expected and not a problem.
+  </ToolHelp>
 
   <div class="row">
     <input class="field" bind:value={host} placeholder="ssh.example.com  or  host:2222" spellcheck="false" autocomplete="off"

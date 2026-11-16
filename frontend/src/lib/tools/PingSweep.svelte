@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { PingSweep, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let cidr = "192.168.1.0/24";
   let portSpec = "80,443,22";
@@ -46,6 +47,14 @@
 
 <div class="tool">
   <div class="note">🔎 Sweep only networks you're authorized to scan.</div>
+
+  <ToolHelp>
+    Each row is a host that <strong>answered</strong> — so the list is your "what's live on this subnet right now". The
+    <strong>method</strong> pill tells you how it was found: <code>icmp</code> replied to ping, while a
+    <strong>port</strong> method means it ignored ping but accepted a TCP connection on one of the fallback ports (common
+    for hosts with a firewall). Absence isn't proof a host is down — a device can block every probe. Compare the count
+    against what you expect on the segment to spot anything unexpected.
+  </ToolHelp>
 
   <div class="card">
     <div class="line">

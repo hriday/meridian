@@ -1,5 +1,6 @@
 <script lang="ts">
   import { HTTPCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let url = "";
   let busy = false;
@@ -38,6 +39,14 @@
     the key headers, protocol and TLS, and where the time goes (DNS, connect, TLS, first byte).
     One GET; it reads the response, it doesn't download the body.
   </p>
+
+  <ToolHelp>
+    The verdict shows the <strong>final</strong> status after any redirects: green <code>2xx</code> is healthy,
+    <code>3xx</code> means it bounced you elsewhere (the Redirects card lists each hop), <code>4xx</code> is a client
+    problem, red <code>5xx</code> is the server failing. In the Timing bars, a long <strong>DNS</strong> or
+    <strong>Connect</strong> points at the network, while a long <strong>First byte</strong> (TTFB) points at a slow
+    app or backend. Check the redirect chain lands on <code>https://</code> and the host you expected.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={url} placeholder="github.com  ·  https://example.com/path"

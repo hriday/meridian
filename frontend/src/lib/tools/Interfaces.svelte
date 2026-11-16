@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Interfaces } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let busy = false;
   let error = "";
@@ -31,6 +32,14 @@
     </p>
     <button class="go" on:click={load} disabled={busy}>{busy ? "…" : "Refresh"}</button>
   </div>
+
+  <ToolHelp>
+    One card per interface. An <code>up</code> pill means the link is active; a <strong>loopback</strong> or
+    <code>down</code> card (dimmed) is normal for interfaces you're not using. Under <strong>Addresses</strong>, check the
+    interface carrying traffic has the <strong>IPv4/IPv6 address</strong> you expect for this network — a missing or
+    wrong-subnet address is a misconfiguration. <strong>MTU</strong> is the largest packet size; the usual value is
+    <code>1500</code>, and a lower one (e.g. on a VPN or tunnel) can explain fragmentation or path-MTU trouble.
+  </ToolHelp>
 
   {#if error}<div class="hint">Couldn't read interfaces: {error}</div>{/if}
 

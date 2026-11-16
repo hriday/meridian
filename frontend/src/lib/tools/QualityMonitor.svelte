@@ -4,6 +4,7 @@
   import { newStreamID } from "../metrics/metricStream";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
   import { StartQualityMonitor, StopQualityMonitor } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let target = "1.1.1.1";
   let running = false;
@@ -54,6 +55,13 @@
     Opinion Score, 1–5) — the standard VoIP quality metric — to answer "is this link good enough for a voice/video call?"
     No admin rights needed. Live only; nothing stored.
   </p>
+
+  <ToolHelp>
+    Watch the <strong>MOS</strong> (1–5): <strong>4+ is good</strong> for a voice or video call, under about
+    <strong>3.5</strong> and quality starts to suffer. The <strong>limiting factor</strong> names which of
+    latency, jitter or loss is dragging the score down — that's what to fix. The chart is live and nothing is
+    kept after you stop.
+  </ToolHelp>
 
   <form on:submit|preventDefault={start} class="row">
     <input class="field mono" bind:value={target} placeholder="1.1.1.1  or  teams.microsoft.com" spellcheck="false" aria-label="Target host" />

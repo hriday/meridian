@@ -6,6 +6,7 @@
     ClearAtlasKey,
     AtlasPing,
   } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   // Key state
   let keySet = false;
@@ -96,6 +97,14 @@
     machine. You bring your own free Atlas API key; it stays on this computer
     and is sent only to RIPE Atlas.
   </p>
+
+  <ToolHelp>
+    The verdict counts <strong>how many probes got a reply</strong>; all responding with low, consistent latency means the
+    target is healthy and globally reachable. If some probes see loss or high <code>avg</code> while others are fine, the
+    problem is <strong>regional</strong> — a route or peering issue near those vantage points, not the target itself.
+    <strong>Zero replies everywhere</strong> points to the target being down or blocking ICMP. Compare per-probe
+    <code>avg</code> across continents to spot where it is slow.
+  </ToolHelp>
 
   {#if keyError}
     <div class="banner bad"><span class="vlabel">Key problem</span><span class="vnote">{keyError}</span></div>

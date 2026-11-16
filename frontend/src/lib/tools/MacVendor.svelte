@@ -2,6 +2,7 @@
   import { MACVendor } from "../../../wailsjs/go/app/App.js";
   import { get } from "svelte/store";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "";
   const _req = get(requestedTool);
@@ -36,6 +37,13 @@
     are the <b>OUI</b> — an IEEE-assigned vendor ID. A locally-administered or randomized
     MAC has no vendor. The lookup sends only the OUI, nothing about you.
   </p>
+
+  <ToolHelp>
+    A green hit names the <strong>manufacturer</strong> registered to that OUI — useful for telling what a device on your
+    network actually is (an Apple, Cisco, or Raspberry Pi NIC, say). A <strong>not registered</strong> result usually
+    means the MAC is <strong>locally-administered or randomized</strong> (common on phones doing privacy randomization and
+    on virtual interfaces), so there's no real vendor to find — not an error.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input

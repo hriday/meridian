@@ -1,5 +1,6 @@
 <script lang="ts">
   import { TLSScan } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let rep: any = null;
@@ -32,6 +33,15 @@
     legacy protocols (TLS 1.0/1.1) and weak ciphers (RC4, 3DES, CBC) that are still negotiable. This looks at the
     <em>handshake</em>; the <strong>TLS certificate</strong> and <strong>Cert expiry</strong> tools look at the cert.
   </p>
+
+  <ToolHelp>
+    The big letter is the overall grade: <code>A</code>–<code>B</code> is good, <code>C</code>–<code>D</code> needs
+    attention, <code>E</code>–<code>F</code> is bad. Under Protocols, you want TLS 1.2/1.3 <code>enabled</code> and
+    anything tagged <strong>legacy</strong> (TLS 1.0/1.1) turned off. Under Cipher suites, every row should read
+    <code>secure</code> — a red <code>WEAK</code> suite (RC4, 3DES, CBC) is still negotiable and is what the
+    <strong>Findings</strong> list tells you to disable. The post-quantum line is forward-looking, not a current
+    weakness.
+  </ToolHelp>
 
   <div class="row">
     <input class="field" bind:value={host} placeholder="example.com  or  host:8443" spellcheck="false" autocomplete="off"

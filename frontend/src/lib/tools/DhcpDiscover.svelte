@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DHCPDiscover, DHCPSupported } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
   let error = "";
@@ -39,6 +40,14 @@
     DHCP server and what it hands out, and <strong>catch a rogue server</strong> (more than one answering is a red
     flag). Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp>
+    <strong>Exactly one</strong> server answering is the healthy case — check its <strong>offered address</strong>,
+    gateway, DNS and lease match what this network should hand out. <strong>Two or more</strong> answers is the alarm:
+    the extra one is likely a <strong>rogue DHCP server</strong> (a misconfigured router or an attacker) that can hijack
+    clients, so track it down by its server IP. <strong>No answer</strong> means no reachable server on this segment —
+    expected on a link without DHCP, a problem on one that should have it.
+  </ToolHelp>
 
   {#if !supported}
     <div class="hint">DHCP discovery isn't supported on this operating system yet.</div>

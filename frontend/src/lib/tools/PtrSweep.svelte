@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PTRSweep } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let cidr = "";
   let entries: any[] = [];
@@ -31,6 +32,13 @@
     a quick read of what's <em>named</em> in a network. DNS only; no packets are sent to the hosts. Pairs with
     <strong>Ping sweep</strong> / <strong>Port scanner</strong>, which probe reachability.
   </p>
+
+  <ToolHelp>
+    Each row is an address that <strong>resolves to a name</strong>, so the hostname often tells you what the box is
+    (<code>gw</code>, <code>printer</code>, a server's FQDN) — a fast way to map a range you don't know. Only named
+    addresses appear: a <strong>blank result or gaps are normal</strong> and don't mean those hosts are absent, just that
+    they have no reverse-DNS record. Pair it with Ping sweep to tell "named" from "actually reachable".
+  </ToolHelp>
 
   <div class="row">
     <input class="field mono" bind:value={cidr} placeholder="10.0.0.0/24" spellcheck="false" autocomplete="off"

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { EmailAuthCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let domain = "";
   let selectors = "";
@@ -33,6 +34,14 @@
     is it? Reads <strong>SPF</strong>, <strong>DMARC</strong>, and probes common <strong>DKIM</strong> selectors, all from
     DNS. For the broader DNS posture (nameservers, MX, DNSSEC) use <strong>DNS audit</strong>.
   </p>
+
+  <ToolHelp>
+    Three cards, one per mechanism. You want <code>pass</code> on SPF and DMARC and <code>found</code> on DKIM — all
+    three green means the domain is hard to spoof, especially with SPF ending <code>-all</code> and DMARC at
+    <code>p=reject</code>. A <code>warn</code> is a soft policy a spoofer can slip past (<code>~all</code>,
+    <code>p=none</code>); a red SPF/DMARC leaves the domain open to forged mail. DKIM <code>not found</code> often just
+    means the selector wasn't in the probed set — add yours in the selector box before concluding it's missing.
+  </ToolHelp>
 
   <div class="row">
     <input class="field" bind:value={domain} placeholder="example.com" spellcheck="false" autocomplete="off"

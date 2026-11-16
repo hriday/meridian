@@ -3,6 +3,7 @@
   import { newStreamID } from "../metrics/metricStream";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
   import { StartMTR, StopMTR } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let target = "cloudflare.com";
   let useV6 = false;
@@ -80,6 +81,14 @@
     <strong>loss and latency per hop</strong>, so you can see <em>where</em> a path degrades, not just that it does.
     No admin rights needed — uses ICMP echo. Live only; nothing is stored.
   </p>
+
+  <ToolHelp>
+    Read the <strong>Loss%</strong> column down the path. The hop where loss <strong>first appears and stays high through
+    every later hop</strong> is the real trouble spot. Loss at one middle hop that <strong>clears on the hops below it</strong>
+    is harmless — that router just deprioritizes replying to pings, it isn't dropping your traffic. Compare
+    <strong>Avg</strong> against <strong>Worst</strong>: a big gap means jitter (unstable latency). Let it run a while —
+    the stats are cumulative, so more rounds make the numbers trustworthy.
+  </ToolHelp>
 
   <form on:submit|preventDefault={start} class="row">
     <input class="field mono" bind:value={target} placeholder="cloudflare.com  or  104.16.123.45" autocomplete="off" spellcheck="false" aria-label="Target host" />

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Whois } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "";
   let busy = false;
@@ -32,6 +33,15 @@
     structured view of a domain's registration, use <span class="mono">Lookup</span> →
     Registry. The query carries only what you type.
   </p>
+
+  <ToolHelp>
+    This is the raw registry record, so read it by field. For a domain, the useful lines are
+    <strong>registrar</strong>, the <strong>creation</strong> and <strong>expiry</strong> dates, and the
+    <strong>name servers</strong>; a brand-new creation date or an imminent expiry is often what you're checking for.
+    The server chain at the top shows the referral path — the <strong>final</strong> server is the authoritative one.
+    For IPs and ASNs, you get the owning org and allocated range instead. Many fields may be redacted for privacy — a
+    thin record isn't an error.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={query} placeholder="example.com  ·  1.1.1.1  ·  AS13335"

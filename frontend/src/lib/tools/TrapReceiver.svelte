@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import LiveTail from "../collectors/LiveTail.svelte";
   import { TrapStart, TrapStop, TrapPoll } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const CAP = 10000;
   const POLL_MS = 700;
@@ -95,6 +96,12 @@
     trap or varbind to find the one you want. In-memory and ephemeral: it keeps the most recent traps
     while running and clears on stop — a quick catch on a laptop, not long-term retention.
   </p>
+  <ToolHelp sudo="binds a low port — sudo, or use a high --port">
+    Each row is one trap the moment it fired — its <strong>source</strong>, the <strong>trap</strong> (name or
+    OID), and its <strong>varbinds</strong> (the event's details). Filter to the source or trap you're chasing.
+    A rising <strong>dropped</strong> count means traps arrived faster than the buffer held; only the most recent
+    are kept, and everything clears on Stop.
+  </ToolHelp>
   <p class="help">
     Point your devices' trap destination at this machine on the <strong>Listen UDP</strong> port, then
     <strong>Start</strong>. The port defaults high (1162) so it binds without admin — set it to

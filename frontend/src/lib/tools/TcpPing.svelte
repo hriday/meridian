@@ -1,5 +1,6 @@
 <script lang="ts">
   import { TCPPing } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let port: number = 443;
@@ -33,6 +34,14 @@
     sending ICMP — so it works through firewalls that drop ping, and needs no elevated privileges. A refused or
     timed-out connection counts as loss. Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp>
+    Because it connects to a real port, a clean result proves the <strong>service itself is reachable</strong>, not just
+    the host. <strong>Loss</strong> should be <code>0%</code> — a refused or timed-out connection counts as loss and means
+    the port is closed, filtered, or the service is down. <strong>Avg</strong> is the handshake time; watch
+    <strong>jitter</strong> for how steady it is. Rising loss or latency to a service you depend on is your early warning
+    that it's degrading.
+  </ToolHelp>
 
   <div class="row">
     <input class="field host" bind:value={host} placeholder="host or IP" spellcheck="false" autocomplete="off"

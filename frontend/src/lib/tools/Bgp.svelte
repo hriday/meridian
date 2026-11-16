@@ -2,6 +2,7 @@
   import { get } from "svelte/store";
   import { LookupBGP } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "1.1.1.1";
   let busy = false;
@@ -89,6 +90,14 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    The <strong>verdict</strong> line is the summary: who announces the prefix and how widely it's seen —
+    <strong>more peers and collectors</strong> mean more independent routers confirm the route is real. Watch for
+    <code>MOAS</code> (multiple origins announcing the same prefix): it can be benign anycast, but it's also what a
+    <strong>route hijack</strong> looks like. On the health pills, you want <code>RPKI valid</code> and
+    <code>IRR valid</code> — <code>invalid</code> means the origin isn't authorized to announce it, and
+    <code>unknown</code>/<code>uncheckable</code> just means no record was found.
+  </ToolHelp>
   <form on:submit|preventDefault={() => run()} class="row">
     <input
       class="field mono"

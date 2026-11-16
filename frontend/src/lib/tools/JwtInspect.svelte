@@ -2,6 +2,7 @@
   import { JWTDecode, JWTVerify } from "../../../wailsjs/go/app/App.js";
   import { get } from "svelte/store";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let token = "";
   const _req = get(requestedTool);
@@ -51,6 +52,14 @@
     token (a bearer credential) never leaves this computer. See the header, claims, and expiry, and optionally check the
     signature. Nothing is stored.
   </p>
+
+  <ToolHelp>
+    Decoding only reads the token — anyone can do it, so the claims are not trustworthy until the signature checks out.
+    Watch the <strong>Expires</strong> badge (<code>valid</code> vs <code>expired</code>) and any
+    <strong>⚠ warnings</strong>, such as <code>alg: none</code> or a weak algorithm. <strong>Verify signature</strong>
+    with the shared secret (HS*) or public key (RS*/ES*) is the real test: a green <strong>Signature valid</strong> means
+    the token is authentic and untampered; invalid means don't trust it.
+  </ToolHelp>
 
   <textarea class="field mono tok" bind:value={token} rows="4" spellcheck="false"
     placeholder="Paste a JWT (eyJhbGciOi…)"></textarea>

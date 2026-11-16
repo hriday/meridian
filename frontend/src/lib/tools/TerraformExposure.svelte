@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AnalyzeTerraform } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const SOURCES = [
     { id: "", label: "Auto-detect" },
@@ -65,6 +66,14 @@
     rules, public buckets and databases, unencrypted storage — with a map of what's reachable from outside.
     Offline; nothing leaves your machine.
   </p>
+
+  <ToolHelp>
+    The <strong>Internet-exposed</strong> and <strong>Critical</strong> tiles are the ones to watch — anything above zero
+    turns red and means a resource is reachable from <code>0.0.0.0/0</code>. Findings are graded
+    <strong>critical</strong> / <strong>warning</strong> / <strong>info</strong>: critical is an open door to fix now,
+    info is likely by-design but worth confirming. The diagram draws each path from the internet to the resource it
+    reaches; an <code>internal</code> resource in the table isn't exposed.
+  </ToolHelp>
 
   <div class="card span">
     <div class="row srcrow">

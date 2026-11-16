@@ -1,5 +1,6 @@
 <script lang="ts">
   import { NTPQuery, NTPSystem } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let system: any = null;
   let query = "time.apple.com";
@@ -69,6 +70,14 @@
 <div class="tool">
   <h2>NTP</h2>
   <p class="sub">Query a time server — stratum, offset, and delay. Meridian never sets your clock.</p>
+
+  <ToolHelp>
+    <strong>Offset</strong> is the number that matters: how far your clock is from the server. Under <strong>100 ms</strong>
+    is accurate, hundreds of ms is noticeably off, and over a second is worth fixing (certificates, auth and logs break
+    when clocks drift). <strong>Stratum</strong> is the server's distance from a reference clock — <code>1</code> is
+    directly attached, higher is further; single digits are fine. A <code>kiss-o'-death</code> means the server is
+    rate-limiting you — switch to another server rather than hammering it.
+  </ToolHelp>
 
   <form on:submit|preventDefault={() => run()} class="row">
     <input class="field mono" bind:value={query} placeholder="time.apple.com" autocomplete="off" spellcheck="false" aria-label="NTP server" />

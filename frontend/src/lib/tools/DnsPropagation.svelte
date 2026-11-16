@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DNSPropagation } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let name = "";
   let rtype = "A";
@@ -43,6 +44,14 @@
     After you change a record, a split answer means some resolvers still serve the old value (or the zone is
     inconsistent). Keyless; nothing is stored.
   </p>
+
+  <ToolHelp>
+    The banner is the bottom line: <strong>Consensus</strong> (green) means every responding resolver returns the same
+    answer — your change has fully propagated. <strong>Diverged</strong> (amber) means some resolvers still serve a
+    different value; after an edit that's normal and clears as caches expire, so wait out the record's old <code>TTL</code>
+    and re-check. In the table, the majority answer is unmarked and divergent rows are flagged — if the split persists
+    long after the TTL, suspect an inconsistent zone rather than propagation lag.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={name} placeholder="example.com" autocomplete="off" spellcheck="false" aria-label="DNS name" />

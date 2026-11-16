@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ReconcileLAN, ApplyReconcileLAN } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
   let applying = false;
@@ -65,6 +66,14 @@
     for a known IP — a possible rogue or spoof), and records that no longer answer. Review, then import or update in
     one step. Needs elevated privileges (raw L2), and an <strong>unlocked</strong> inventory.
   </p>
+
+  <ToolHelp sudo="live ARP sweep needs sudo or BPF-group">
+    The summary splits the diff into buckets. <strong>New</strong> is a live host not in your inventory — import it if
+    it's legitimate. <strong>MAC change</strong> is the one to scrutinize: a known IP now answered by a
+    <strong>different hardware address</strong> can mean a replaced device, or a <strong>rogue / spoof</strong>.
+    <strong>Missing</strong> is an inventory record that didn't answer (powered off, or gone). <strong>In sync</strong>
+    needs nothing. Tick the changes you trust, then <strong>Apply to inventory</strong> to write only those.
+  </ToolHelp>
 
   <div class="row">
     <button class="btn" on:click={run} disabled={loading || applying}>

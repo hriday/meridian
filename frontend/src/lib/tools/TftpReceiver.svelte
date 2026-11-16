@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { TftpStart, TftpStop, TftpList, TftpPreview, TftpSave } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const POLL_MS = 1000;
   let port = 6969;
@@ -72,6 +73,12 @@
     this machine and <span class="mono">copy running-config tftp://…</span> drops the config straight here,
     where you can read it and save it. In-memory and ephemeral — no TFTP server to set up, cleared on Stop.
   </p>
+  <ToolHelp sudo="binds a low port — sudo, or use a high --port">
+    Files your devices push (e.g. <code>copy running-config tftp://…</code>) appear as rows — click one to
+    <strong>preview</strong> it, <strong>Save</strong> to write it to disk. <strong>Waiting for an upload</strong>
+    means nothing's arrived yet; check the device points at this host and the same port. It's
+    <strong>receive-only</strong> and holds files in memory, so they clear on Stop.
+  </ToolHelp>
   <p class="help">
     On the device: <span class="mono">copy running-config tftp://&lt;this-host&gt;:&lt;port&gt;/&lt;name&gt;</span>
     (port 69 needs admin, so this defaults to <strong>6969</strong> — set it on the device too). Received files

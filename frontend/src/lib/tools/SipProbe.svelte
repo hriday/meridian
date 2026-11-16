@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SIPProbe } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let transport = "udp";
@@ -32,6 +33,13 @@
     or endpoint, and see whether it answers and what it supports. The first thing to check when calls won't set up.
     Nothing is stored.
   </p>
+
+  <ToolHelp>
+    A <strong>2xx</strong> status (e.g. <code>200 OK</code>) means the endpoint is reachable and healthy; any
+    other code that comes back still proves SIP is answering, while <strong>no SIP response</strong> means
+    signaling isn't getting through — a firewall, the wrong transport, or a dead PBX. The <strong>Methods</strong>
+    and <strong>Supported</strong> chips show what the server can do (e.g. whether <code>INVITE</code> is allowed).
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={host} placeholder="pbx.example.com  or  sip.provider.net" spellcheck="false" aria-label="SIP host" />

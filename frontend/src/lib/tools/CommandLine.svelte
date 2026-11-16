@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CLICommands, CLIInfo, InstallCLI } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let groups: any[] = [];
   let cli: any = { available: false, installed: false, supported: false, onPath: true, linkPath: "", path: "" };
@@ -51,6 +52,13 @@
     script it, pipe it, or run it headless over SSH. Most commands take <span class="mono">--json</span>; streaming
     ones run until <span class="mono">Ctrl-C</span>. Click a command to copy it.
   </p>
+
+  <ToolHelp>
+    This is a reference, not a result: each row is a runnable subcommand — the <strong>name</strong> is the command and
+    the dim text after it is its <strong>arguments</strong>. Filter to find one, then click to copy the full
+    <code>meridian-cli …</code> invocation and paste it into a terminal. The status line up top tells you whether the
+    <code>meridian-cli</code> binary is installed and on your <strong>PATH</strong> yet.
+  </ToolHelp>
 
   <div class="status">
     {#if cli.available}

@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { Traceroute, TCPTraceroute, StopTrace } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let target = "cloudflare.com";
   let useV6 = false;
@@ -93,6 +94,14 @@
       Each hop labelled with its network (AS) and owner. No admin rights needed — uses ICMP echo.
     {/if}
   </p>
+
+  <ToolHelp>
+    Read hops top to bottom: each is one router on the way, labelled with the <strong>network (AS) and owner</strong> it
+    belongs to, so the <strong>AS path</strong> shows which providers your traffic crosses. Watch where
+    <strong>RTT jumps</strong> and stays high — that hop (often an AS boundary) is where latency is added. A
+    <code>*</code> is a hop that didn't reply; a few mid-path are harmless (routers that rate-limit), but
+    <strong>stars all the way to the end</strong> mean the trace couldn't get through past that point.
+  </ToolHelp>
 
   <form on:submit|preventDefault={start} class="row">
     <input class="field mono" bind:value={target} placeholder="cloudflare.com  or  104.16.123.45" autocomplete="off" spellcheck="false" aria-label="Target host" />
