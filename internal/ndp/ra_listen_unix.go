@@ -40,14 +40,24 @@ func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]Route
 	if len(ifaces) == 0 {
 		return nil, fmt.Errorf("no IPv6-capable interface to solicit on")
 	}
-	rs := &icmp.Message{Type: ipv6.ICMPTypeRouterSolicitation, Code: 0, Body: &icmp.RawBody{Data: []byte{0, 0, 0, 0}}}
-	wb, err := rs.Marshal(nil)
-	if err != nil {
-		return nil, err
-	}
+	// Routers answer a solicitation (and send periodic RAs) to the all-nodes
+	// group ff02::1 — join it on each interface or the replies are dropped.
+	allNodes := &net.IPAddr{IP: net.ParseIP("ff02::1")}
+	sent := 0
+	var lastSendErr error
 	for i := range ifaces {
+		if err := pc.JoinGroup(&ifaces[i], allNodes); err == nil {
+			defer pc.LeaveGroup(&ifaces[i], allNodes)
+		}
 		_ = pc.SetMulticastInterface(&ifaces[i])
-		_, _ = conn.WriteTo(wb, &net.IPAddr{IP: allRouters, Zone: ifaces[i].Name})
+		if _, werr := conn.WriteTo(buildRS(ifaces[i].HardwareAddr), &net.IPAddr{IP: allRouters, Zone: ifaces[i].Name}); werr != nil {
+			lastSendErr = werr
+			continue
+		}
+		sent++
+	}
+	if sent == 0 {
+		return nil, fmt.Errorf("couldn't send a Router Solicitation: %v", lastSendErr)
 	}
 
 	deadline := time.Now().Add(timeout)
@@ -90,6 +100,19 @@ func listenRA(ctx context.Context, iface string, timeout time.Duration) ([]Route
 		out = append(out, ra)
 	}
 	return out, nil
+}
+
+// buildRS marshals a Router Solicitation, carrying the interface's MAC as a
+// Source Link-Layer Address option so the router can unicast the reply back.
+func buildRS(mac net.HardwareAddr) []byte {
+	body := []byte{0, 0, 0, 0} // 4 reserved bytes
+	if len(mac) == 6 {
+		body = append(body, 1, 1) // option type 1 (source LL addr), length 1 (8 bytes)
+		body = append(body, mac...)
+	}
+	m := &icmp.Message{Type: ipv6.ICMPTypeRouterSolicitation, Code: 0, Body: &icmp.RawBody{Data: body}}
+	wb, _ := m.Marshal(nil)
+	return wb
 }
 
 func srcString(src net.Addr) string {

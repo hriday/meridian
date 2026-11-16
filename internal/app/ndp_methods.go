@@ -19,6 +19,7 @@ func (a *App) NDPScan(withRA bool) (ndp.Result, error) {
 		return res, err
 	}
 	res.Neighbors = ns
+	res.DefaultRouters, _ = ndp.DefaultRouters(a.lookupCtx()) // unprivileged, best-effort
 	if withRA {
 		if !ndp.RASupported() {
 			res.RANote = "Router Advertisement listening isn't available on this OS."

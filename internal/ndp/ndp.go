@@ -51,16 +51,29 @@ type RouterAdvert struct {
 	DNSSearch      []string `json:"dnsSearch,omitempty"` // DNSSL
 }
 
-// Result bundles both views of the link.
-type Result struct {
-	OS        string         `json:"os"`
-	Neighbors []Neighbor     `json:"neighbors"`
-	Routers   []RouterAdvert `json:"routers"`
-	RANote    string         `json:"raNote,omitempty"` // why RA listening was skipped/failed, if it was
+// Router is an IPv6 default router the OS has learned (from Router
+// Advertisements), read unprivileged from the routing/neighbor-discovery tables.
+type Router struct {
+	Address    string `json:"address"`
+	Interface  string `json:"interface,omitempty"`
+	Preference string `json:"preference,omitempty"` // high / medium / low
+	Expire     string `json:"expire,omitempty"`
 }
 
-// neighborsFn reads the OS neighbor cache, set per-OS at build time.
-var neighborsFn func(context.Context) ([]Neighbor, error)
+// Result bundles the views of the link.
+type Result struct {
+	OS             string         `json:"os"`
+	Neighbors      []Neighbor     `json:"neighbors"`
+	DefaultRouters []Router       `json:"defaultRouters"`    // learned routers (unprivileged)
+	Routers        []RouterAdvert `json:"routers,omitempty"` // live-captured RAs (--ra, privileged)
+	RANote         string         `json:"raNote,omitempty"`  // why RA listening was skipped/failed
+}
+
+// neighborsFn and defaultRoutersFn read the OS tables, set per-OS at build time.
+var (
+	neighborsFn      func(context.Context) ([]Neighbor, error)
+	defaultRoutersFn func(context.Context) ([]Router, error)
+)
 
 // Neighbors returns the IPv6 neighbor cache (unprivileged).
 func Neighbors(ctx context.Context) ([]Neighbor, error) {
@@ -68,6 +81,16 @@ func Neighbors(ctx context.Context) ([]Neighbor, error) {
 		return nil, errUnsupported
 	}
 	return neighborsFn(ctx)
+}
+
+// DefaultRouters returns the IPv6 routers the OS has learned, read unprivileged
+// from its routing tables — no raw socket needed. It is best-effort: an empty
+// list (nil error) just means none are known.
+func DefaultRouters(ctx context.Context) ([]Router, error) {
+	if defaultRoutersFn == nil {
+		return nil, nil
+	}
+	return defaultRoutersFn(ctx)
 }
 
 // raListenerFn solicits and parses Router Advertisements, set only on platforms

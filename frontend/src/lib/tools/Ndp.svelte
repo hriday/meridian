@@ -23,14 +23,15 @@
 <div class="tool">
   <p class="lede">
     Explores the <strong>IPv6 link</strong>: the neighbor cache (the v6 counterpart to ARP — every on-link host the OS has
-    seen, with its MAC and reachability) and, with <strong>Router Advertisements</strong> enabled, what the routers
-    announce — prefixes and their SLAAC/on-link flags, managed/other-config flags, RDNSS, MTU and lifetimes. Reading
-    neighbors is unprivileged; listening for Router Advertisements needs a raw ICMPv6 socket (run the app with sudo).
+    seen, with its MAC and reachability) and the <strong>IPv6 routers</strong> the OS has learned — both read
+    unprivileged, no sudo. Enable <strong>live capture</strong> (needs sudo) to additionally solicit Router Advertisements
+    off the wire and read the full detail: managed/other-config flags, prefixes with SLAAC/on-link flags, RDNSS, MTU and
+    exact lifetimes.
   </p>
 
   <div class="row">
     <button class="btn" on:click={run} disabled={loading}>{loading ? "Scanning…" : "Scan link"}</button>
-    <label class="toggle"><input type="checkbox" bind:checked={withRA} /> also listen for Router Advertisements (sudo)</label>
+    <label class="toggle"><input type="checkbox" bind:checked={withRA} /> live RA capture (sudo)</label>
   </div>
 
   {#if error}<p class="err">{error}</p>{/if}
@@ -58,8 +59,25 @@
       <p class="empty">No IPv6 neighbors cached.</p>
     {/if}
 
+    <h3 class="sec">IPv6 routers <span class="count">{rep.defaultRouters?.length ?? 0}</span></h3>
+    {#if rep.defaultRouters?.length}
+      <div class="cards">
+        {#each rep.defaultRouters as rt}
+          <div class="card ra">
+            <span class="mono">{rt.address}{#if rt.interface}%{rt.interface}{/if}</span>
+            <span class="facts">
+              {#if rt.preference}<span>pref <code>{rt.preference}</code></span>{/if}
+              {#if rt.expire}<span>expires <code>{rt.expire}</code></span>{/if}
+            </span>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="empty">No IPv6 default router learned (your network may be IPv4-only).</p>
+    {/if}
+
     {#if withRA}
-      <h3 class="sec">Router Advertisements {#if rep.routers?.length}<span class="count">{rep.routers.length}</span>{/if}</h3>
+      <h3 class="sec">Router Advertisements (live) {#if rep.routers?.length}<span class="count">{rep.routers.length}</span>{/if}</h3>
       {#if rep.raNote}
         <p class="note neu">{rep.raNote}</p>
       {:else if rep.routers?.length}
