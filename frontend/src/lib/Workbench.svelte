@@ -310,6 +310,7 @@
                     class="item"
                     class:on={active === t.id}
                     class:disabled={!t.ready}
+                    data-tool={t.id}
                     on:click={() => t.ready && (active = t.id)}
                     title={t.ready ? t.name : `${t.name} — coming soon`}
                   >
