@@ -27,7 +27,9 @@ type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
 func TopMX(ctx context.Context, domain string) (string, error) {
 	mxs, err := net.DefaultResolver.LookupMX(ctx, domain)
 	if err != nil {
-		return "", fmt.Errorf("no MX records for %s: %w", domain, err)
+		// A failed lookup is not the same as "no MX" — don't word a resolver
+		// error as a definitive absence.
+		return "", fmt.Errorf("couldn't look up MX for %s: %w", domain, err)
 	}
 	if len(mxs) == 0 {
 		return "", fmt.Errorf("no MX records for %s", domain)
@@ -60,7 +62,7 @@ type Result struct {
 	Banner       string   `json:"banner"`
 	Greeting     string   `json:"greeting"` // first line of the EHLO 250 reply
 	Capabilities []string `json:"capabilities"`
-	StartTLS     bool     `json:"startTLS"`     // STARTTLS advertised
+	StartTLS     bool     `json:"startTLS"`      // STARTTLS advertised
 	TLS          *TLSInfo `json:"tls,omitempty"` // present if TLS was established
 	ImplicitTLS  bool     `json:"implicitTLS"`   // connected with TLS from the start (e.g. :465)
 	AuthMechs    []string `json:"authMechs,omitempty"`
