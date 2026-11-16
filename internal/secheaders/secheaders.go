@@ -34,13 +34,14 @@ type Header struct {
 
 // Report is the overall result for a URL.
 type Report struct {
-	URL      string   `json:"url"`
-	FinalURL string   `json:"finalUrl"`
-	HTTPS    bool     `json:"https"`
-	Status   int      `json:"status"`
-	Headers  []Header `json:"headers"`
-	Score    int      `json:"score"` // 0–100
-	Grade    string   `json:"grade"` // A–F
+	URL         string   `json:"url"`
+	FinalURL    string   `json:"finalUrl"`
+	HTTPS       bool     `json:"https"`
+	Status      int      `json:"status"`
+	Headers     []Header `json:"headers"`
+	Score       int      `json:"score"`                 // 0–100
+	Grade       string   `json:"grade"`                 // A–F
+	Remediation []string `json:"remediation,omitempty"` // concrete header lines to raise the grade
 }
 
 // Scan fetches rawURL (following redirects) and grades its security headers.
@@ -173,11 +174,55 @@ func classify(h http.Header, finalURL string, status int) Report {
 	}
 
 	rep.score()
+	rep.Remediation = rep.remediate()
 	return rep
 }
 
 func (r *Report) add(name string, present bool, value, grade, owasp, note string) {
 	r.Headers = append(r.Headers, Header{Name: name, Present: present, Value: value, Grade: grade, Note: note, OWASP: owasp})
+}
+
+// remediate returns the concrete header line (or directive) to add for each
+// header that isn't already OK, so the user can paste the fix.
+func (r *Report) remediate() []string {
+	var out []string
+	for _, h := range r.Headers {
+		if h.Grade == GradeOK {
+			continue
+		}
+		if fix := headerFix(h, r.HTTPS); fix != "" {
+			out = append(out, fix)
+		}
+	}
+	return out
+}
+
+func headerFix(h Header, https bool) string {
+	switch h.Name {
+	case "Strict-Transport-Security":
+		if !https {
+			return "Serve the site over HTTPS first, then add:\n    Strict-Transport-Security: max-age=63072000; includeSubDomains; preload"
+		}
+		return "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload"
+	case "Content-Security-Policy":
+		if h.Present {
+			return "Tighten the CSP — drop 'unsafe-inline'/'unsafe-eval' and use nonces or hashes for scripts/styles."
+		}
+		return "Content-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
+	case "X-Frame-Options":
+		return "X-Frame-Options: DENY    (or set frame-ancestors 'none' in the CSP)"
+	case "X-Content-Type-Options":
+		return "X-Content-Type-Options: nosniff"
+	case "Referrer-Policy":
+		return "Referrer-Policy: strict-origin-when-cross-origin"
+	case "Permissions-Policy":
+		return "Permissions-Policy: geolocation=(), camera=(), microphone=()"
+	case "Server":
+		return "Suppress the version banner — nginx: server_tokens off;   Apache: ServerTokens Prod"
+	case "X-Powered-By":
+		return "Remove the header — nginx: proxy_hide_header X-Powered-By;   app: disable X-Powered-By"
+	}
+	return ""
 }
 
 // score computes a 0–100 score and A–F grade from the graded headers.

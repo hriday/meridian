@@ -66,6 +66,12 @@
         </div>
       {/each}
     </div>
+    {#if rep.remediation && rep.remediation.length}
+      <div class="improve">
+        <div class="ih">How to fix — close the zone transfer</div>
+        {#each rep.remediation as s}<pre class="fix">{s}</pre>{/each}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -82,6 +88,9 @@
   .summary { max-width: 820px; margin: 16px 0 10px; padding: 9px 13px; border-radius: 9px; font-size: 0.85rem; border: 1px solid var(--border); border-left-width: 3px; }
   .summary.ok { border-left-color: var(--good, #3fb950); }
   .summary.bad { border-left-color: var(--danger, #e5484d); color: var(--text); }
+  .improve { max-width: 820px; margin-top: 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; background: var(--card); }
+  .improve .ih { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .improve .fix { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; color: var(--text); background: var(--well); border-radius: 6px; padding: 7px 10px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
   .cards { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
   .card { border: 1px solid var(--border); border-left-width: 3px; border-radius: 10px; padding: 11px 14px; background: var(--card); }
   .card.ok { border-left-color: var(--good, #3fb950); }

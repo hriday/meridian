@@ -560,6 +560,7 @@ export namespace axfr {
 	    domain: string;
 	    nameservers: NSResult[];
 	    exposed: boolean;
+	    remediation?: string[];
 	    summary: string;
 	
 	    static createFrom(source: any = {}) {
@@ -571,6 +572,7 @@ export namespace axfr {
 	        this.domain = source["domain"];
 	        this.nameservers = this.convertValues(source["nameservers"], NSResult);
 	        this.exposed = source["exposed"];
+	        this.remediation = source["remediation"];
 	        this.summary = source["summary"];
 	    }
 	
@@ -4075,6 +4077,7 @@ export namespace secheaders {
 	    headers: Header[];
 	    score: number;
 	    grade: string;
+	    remediation?: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Report(source);
@@ -4089,6 +4092,7 @@ export namespace secheaders {
 	        this.headers = this.convertValues(source["headers"], Header);
 	        this.score = source["score"];
 	        this.grade = source["grade"];
+	        this.remediation = source["remediation"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -4762,6 +4766,7 @@ export namespace tfscan {
 	    category: string;
 	    title: string;
 	    detail: string;
+	    fix?: string;
 	    resource: string;
 	    file: string;
 	    line: number;
@@ -4776,6 +4781,7 @@ export namespace tfscan {
 	        this.category = source["category"];
 	        this.title = source["title"];
 	        this.detail = source["detail"];
+	        this.fix = source["fix"];
 	        this.resource = source["resource"];
 	        this.file = source["file"];
 	        this.line = source["line"];
@@ -5067,6 +5073,7 @@ export namespace tlsscan {
 	    certSignature: string;
 	    grade: string;
 	    findings: string[];
+	    remediation?: string[];
 	    summary: string;
 	
 	    static createFrom(source: any = {}) {
@@ -5082,6 +5089,7 @@ export namespace tlsscan {
 	        this.certSignature = source["certSignature"];
 	        this.grade = source["grade"];
 	        this.findings = source["findings"];
+	        this.remediation = source["remediation"];
 	        this.summary = source["summary"];
 	    }
 	

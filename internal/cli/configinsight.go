@@ -118,6 +118,9 @@ func printTFScan(stdout io.Writer, a tfscan.Analysis) {
 		if f.Detail != "" {
 			fmt.Fprintf(stdout, "           %s\n", f.Detail)
 		}
+		if f.Fix != "" {
+			fmt.Fprintf(stdout, "       fix: %s\n", f.Fix)
+		}
 	}
 	for _, n := range a.Notes {
 		fmt.Fprintf(stdout, "note: %s\n", n)

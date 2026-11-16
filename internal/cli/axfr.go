@@ -60,4 +60,10 @@ func printAXFR(stdout io.Writer, r axfr.Report) {
 			fmt.Fprintf(stdout, "             leaked: %s\n", s)
 		}
 	}
+	if len(r.Remediation) > 0 {
+		fmt.Fprintf(stdout, "\nHow to fix:\n")
+		for _, s := range r.Remediation {
+			fmt.Fprintf(stdout, "  • %s\n", s)
+		}
+	}
 }

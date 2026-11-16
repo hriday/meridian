@@ -276,6 +276,12 @@ func printSecHeaders(stdout io.Writer, r secheaders.Report) {
 			fmt.Fprintf(stdout, "      %s\n", h.Note)
 		}
 	}
+	if len(r.Remediation) > 0 {
+		fmt.Fprintf(stdout, "\nHow to improve (toward grade A):\n")
+		for _, s := range r.Remediation {
+			fmt.Fprintf(stdout, "  • %s\n", s)
+		}
+	}
 }
 
 // ---- subdomains ------------------------------------------------------------
@@ -489,6 +495,12 @@ func printCipherScan(stdout io.Writer, r tlsscan.Report) {
 		fmt.Fprintln(stdout, "\nFindings:")
 		for _, f := range r.Findings {
 			fmt.Fprintf(stdout, "  • %s\n", f)
+		}
+	}
+	if len(r.Remediation) > 0 {
+		fmt.Fprintf(stdout, "\nHow to improve (toward grade A):\n")
+		for _, s := range r.Remediation {
+			fmt.Fprintf(stdout, "  • %s\n", s)
 		}
 	}
 }

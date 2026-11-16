@@ -102,6 +102,12 @@
     {:else}
       <p class="foot">No legacy protocols or weak ciphers negotiable — a clean handshake.</p>
     {/if}
+    {#if rep.remediation && rep.remediation.length}
+      <div class="improve">
+        <div class="h">How to improve — toward grade A</div>
+        {#each rep.remediation as s}<pre class="fix">{s}</pre>{/each}
+      </div>
+    {/if}
     <p class="foot">Note: Go can't test SSLv3 or export/DES ciphers (removed from the standard library), so those aren't probed — absence here isn't proof they're disabled.</p>
   {/if}
 </div>
@@ -146,5 +152,8 @@
   .badge.off { background: var(--well); color: var(--text-dim); border: 1px solid var(--border); }
   .findings { max-width: 820px; margin-top: 14px; border: 1px solid var(--border); border-left: 3px solid var(--danger, #e5484d); border-radius: 10px; padding: 10px 14px; background: var(--card); }
   .finding { font-size: 0.82rem; color: var(--text); line-height: 1.6; }
+  .improve { max-width: 820px; margin-top: 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; background: var(--card); }
+  .improve .h { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .fix { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; color: var(--text); background: var(--well); border-radius: 6px; padding: 7px 10px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
   .foot { max-width: 820px; font-size: 0.76rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; line-height: 1.6; }
 </style>
