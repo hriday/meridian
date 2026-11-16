@@ -1109,7 +1109,11 @@ func printPrefixReport(stdout io.Writer, r lookup.PrefixReport) {
 	if r.OriginASN != "" {
 		reportRow(stdout, "Origin AS", strings.TrimSpace(r.OriginASN+"  "+r.OriginName))
 	}
-	reportRow(stdout, "Announced", fmt.Sprintf("%t", r.Announced))
+	if r.RoutingSrc.Err != "" {
+		reportRow(stdout, "Announced", "unavailable (routing data unreachable)")
+	} else {
+		reportRow(stdout, "Announced", fmt.Sprintf("%t", r.Announced))
+	}
 	reportRow(stdout, "RPKI", strings.TrimSpace(r.RPKIState+"  "+r.RPKIRoa))
 	reportRow(stdout, "Registered", strings.TrimSpace(r.RegisteredOrg+registrySuffix(r.Registry)))
 	reportRow(stdout, "Abuse", r.AbuseEmail)
