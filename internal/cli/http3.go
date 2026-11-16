@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hriday/meridian/internal/h3probe"
@@ -35,14 +37,28 @@ func runHTTP3(args []string, stdout, stderr io.Writer) int {
 	reportRow(stdout, "QUIC reachable", yesNo(res.QUICReachable))
 	if res.QUICReachable {
 		reportRow(stdout, "ALPN", res.ALPN)
+		reportRow(stdout, "QUIC version", res.QUICVersion)
 		reportRow(stdout, "TLS", res.TLSVersion)
 		reportRow(stdout, "Handshake", fmt.Sprintf("%d ms", res.HandshakeMillis))
 	} else if res.QUICError != "" {
 		reportRow(stdout, "QUIC error", res.QUICError)
 	}
-	reportRow(stdout, "Advertises h3", yesNo(res.AdvertisesH3))
+	reportRow(stdout, "Alt-Svc h3", yesNo(res.AdvertisesH3))
 	if res.AltSvc != "" {
 		reportRow(stdout, "Alt-Svc", res.AltSvc)
+	}
+	if h := res.HTTPS; h != nil && h.Found {
+		reportRow(stdout, "HTTPS record", "advertises "+strings.Join(h.ALPN, ", "))
+		reportRow(stdout, "  h3 via DNS", yesNo(h.AdvertisesH3))
+		reportRow(stdout, "  ECH", yesNo(h.ECH))
+		if h.Port != 0 {
+			reportRow(stdout, "  port", strconv.Itoa(h.Port))
+		}
+		if hints := append(append([]string{}, h.IPv4Hint...), h.IPv6Hint...); len(hints) > 0 {
+			reportRow(stdout, "  hints", strings.Join(hints, ", "))
+		}
+	} else if h != nil {
+		reportRow(stdout, "HTTPS record", "none published")
 	}
 	fmt.Fprintln(stdout, "\n"+res.Verdict)
 	return 0

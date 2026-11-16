@@ -1969,15 +1969,45 @@ export namespace fwconfig {
 
 export namespace h3probe {
 	
+	export class HTTPSRecord {
+	    found: boolean;
+	    priority: number;
+	    target?: string;
+	    alpn?: string[];
+	    port?: number;
+	    ipv4Hint?: string[];
+	    ipv6Hint?: string[];
+	    ech: boolean;
+	    advertisesH3: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPSRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.found = source["found"];
+	        this.priority = source["priority"];
+	        this.target = source["target"];
+	        this.alpn = source["alpn"];
+	        this.port = source["port"];
+	        this.ipv4Hint = source["ipv4Hint"];
+	        this.ipv6Hint = source["ipv6Hint"];
+	        this.ech = source["ech"];
+	        this.advertisesH3 = source["advertisesH3"];
+	    }
+	}
 	export class Result {
 	    host: string;
 	    port: number;
 	    quicReachable: boolean;
 	    alpn: string;
+	    quicVersion?: string;
 	    tlsVersion: string;
 	    handshakeMillis: number;
 	    advertisesH3: boolean;
 	    altSvc: string;
+	    https?: HTTPSRecord;
 	    quicError?: string;
 	    verdict: string;
 	
@@ -1991,13 +2021,33 @@ export namespace h3probe {
 	        this.port = source["port"];
 	        this.quicReachable = source["quicReachable"];
 	        this.alpn = source["alpn"];
+	        this.quicVersion = source["quicVersion"];
 	        this.tlsVersion = source["tlsVersion"];
 	        this.handshakeMillis = source["handshakeMillis"];
 	        this.advertisesH3 = source["advertisesH3"];
 	        this.altSvc = source["altSvc"];
+	        this.https = this.convertValues(source["https"], HTTPSRecord);
 	        this.quicError = source["quicError"];
 	        this.verdict = source["verdict"];
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }
