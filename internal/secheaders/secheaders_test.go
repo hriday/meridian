@@ -84,4 +84,7 @@ func TestClassifyServerVersionDisclosure(t *testing.T) {
 func TestMaxAge(t *testing.T) {
 	require.Equal(t, 31536000, maxAge("max-age=31536000; includeSubDomains"))
 	require.Equal(t, 0, maxAge("includeSubDomains"))
+	// An absurdly large value caps at 1<<30 without overflowing (safe on 32-bit
+	// int, e.g. 32-bit ARM Linux).
+	require.Equal(t, 1<<30, maxAge("max-age=999999999999999"))
 }

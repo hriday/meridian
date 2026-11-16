@@ -229,12 +229,17 @@ func maxAge(hsts string) int {
 	if m == nil {
 		return 0
 	}
+	// Cap the accumulated value well above any real HSTS max-age (1<<30 seconds
+	// is ~34 years; the meaningful maximum is ~2 years), checking *before* the
+	// multiply so this is safe on 32-bit int (where int is 32 bits and n*10 would
+	// otherwise overflow — e.g. ARM Linux).
+	const cap = 1 << 30
 	n := 0
 	for _, c := range m[1] {
-		n = n*10 + int(c-'0')
-		if n > 1<<40 {
-			break
+		if n > cap/10 {
+			return cap
 		}
+		n = n*10 + int(c-'0')
 	}
 	return n
 }
