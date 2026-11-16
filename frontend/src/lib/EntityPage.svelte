@@ -257,7 +257,7 @@
           <div class="chead"><h3>Who announces this</h3><span class="srcs"><span class="src">{chip(data.routingSrc)}</span><span class="src">{chip(data.rpkiSrc)}</span></span></div>
           <dl class="mono">
             {#if data.originAsn}<dt>Origin AS</dt><dd class="big"><button class="piv" on:click={() => onpivot(data.originAsn)}>{data.originAsn}</button> <span class="dim">{data.originName}</span></dd>{/if}
-            <dt>Announced</dt><dd>{data.announced ? "yes" : "no"}</dd>
+            <dt>Announced</dt><dd>{#if data.routingSrc?.err}<span class="dim">unavailable</span>{:else}{data.announced ? "yes" : "no"}{/if}</dd>
             <dt>RPKI</dt><dd>{#if data.rpkiState}<span class="pill {rpkiClass(data.rpkiState)}">{data.rpkiState}</span> {#if data.rpkiRoa}<span class="dim">{data.rpkiRoa}</span>{/if}{:else}<span class="pill soon">unknown</span>{/if}</dd>
             {#if data.registeredOrg}<dt>Registered org</dt><dd>{data.registeredOrg}{#if data.registry} <span class="pill">{data.registry}</span>{/if}</dd>{/if}
             {#if data.abuseEmail}<dt>Abuse</dt><dd>{data.abuseEmail}</dd>{/if}

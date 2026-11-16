@@ -84,3 +84,14 @@ func TestPrintASNReportPeeringNoPresence(t *testing.T) {
 	require.NotContains(t, s, "IXP")
 	require.NotContains(t, s, "facilit")
 }
+
+func TestPrintPrefixReportAnnouncedUnavailableOnRoutingError(t *testing.T) {
+	var out bytes.Buffer
+	printPrefixReport(&out, lookup.PrefixReport{
+		Input:      "1.2.3.0/24",
+		RoutingSrc: lookup.Source{Label: "RIPEstat", Err: "timeout"},
+	})
+	s := out.String()
+	require.Contains(t, s, "Announced")
+	require.Contains(t, s, "unavailable", "a failed routing fetch must not read as Announced=false")
+}
