@@ -56,7 +56,7 @@ func (c *Client) GetJSON(ctx context.Context, url string, v any) error {
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("GET %s: status %d", url, resp.StatusCode)
+		return &StatusError{URL: url, Code: resp.StatusCode}
 	}
 	if err := json.Unmarshal(body, v); err != nil {
 		return fmt.Errorf("GET %s: decode: %w", url, err)
@@ -64,6 +64,16 @@ func (c *Client) GetJSON(ctx context.Context, url string, v any) error {
 	c.store(url, body)
 	return nil
 }
+
+// StatusError is a non-2xx HTTP response from an upstream API. Callers can
+// distinguish a 404 ("the record doesn't exist" — often normal) from a real
+// outage (5xx / network error).
+type StatusError struct {
+	URL  string
+	Code int
+}
+
+func (e *StatusError) Error() string { return fmt.Sprintf("GET %s: status %d", e.URL, e.Code) }
 
 func (c *Client) cached(url string) ([]byte, bool) {
 	c.mu.Lock()

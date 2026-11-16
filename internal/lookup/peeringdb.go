@@ -2,7 +2,9 @@ package lookup
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 )
@@ -88,6 +90,12 @@ func (c *Client) peeringDB(ctx context.Context, asn string) (*Peering, error) {
 		Data []netRec `json:"data"`
 	}
 	if err := c.GetJSON(ctx, peeringDBBase+"net?asn="+num, &net); err != nil {
+		// PeeringDB answers 404 for an ASN it doesn't list (most non-IX networks),
+		// which is a normal "not listed", not an outage.
+		var se *StatusError
+		if errors.As(err, &se) && se.Code == http.StatusNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if len(net.Data) == 0 {
