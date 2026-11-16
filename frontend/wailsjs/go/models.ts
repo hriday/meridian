@@ -2735,6 +2735,7 @@ export namespace lookup {
 	    registry: string;
 	    v4Prefixes: number;
 	    v6Prefixes: number;
+	    prefixes?: string[];
 	    neighbours: number;
 	    routingSrc: Source;
 	    registrySrc: Source;
@@ -2752,6 +2753,7 @@ export namespace lookup {
 	        this.registry = source["registry"];
 	        this.v4Prefixes = source["v4Prefixes"];
 	        this.v6Prefixes = source["v6Prefixes"];
+	        this.prefixes = source["prefixes"];
 	        this.neighbours = source["neighbours"];
 	        this.routingSrc = this.convertValues(source["routingSrc"], Source);
 	        this.registrySrc = this.convertValues(source["registrySrc"], Source);

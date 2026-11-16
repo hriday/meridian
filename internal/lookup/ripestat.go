@@ -42,6 +42,33 @@ func (c *Client) ripeASOverview(ctx context.Context, asn string) (holder string,
 	return r.Data.Holder, nil
 }
 
+// ripeAnnouncedPrefixes returns the list of prefixes (IP blocks) an ASN
+// announces, in RIPEstat's order. Capped so a very large ASN can't return an
+// unbounded list.
+func (c *Client) ripeAnnouncedPrefixes(ctx context.Context, asn string) ([]string, error) {
+	var r struct {
+		Data struct {
+			Prefixes []struct {
+				Prefix string `json:"prefix"`
+			} `json:"prefixes"`
+		} `json:"data"`
+	}
+	if err := c.GetJSON(ctx, ripeURL("announced-prefixes", asn), &r); err != nil {
+		return nil, err
+	}
+	const cap = 5000
+	out := make([]string, 0, len(r.Data.Prefixes))
+	for _, p := range r.Data.Prefixes {
+		if p.Prefix != "" {
+			out = append(out, p.Prefix)
+			if len(out) >= cap {
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 // ripeRoutingStatus returns the counts of announced IPv4/IPv6 prefixes and the
 // number of observed BGP neighbours for an ASN.
 func (c *Client) ripeRoutingStatus(ctx context.Context, asn string) (v4Count, v6Count, neighbours int, err error) {
