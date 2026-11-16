@@ -1,5 +1,6 @@
 <script lang="ts">
   import { RTPCapture, RTPSupported } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let seconds = 10;
   let loading = false;
@@ -34,6 +35,13 @@
     loss and sequence gaps</strong> — the ground truth when a call sounds bad. You only see RTP you're in the path of
     (your own calls, or a SPAN/mirror port). Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp sudo="needs sudo or BPF-group access">
+    Each card is one media stream. <strong>Loss</strong> and <strong>jitter</strong> are the numbers that matter —
+    under roughly <strong>1% loss</strong> and <strong>30 ms jitter</strong> is healthy (green); above either turns
+    the card red and is what a caller hears as choppy or robotic audio. <strong>No streams</strong> just means
+    none crossed your capture point — make a call, or use a SPAN/mirror port.
+  </ToolHelp>
 
   {#if !supported}
     <div class="hint">RTP capture isn't supported on this operating system yet.</div>

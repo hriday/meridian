@@ -6,6 +6,7 @@
     RulesCatalog, RulesInstalled, RulesDir, RulesDownload,
   } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let cracker: any = { available: false };
   let dir = "";
@@ -141,6 +142,13 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    The headline is the share of hashes cracked — anything over <strong>20%</strong> turns the verdict red and means too
+    many weak passwords. <strong>Patterns</strong> and <strong>password reuse</strong> show where the weakness clusters;
+    each cracked row is graded <code>weak</code> / <code>medium</code> / <code>strong</code>. The
+    <strong>Have I Been Pwned</strong> check flags accounts — cracked or not — whose password shows up in a known breach;
+    those need changing now. An uncracked password only means your wordlist didn't reach it, not that it's safe.
+  </ToolHelp>
   <div class="note">
     🔒 Authorized self-audit of <b>your own</b> directory. Import hashes you
     administer, find weak passwords, fix policy. Everything stays on this

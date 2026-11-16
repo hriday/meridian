@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DiscoverLAN } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let seconds = 8;
   let loading = false;
@@ -31,6 +32,14 @@
     <strong>SSDP / UPnP</strong> (routers, smart TVs, media servers, IoT). This is the "what is this device, and what
     does it offer" layer on top of a ping or ARP sweep. Multicast, no privileges, point-in-time.
   </p>
+
+  <ToolHelp>
+    Results group into <strong>mDNS / Bonjour</strong> (devices naming themselves and the services they offer, like
+    <code>_ssh</code> or <code>_smb</code>) and <strong>SSDP / UPnP</strong> (routers, TVs, IoT). The <strong>name</strong>
+    and service type tell you what each box is and what it exposes — handy for spotting an unexpected service or a device
+    that shouldn't be advertising. An <strong>empty result isn't "nothing here"</strong>: it usually means you're off the
+    LAN segment or multicast is being filtered (VPN, guest network), so run it on the same link as the devices.
+  </ToolHelp>
 
   <div class="row">
     <label>Listen for <input class="field" type="number" min="5" max="25" bind:value={seconds} /> s</label>

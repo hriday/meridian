@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DiffConfigs } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let a = "";
   let b = "";
@@ -58,6 +59,14 @@
     Meridian lines them up and shows what changed, grouped by the section each change
     falls in. Offline; nothing leaves your machine.
   </p>
+
+  <ToolHelp>
+    The summary counts <strong><span style="color:var(--good,#3fb950)">+added</span></strong> and
+    <strong><span style="color:var(--bad,#f0616a)">−removed</span></strong> lines across the sections that changed; only
+    changed sections are shown, so anything missing is identical between the two. Green lines exist in B but not A, red
+    lines in A but not B — read them as what was added and removed going from the earlier to the later config. Use it to
+    confirm a change landed as intended and that nothing unexpected (an ACL, a route) slipped in.
+  </ToolHelp>
 
   <div class="cols">
     <div class="col">

@@ -4,6 +4,7 @@
   import Sparkline from "../metrics/Sparkline.svelte";
   import { subscribe, newStreamID } from "../metrics/metricStream";
   import { StartDeviceMonitor, StopDeviceMonitor } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   type Entry = {
     id: number;
@@ -112,6 +113,15 @@
     threshold and flags anything that stops answering. The community string is read-only and never
     shown back. The UI never blocks on polling.
   </p>
+
+  <ToolHelp>
+    Each row updates live every 5s. <strong>STEADY</strong> (green) is healthy; <code>CPU/MEM WARN</code> (amber) and
+    <code>CPU/MEM HIGH</code> (red) mean a box is past its threshold — CPU at <strong>75/90%</strong>, memory at
+    <strong>80/90%</strong>. The <strong>60s</strong> sparkline shows whether that load is a passing spike or a sustained
+    climb. <code>UNREACHABLE</code> or <code>ERROR</code> means it stopped answering SNMP; <code>NO HOST-RES</code> means
+    the device doesn't expose CPU/memory OIDs. Turn on <strong>worst first</strong> to float the devices that need
+    attention to the top.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={add}>
     <input class="field addr mono" bind:this={addrEl} bind:value={addr} placeholder="10.0.0.1  ·  device address" aria-label="Device address" spellcheck="false" autocomplete="off" />

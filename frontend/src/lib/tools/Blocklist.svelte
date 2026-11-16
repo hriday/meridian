@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Blocklist, DNSSystem } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let ip = "";
   let resolver = "";
@@ -60,6 +61,15 @@
     <b>Use your own resolver:</b> big public resolvers (8.8.8.8 / 1.1.1.1) get these
     queries refused, which shows as <i>Refused</i>, not a clean result.
   </p>
+
+  <ToolHelp>
+    The banner is the bottom line: <strong>green</strong> means a clean full pass, <strong>red</strong> means at least
+    one list has the IP <code>Listed</code> — expect mail from it to be deferred or rejected until you delist.
+    <strong>Amber</strong> means the run was incomplete: some lists were unreachable or returned <code>Refused</code>,
+    so "clean" isn't proven. In the table, <code>Refused</code> is a resolver problem, not a verdict — switch to your
+    own resolver and re-run. For a real <code>Listed</code> hit, use the detail and return codes to find each list's
+    delisting process.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input

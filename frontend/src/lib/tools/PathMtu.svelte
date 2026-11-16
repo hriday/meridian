@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PathMTU, MTUSupported } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let target = "";
   let loading = false;
@@ -32,6 +33,14 @@
     path. A value below your link MTU means a smaller-MTU hop (often a VPN or tunnel) that will silently drop full-size
     packets with Don't-Fragment set. No admin rights needed. Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp>
+    The big number is the <strong>path MTU</strong> — the largest packet that crosses the whole path unfragmented. If it
+    <strong>matches your link MTU</strong> (usually <code>1500</code>), the path is clean. If it's <strong>lower</strong>,
+    a hop along the way (often a VPN or tunnel) is the bottleneck, and full-size packets get silently dropped — the classic
+    cause of connections that open but then hang on large transfers. The fix is to lower MTU/MSS on that path to the
+    reported value.
+  </ToolHelp>
 
   {#if !supported}
     <div class="hint">Path MTU discovery isn't supported on this operating system yet.</div>

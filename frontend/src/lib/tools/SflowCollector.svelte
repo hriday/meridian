@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { SflowStart, SflowStop, SflowTop } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const POLL_MS = 1500;
   const windows = [
@@ -73,6 +74,12 @@
     so the bytes and packets here are <strong>sampling-rate-scaled estimates</strong> of the real
     traffic — great for spotting the heavy hitters fast. In-memory and ephemeral, like NetFlow.
   </p>
+  <ToolHelp sudo="binds a low port — sudo, or use a high --port">
+    Each row is a <strong>conversation</strong> ranked over the window, but the bytes and packets are
+    <strong>sampling-scaled estimates</strong> (1-in-N) — read them as relative magnitudes for spotting heavy
+    hitters, not exact counts. More <strong>samples</strong> means a more trustworthy ranking. The
+    <strong>exporters</strong> count confirms switches are sending; it clears on Stop.
+  </ToolHelp>
   <p class="help">
     Set your switch's sFlow collector destination to this machine on the <strong>Listen UDP</strong>
     port (6343 is standard), then <strong>Start</strong> — this port needs no admin. Each row is a

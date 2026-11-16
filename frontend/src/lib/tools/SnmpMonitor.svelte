@@ -10,6 +10,7 @@
     SetIfBaseline,
   } from "../../../wailsjs/go/app/App.js";
   import type { snmp } from "../../../wailsjs/go/models";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let device = "";
   let community = "";
@@ -141,6 +142,14 @@
     CPU and memory. The community string is read-only and never shown back or written into any
     error. Point it at a device, list its interfaces, pick one, and watch for known-good or anomaly.
   </p>
+
+  <ToolHelp>
+    The state word (<strong>STEADY / BUSY / SATURATED</strong>) and the gauges are the at-a-glance read:
+    <strong>link util, CPU and memory</strong> go amber past roughly 70–80% and red past 90%. The chart's two
+    lines are <strong>rx</strong> and <strong>tx</strong> throughput; a climbing <strong>+errors</strong> count
+    means the interface is dropping frames. <strong>Set baseline</strong> freezes the known-good band to compare
+    live traffic against.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={list}>
     <input class="field mono" bind:value={device} placeholder="10.0.0.1  ·  device address" aria-label="Device" spellcheck="false" autocomplete="off" />

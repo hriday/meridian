@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport, ImportRunbook } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let profiles: any[] = [];
   let profile = "";
@@ -97,6 +98,13 @@
     engine as the individual tool. Use a built-in profile, or <strong>Import recipe…</strong> to load your own
     YAML / TOML / JSON profile. Export the finished report to Text, JSON, HTML or PDF.
   </p>
+
+  <ToolHelp>
+    The output is each step's result stacked in order — one section per tool the profile ran against your target, exactly
+    as that tool would show it on its own. The <code>✓</code> / <code>⚠</code> on each step header tells you whether that
+    check completed cleanly or hit a problem; a <code>⚠</code> is worth reading first, but read every section, since the
+    findings live in the output, not the badge. Export the whole thing to Text, JSON, HTML or PDF to hand off or file.
+  </ToolHelp>
 
   <div class="row">
     <select class="sel" bind:value={profile} aria-label="Runbook profile">

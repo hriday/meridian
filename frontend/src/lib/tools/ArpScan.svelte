@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ARPScan, ARPSupported } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
   let error = "";
@@ -32,6 +33,13 @@
     its IP, hardware MAC, and vendor. Because ARP is link-local, it finds devices that ignore ping. Point-in-time;
     nothing stored.
   </p>
+
+  <ToolHelp sudo="needs sudo or BPF-group access">
+    Each row is a host that <strong>answered an ARP request</strong>, so it is genuinely live on this segment right now —
+    more reliable than ping. The <strong>vendor</strong> comes from the MAC's manufacturer prefix; a blank one just means
+    an unknown or randomized prefix, not a problem. Match the list against what you expect on the LAN — an
+    <strong>unfamiliar device</strong>, or more hosts than you can account for, is what to chase down.
+  </ToolHelp>
 
   {#if !supported}
     <div class="hint">ARP scanning isn't supported on this operating system yet.</div>

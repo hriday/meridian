@@ -1,5 +1,6 @@
 <script lang="ts">
   import { HTTP3Probe } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "cloudflare.com";
   let port = 443;
@@ -33,6 +34,14 @@
     <strong>"the server doesn't support h3"</strong> from <strong>"it does, but UDP is blocked on your path"</strong> —
     the usual restrictive-network case. No admin rights.
   </p>
+
+  <ToolHelp>
+    Read the two signals together. <strong>QUIC reachable: yes</strong> with <code>ALPN h3</code> means HTTP/3 works
+    end to end from where you are. <strong>Advertises h3: yes</strong> but <strong>QUIC reachable: no</strong> is the
+    telling case — the server offers HTTP/3 but UDP/443 is blocked on your path (firewall or network), not the server's
+    fault. Both <code>no</code> means the server simply doesn't do HTTP/3. The amber verdict flags that blocked-path case
+    specifically.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={run}>
     <input class="field mono" bind:value={host} placeholder="cloudflare.com" autocomplete="off" spellcheck="false" aria-label="Host" />

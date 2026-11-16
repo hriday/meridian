@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { PortScan, ScanCommonPorts, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "127.0.0.1";
   let portSpec = "22,80,443,3389,8080";
@@ -54,6 +55,14 @@
 
 <div class="tool">
   <div class="note">🔎 Scan only hosts and networks you're authorized to test.</div>
+
+  <ToolHelp>
+    An <strong>open</strong> port is a service actively accepting connections — the <code>service</code> column names the
+    usual occupant (e.g. <code>22</code> SSH, <code>443</code> HTTPS). The list of open ports is the host's
+    <strong>attack surface</strong>: anything open that you didn't expect is worth investigating or closing.
+    <strong>closed</strong> means the host replied but nothing is listening, while <strong>filtered</strong> means a
+    firewall swallowed the probe (no answer). Tick <strong>show closed/filtered</strong> to see those too.
+  </ToolHelp>
 
   <div class="card">
     <div class="line">

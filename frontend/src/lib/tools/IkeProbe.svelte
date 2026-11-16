@@ -1,5 +1,6 @@
 <script lang="ts">
   import { IkeProbe } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let loading = false;
@@ -41,6 +42,14 @@
     <strong>NAT traversal</strong> is supported. Read-only — it never completes the handshake or authenticates.
     Probe gateways you're authorized to test.
   </p>
+
+  <ToolHelp>
+    <strong>Responds: yes</strong> with an accepted proposal means a live IKEv2 responder — the
+    <strong>encryption, PRF, integrity and DH group</strong> rows are exactly what it agreed to, so weak picks
+    (a small DH group, a legacy cipher) are where to harden. <strong>No response</strong> means UDP/500 is
+    filtered or nothing's listening — not proof the VPN is down. <strong>NAT traversal: yes</strong> means
+    clients behind NAT can connect.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={run}>
     <input class="field mono" bind:value={host} placeholder="vpn.example.com" autocomplete="off" spellcheck="false" aria-label="VPN gateway host" />

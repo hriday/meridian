@@ -1,5 +1,6 @@
 <script lang="ts">
   import { TLSCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "cloudflare.com";
   let busy = false;
@@ -62,6 +63,14 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    The verdict banner is the bottom line: green <code>Valid</code> means trusted, in date, and issued for this host;
+    amber <code>Expiring</code> is still fine but renew soon; anything red (<code>Expired</code>,
+    <code>Hostname mismatch</code>, <code>Untrusted chain</code>, <code>Self-signed</code>, <code>Weak key</code>) is
+    something a browser will reject or warn on. In <strong>Trust signals</strong> you want both <code>Chain trusted</code>
+    and <code>Hostname matches</code> green. Check <strong>Valid until</strong> for the renewal date and that the
+    <strong>SAN</strong> names cover every hostname you serve.
+  </ToolHelp>
   <form on:submit|preventDefault={run} class="row">
     <input
       class="field mono"

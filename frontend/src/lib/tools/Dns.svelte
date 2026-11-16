@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DNSQuery, DNSSystem } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const TYPES = ["A", "AAAA", "MX", "NS", "TXT", "CNAME", "SOA", "PTR", "CAA", "ANY"];
 
@@ -85,6 +86,15 @@
 <div class="tool">
   <h2>DNS</h2>
   <p class="sub">Query any resolver for any record type. Shows the resolver(s) this machine is configured to use.</p>
+
+  <ToolHelp>
+    Start with the plain-language <strong>verdict</strong> line, then the Response card. <code>Status</code> is the
+    outcome: <code>NOERROR</code> with answers is success, <code>NXDOMAIN</code> means the name doesn't exist, and
+    <code>SERVFAIL</code>/<code>REFUSED</code> point at the resolver or a broken zone, not a missing record. If
+    <strong>DNSSEC</strong> reads <code>authenticated (ad)</code>, the resolver cryptographically validated the answer.
+    The Answer table lists each record with its <code>TTL</code> — how many seconds resolvers may cache it before
+    re-asking.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={name} placeholder="example.com" autocomplete="off" spellcheck="false" aria-label="Name" style="flex:2" />

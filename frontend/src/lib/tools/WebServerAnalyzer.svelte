@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AnalyzeWebServer } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const SERVERS = [
     { id: "nginx", label: "nginx", cmd: "sudo nginx -T > nginx-config.txt", get: "the full running config (nginx.conf + every include, resolved)", placeholder: "Paste `nginx -T` output here, or use Load file…" },
@@ -60,6 +61,15 @@
     structure + sanity checks, not a substitute for the server's own config test. Nothing
     leaves your machine.
   </p>
+
+  <ToolHelp>
+    The count tiles are the quick read — a non-zero <strong>Errors</strong> (red) or <strong>Warnings</strong> (amber)
+    tile is where to look first. The <strong>findings</strong> list grades each by dot: red <code>error</code> is likely
+    broken or unsafe, amber <code>warning</code> is worth fixing, grey <code>info</code> is a note. Below, the
+    <strong>sites</strong> section shows what each server block serves and where each route proxies — a plain (non-SSL)
+    listener is flagged amber. This is a structure and sanity check, not a replacement for the server's own
+    <code>-t</code> config test.
+  </ToolHelp>
 
   <div class="card span">
     <div class="row serverrow">

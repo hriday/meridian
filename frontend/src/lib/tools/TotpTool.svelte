@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from "svelte";
   import { TOTPCode } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let input = "";
   let code: any = null;
@@ -46,6 +47,13 @@
     seed is sent to someone else's server, which defeats the whole point; this never leaves your machine. Great for
     testing a 2FA setup. Nothing is stored.
   </p>
+
+  <ToolHelp>
+    The big number is the <strong>current 6-digit code</strong> — if it matches what your authenticator app shows for the
+    same account, the secret is correct and your 2FA setup is good. The bar counts down the
+    <strong>seconds left</strong> before it rolls to the next code; if yours is close to expiring, wait for a fresh one
+    before entering it. Click the code to copy it.
+  </ToolHelp>
 
   <input class="field mono" bind:value={input} spellcheck="false" autocomplete="off"
     placeholder="base32 secret (JBSWY3DP…)  or  otpauth://totp/…" />

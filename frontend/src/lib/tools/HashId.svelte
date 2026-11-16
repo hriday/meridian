@@ -2,6 +2,7 @@
   import { IdentifyHash } from "../../../wailsjs/go/app/App.js";
   import { get } from "svelte/store";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let hash = "";
   const _req = get(requestedTool);
@@ -23,6 +24,13 @@
     the format (prefix, length, character set) — several hashes share a shape — so you get ranked candidates.
     Nothing leaves your machine.
   </p>
+
+  <ToolHelp>
+    Results are ranked guesses — the <strong>top</strong> row (highlighted) is the most likely type, but trust the shape,
+    not just the order, since many hashes look alike. The <code>hashcat -m &lt;mode&gt;</code> chip is the mode to feed a
+    cracker; a <strong>no hashcat mode</strong> row can't be cracked that way. If several look plausible, try the top
+    candidate's mode first, then work down.
+  </ToolHelp>
 
   <div class="row">
     <input class="field mono" bind:value={hash} placeholder="e.g. 32ed87bdb5fdc5e9cba88547376818d4  or  $6$salt$…" spellcheck="false" autocomplete="off"

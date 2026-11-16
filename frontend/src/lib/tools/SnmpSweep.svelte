@@ -3,6 +3,7 @@
   import { SnmpSweep, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
   import { newStreamID } from "../metrics/metricStream";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let cidr = "10.0.0.0/24";
   let community = "";
@@ -79,6 +80,13 @@
     CIDR with a read community; responders fill in as they're found. Read-only; the community is never
     shown back. The UI never blocks on the scan.
   </p>
+
+  <ToolHelp>
+    Each row is a device that answered SNMP — its <strong>address</strong>, reported <strong>name</strong>,
+    <strong>what it is</strong> (model/OS from sysDescr), and <strong>uptime</strong>. A host that doesn't appear
+    simply didn't answer: SNMP off, a different community, or v3-only — absence isn't proof it's gone. A very
+    low <strong>uptime</strong> flags a device that recently rebooted.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={run}>
     <input class="field cidr mono" bind:value={cidr} placeholder="10.0.0.0/24  ·  subnet (CIDR)" aria-label="Subnet CIDR" spellcheck="false" autocomplete="off" />

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SecurityHeaders } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let url = "";
   let report: any = null;
@@ -37,6 +38,14 @@
     referrer and permissions policy — each mapped to its <strong>OWASP Top 10</strong> category. This checks the
     running server's response (not a config file).
   </p>
+
+  <ToolHelp>
+    The letter grade and <code>/100</code> score summarise the whole set — aim for <code>A</code>/<code>B</code>. Each
+    row is one header with a coloured dot: green <code>OK</code> is present and sound, amber <code>weak</code> is set
+    but loosely, and red <code>missing</code> is the gap to close (HSTS, CSP and frame protection matter most). An
+    <code>info</code>/disclosure tag flags a header that leaks server detail rather than a vulnerability. The
+    <strong>OWASP</strong> tag on each row tells you which risk category it defends.
+  </ToolHelp>
 
   <div class="searchrow">
     <input class="field mono" bind:value={url} placeholder="example.com  or  https://example.com/login" spellcheck="false" autocomplete="off"

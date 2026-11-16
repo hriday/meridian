@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PwHashGenerate, PwHashCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let mode: "gen" | "verify" = "gen";
 
@@ -42,6 +43,13 @@
     verify a password against one — <strong>entirely locally</strong>. Web bcrypt generators send your password to their
     server; this never does. Nothing is stored.
   </p>
+
+  <ToolHelp>
+    <strong>Generate</strong> gives you the <code>bcrypt</code> hash and, with a username, the full
+    <code>htpasswd</code> line to paste into your auth file. A higher <strong>cost</strong> is slower to compute and
+    slower to crack — <code>10</code>–<code>12</code> is a sensible range. <strong>Verify</strong> shows a green check
+    when a password matches a hash and a red cross when it doesn't; use it to confirm a credential before you rely on it.
+  </ToolHelp>
 
   <div class="tabs">
     <button class="tab" class:on={mode === "gen"} on:click={() => (mode = "gen")}>Generate</button>

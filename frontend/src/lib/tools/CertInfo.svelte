@@ -2,6 +2,7 @@
   import { CertDecode } from "../../../wailsjs/go/app/App.js";
   import { get } from "svelte/store";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let pem = "";
   const _req = get(requestedTool);
@@ -33,6 +34,15 @@
     internal cert or a CSR never gets pasted into a web decoder. Handles a full chain; private-key blocks are ignored.
     Nothing is stored.
   </p>
+
+  <ToolHelp>
+    One card per block in the PEM — a chain decodes top to bottom (leaf, intermediates, root). A green left edge and a
+    <code>valid</code> tag mean the cert is in date; a red edge and <code>expired</code> mean it's past
+    <strong>Valid until</strong>. Check that <strong>DNS names</strong> actually cover the hostname you'll serve, and
+    that <strong>Issuer</strong> is a CA you trust — a <code>self-signed</code> tag means nothing vouches for it but
+    itself. For a CSR, there are no dates: you're confirming the subject, key type and requested names before you submit
+    it.
+  </ToolHelp>
 
   <textarea class="field mono" bind:value={pem} rows="6" spellcheck="false"
     placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"></textarea>

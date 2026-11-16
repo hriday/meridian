@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CertBegin, CertFinalize, CertCancel } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let domains = "";
   let email = "";
@@ -82,6 +83,15 @@
     <strong>internal / firewalled</strong> servers (and wildcards). One-shot: you get the cert and key here, then
     deploy and renew them yourself — Meridian doesn't store or auto-renew.
   </p>
+
+  <ToolHelp>
+    This runs in steps: request, then publish the <strong>TXT record</strong> it gives you, then
+    <strong>Verify &amp; issue</strong>. If verify fails, the CA couldn't read your record yet — give DNS a minute to
+    propagate and retry; it doesn't consume the cert. Leave <strong>staging</strong> checked while you're testing: those
+    certs aren't browser-trusted but don't burn the production rate limit (5 failures/hour). Uncheck it for a real cert.
+    When done, save both <code>fullchain.pem</code> and <code>privkey.pem</code> now — the key is shown only here, and the
+    cert lasts ~90 days before you re-run this.
+  </ToolHelp>
 
   {#if step === "form" || step === "issuing"}
     <div class="form">

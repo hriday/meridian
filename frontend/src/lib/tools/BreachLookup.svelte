@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { HIBPBreaches, HIBPLatestBreach, EmailBreachCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let breaches: any[] = [];
   let latest: any = null;
@@ -50,6 +51,13 @@
     accounts, and what data was exposed. Search by name or <strong>domain</strong> (e.g. <span class="mono">adobe.com</span>)
     to see the breaches that hit a company. This is free and keyless.
   </p>
+  <ToolHelp>
+    An email that comes back in one or more breaches means that address has been exposed — change any reused passwords
+    and turn on <strong>2FA</strong>. In the catalogue, each card is one breach: <strong>accounts</strong> is how many
+    were leaked, the data classes (<code>passwords</code>, <code>email addresses</code>, …) tell you what got out, and a
+    <code>sensitive</code> or <code>unverified</code> flag is worth noting. A clean result isn't a guarantee — it only
+    means nothing is known, not that nothing leaked.
+  </ToolHelp>
   <!-- Check a specific email (XposedOrNot, free) -->
   <div class="emailbox">
     <div class="eb-title">Check an email address</div>

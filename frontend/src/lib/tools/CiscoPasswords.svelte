@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AnalyzeCiscoPasswords } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let cfg = "";
   let secrets: any[] = [];
@@ -56,6 +57,14 @@
     locally — the config never leaves your machine. Recovered passwords are
     sensitive; clear the view when you're done.
   </p>
+
+  <ToolHelp>
+    Each row is one password or secret line, rated by strength. A red
+    <strong>cleartext</strong> or <strong>reversible</strong> badge means the password was recovered and is printed in the
+    last column — rotate it and stop using that encoding. A <strong>weak</strong> or <strong>deprecated hash</strong>
+    (type 5 MD5) should be upgraded to a <strong>strong hash</strong> (type 8/9), which can't be reversed here. The
+    recovered-in-plaintext count is the number to drive to zero.
+  </ToolHelp>
 
   <div class="card span">
     <div class="colhdr">

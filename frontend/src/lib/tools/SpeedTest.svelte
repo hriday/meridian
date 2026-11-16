@@ -4,6 +4,7 @@
   import StreamChart from "../metrics/StreamChart.svelte";
   import { subscribe, newStreamID } from "../metrics/metricStream";
   import { SpeedtestStart, SpeedtestStop } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let port = 5201;
@@ -100,6 +101,13 @@
     <span class="mono">iperf3 -s</span>. Pick a direction and watch the live rate; the result shows the
     average, retransmits and RTT. Pure-Go client — nothing to install here, and Meridian never serves.
   </p>
+
+  <ToolHelp>
+    The gauges show live throughput; the <strong>Result</strong> card's <strong>avg download/upload</strong> is
+    the headline number — compare it against the link's rated speed to judge good vs bad. High
+    <strong>retransmits</strong> or a climbing <strong>RTT</strong> under load point to a congested or lossy path,
+    not raw bandwidth. On <strong>UDP</strong>, watch <strong>loss</strong> and <strong>jitter</strong> instead.
+  </ToolHelp>
 
   <div class="card span">
     <div class="grid">

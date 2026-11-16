@@ -1,5 +1,6 @@
 <script lang="ts">
   import { LLDPDiscover, LLDPSupported } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
   let error = "";
@@ -33,6 +34,14 @@
     Reads LLDP (and Cisco CDP) frames off the wire. Only works on a <strong>managed switch</strong> that advertises them
     — a home router won't. Point-in-time; nothing stored.
   </p>
+
+  <ToolHelp sudo="needs sudo or BPF-group access">
+    A neighbor card is the switch you're wired into, straight from its own advertisement. <strong>Port</strong> is the
+    exact switch interface this cable lands on (e.g. <code>Gi1/0/12</code>) — the fact you came for when tracing a cable.
+    <strong>VLAN</strong> is the port's native VLAN; a wrong value explains why a host is on the wrong network.
+    <strong>Mgmt IP</strong> and system name tell you which switch to log into. <strong>No neighbors</strong> usually
+    means an unmanaged device upstream or nothing advertised during the listen window, not a failure.
+  </ToolHelp>
 
   {#if !supported}
     <div class="hint">LLDP/CDP capture isn't supported on this operating system yet.</div>

@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from "svelte";
   import LiveTail from "../collectors/LiveTail.svelte";
   import { SyslogStart, SyslogStop, SyslogPoll } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const CAP = 10000;
   const POLL_MS = 700;
@@ -107,6 +108,12 @@
     thing you care about. In-memory and ephemeral: it keeps the most recent messages while running and
     clears when you stop — a quick look on a laptop, not long-term retention.
   </p>
+  <ToolHelp sudo="binds a low port — sudo, or use a high --port">
+    Messages stream newest-first and severity colours them — <strong>error/critical</strong> rows go red,
+    <strong>warning</strong> amber. Filter by host or text to isolate one box. A climbing <strong>dropped</strong>
+    count means messages arrived faster than the buffer could hold; only the most recent are kept while running,
+    and everything clears on Stop.
+  </ToolHelp>
   <p class="help">
     Point a device's syslog at this machine on the <strong>Listen UDP</strong> port, then <strong>Start</strong>.
     The port defaults high (5514) so it binds without admin — set it to <span class="mono">514</span> only

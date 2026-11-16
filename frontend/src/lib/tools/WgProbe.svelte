@@ -1,5 +1,6 @@
 <script lang="ts">
   import { WgProbe } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
   let port = 51820;
@@ -34,6 +35,13 @@
     it can't authenticate — so for a meaningful probe paste the peer's <strong>public key</strong> (base64);
     without it, silence is expected and proves nothing. Read-only; probe endpoints you're authorized to test.
   </p>
+
+  <ToolHelp>
+    A <strong>cookie reply</strong> or <strong>handshake response</strong> confirms a real WireGuard responder;
+    <strong>no reply</strong> is the expected default and proves nothing on its own. The key is
+    <strong>Valid mac1</strong>: <code>yes (authenticated)</code> means your peer public key matched, so silence
+    <em>then</em> is a genuinely down or filtered endpoint — not just WireGuard staying quiet.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={run}>
     <input class="field mono" bind:value={host} placeholder="vpn.example.com" autocomplete="off" spellcheck="false" aria-label="WireGuard host" />

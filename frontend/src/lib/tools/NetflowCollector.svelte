@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { NetflowStart, NetflowStop, NetflowTop } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   const POLL_MS = 1500;
   const windows = [
@@ -73,6 +74,12 @@
     and the heavy conversations rise to the top. In-memory and ephemeral — a quick look on a laptop, not a
     flow warehouse.
   </p>
+  <ToolHelp sudo="binds a low port — sudo, or use a high --port">
+    Each row is a <strong>conversation</strong> (src → dst:port) ranked by bytes or packets over the window — the
+    top rows are your heaviest talkers right now. An unexpected destination or a single host dominating is the
+    thing to chase. The <strong>exporters</strong> count confirms your routers are actually sending; it's
+    in-memory and clears on Stop.
+  </ToolHelp>
   <p class="help">
     Set your device's NetFlow/IPFIX export destination to this machine on the <strong>Listen UDP</strong>
     port (2055 is common; also 9995/9996), then <strong>Start</strong> — these ports need no admin. Each row

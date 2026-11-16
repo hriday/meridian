@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { AtlasKeyStatus, AtlasTrace } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let keySet = false;
   let keyErr = "";
@@ -49,6 +50,14 @@
     network — the remote counterpart to the local traceroute. Reuses the Atlas
     key you set in Remote ping; it stays on this machine and is sent only to RIPE.
   </p>
+
+  <ToolHelp>
+    Each probe shows the path from a different vantage point to your target; <code>reached</code> means that probe got all
+    the way there. Read down the hops — a <code>*</code> is a hop that didn't reply (often just a router that drops
+    traceroute, harmless if later hops answer). Watch for the point where <strong>latency jumps</strong> or the path stops
+    reaching: that hop is where the trouble starts. Compare probes to tell a <strong>target-side</strong> problem (all
+    paths fail near the end) from a <strong>regional</strong> one (only some paths break).
+  </ToolHelp>
 
   {#if keyErr}
     <div class="banner bad"><span class="vlabel">Key problem</span><span class="vnote">{keyErr}</span></div>

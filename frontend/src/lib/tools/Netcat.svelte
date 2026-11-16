@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { NetcatConnect, NetcatListen, NetcatSend, NetcatClose } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "127.0.0.1";
   let port = "9000";
@@ -82,6 +83,14 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    <strong>connected</strong> (green) means the socket opened; <strong>error</strong> means refused, filtered or
+    unreachable. The <strong>transcript</strong> shows bytes each way — <code>←</code> received, <code>→</code>
+    sent; switch to <strong>hex</strong> to inspect binary or non-printable data. With TLS on, a
+    <strong>verified</strong> badge means the certificate chain checked out; <strong>unverified</strong> means it
+    didn't.
+  </ToolHelp>
+
   <!-- Target -->
   <div class="card">
     <div class="line">

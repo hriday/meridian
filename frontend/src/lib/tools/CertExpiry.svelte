@@ -1,5 +1,6 @@
 <script lang="ts">
   import { CertExpiryCheck } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let input = "";
   let rows: any[] = [];
@@ -44,6 +45,14 @@
     override). Nothing but the connection itself is involved — no third-party service. For a deep look at one cert,
     use the <strong>TLS certificate</strong> tool.
   </p>
+
+  <ToolHelp>
+    Rows are sorted soonest-first, so the top row is the most urgent. <strong>Red</strong> badges —
+    <code>expired</code> or within 14 days — are act-now: a lapsed cert means an outage and browser errors the moment it
+    expires. <strong>Amber</strong> (within 30 days) is renew-soon. <code>unreachable</code> isn't a passing result — the
+    host didn't complete a TLS handshake (wrong port, firewall, or it isn't serving TLS), so you learned nothing about
+    its expiry.
+  </ToolHelp>
 
   <textarea
     class="field mono"

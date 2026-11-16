@@ -1,5 +1,6 @@
 <script lang="ts">
   import { STUNDiscover } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let server = "";
   let loading = false;
@@ -28,6 +29,13 @@
     the key to diagnosing one-way audio and NAT-traversal problems in SIP &amp; WebRTC. Querying two servers flags a
     <strong>symmetric NAT</strong>, which breaks media without a relay. Nothing is stored.
   </p>
+
+  <ToolHelp>
+    The big value is your <strong>public (reflexive) address</strong> as the internet sees it. The verdict reads
+    the NAT: a <strong>symmetric NAT</strong> (red) is the problem case — it breaks SIP/WebRTC media unless you
+    add a TURN relay; a cone or no-NAT result (green/amber) traverses fine. Compare the public IP to your
+    <strong>local IP</strong> to confirm whether you're behind NAT at all.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="row">
     <input class="field mono" bind:value={server} placeholder="stun.l.google.com:19302  (blank = public defaults)" spellcheck="false" aria-label="STUN server" />

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { OpenResolverTest } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let resolver = "";
   let rep: any = null;
@@ -29,6 +30,14 @@
     an accidental open resolver, abusable for <strong>DNS amplification</strong> attacks. Your own configured resolver
     answering for you is normal.
   </p>
+
+  <ToolHelp>
+    You want <code>not open</code> (green) for any device that isn't meant to be a public resolver. A red
+    <strong><code>OPEN</code></strong> verdict means it recursed for a name it isn't authoritative for — anyone on the
+    internet can abuse it for <strong>DNS amplification</strong>, so restrict it to your own network. The facts below
+    show the proof: <code>recursion available: yes</code> and <code>answered: yes</code> together are what make it open.
+    Testing your own ISP or configured resolver answering you is expected and not a finding.
+  </ToolHelp>
 
   <div class="row">
     <input class="field mono" bind:value={resolver} placeholder="192.168.1.1" spellcheck="false" autocomplete="off"

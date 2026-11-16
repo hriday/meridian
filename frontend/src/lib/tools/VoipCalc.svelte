@@ -1,5 +1,6 @@
 <script lang="ts">
   import { VoipCodecs, VoipBandwidth } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let codecs: any[] = [];
   let codec = "G.711 (PCMU/PCMA)";
@@ -29,6 +30,13 @@
     How much a call actually costs on the wire once you add IP/UDP/RTP (and Ethernet) overhead — and how much
     <strong>N concurrent calls</strong> need. Capacity planning: "how many calls fit on this link?" Pure math, offline.
   </p>
+
+  <ToolHelp>
+    The big number is total bandwidth for <strong>N concurrent calls</strong> including IP/UDP/RTP overhead — size
+    the link above it, with headroom. A <strong>smaller packet interval</strong> (ptime) means more packets and
+    more overhead per call; a lower-bitrate codec shrinks the payload. Use the <strong>Ethernet</strong> figure
+    when the path is plain switched Ethernet rather than a WAN link.
+  </ToolHelp>
 
   <div class="form">
     <label>Codec<select class="field" bind:value={codec}>{#each codecs as c}<option value={c.name}>{c.name} — {c.bitrateKbps} kbps</option>{/each}</select></label>

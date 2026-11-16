@@ -9,6 +9,7 @@
     IPSpaceSyncInfo, IPSpaceSyncConfigureLocal, IPSpaceSyncConfigureS3, IPSpaceSyncConfigureSFTP, IPSpaceSyncConfigureGit, IPSpaceSyncPreview, IPSpaceSyncApply,
   } from "../../../wailsjs/go/app/App.js";
   import { requestedTool } from "../nav";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let phase: "loading" | "create" | "locked" | "ready" = "loading";
   let invList: any[] = [], activeId = "", creatingInv = false, newName = "";
@@ -321,6 +322,14 @@
 </script>
 
 <div class="tool">
+  <ToolHelp>
+    Each row is a CIDR block in your inventory, nested under the larger block that contains it; the small bar on the right
+    is <strong>utilisation</strong> — how much of that block its children already use, so a near-full bar means you're
+    running out of space to carve. Status reads <code>active</code>, <code>reserved</code> or <code>deprecated</code>.
+    Each inventory is encrypted on disk with its own passphrase; <strong>Sync</strong> and <strong>Import/Export</strong>
+    show incoming vs outgoing changes so you can review before anything is written, and a <strong>conflict</strong> means
+    the same prefix changed on both sides — resolve it before syncing.
+  </ToolHelp>
   {#if phase === "loading"}
     <p class="muted">Loading…</p>
 

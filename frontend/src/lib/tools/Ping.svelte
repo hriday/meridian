@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PingHost } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let host = "1.1.1.1";
   let count = 5;
@@ -64,6 +65,14 @@
     reports round-trip latency, how much it varies (<b>jitter</b>), and any packet
     loss. For many hosts at once, use <span class="mono">Ping sweep</span>.
   </p>
+
+  <ToolHelp>
+    The verdict line is the quick read; the cards are the detail. <strong>Loss</strong> should be <code>0%</code> — any
+    loss to a nearby host points to a real problem. For <strong>latency</strong>, what matters is <strong>avg</strong>
+    plus how steady it is: a low <strong>jitter</strong> means a consistent connection, while high jitter (the run reads
+    "uneven") causes stutter in calls and video even when the average looks fine. A <code>×</code> in the sequence row is
+    a dropped packet.
+  </ToolHelp>
 
   <form on:submit|preventDefault={run} class="grid">
     <label>Host

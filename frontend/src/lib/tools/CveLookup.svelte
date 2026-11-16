@@ -1,6 +1,7 @@
 <script lang="ts">
   import { CVELookup, CVESearch, CVEIsID } from "../../../wailsjs/go/app/App.js";
   import { BrowserOpenURL } from "../../../wailsjs/runtime/runtime.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let query = "";
   let results: any[] = [];
@@ -36,6 +37,14 @@
     the weakness type (CWE), and — importantly — whether <strong>CISA lists it as actively exploited</strong>.
     Data from the <a href="https://nvd.nist.gov" target="_blank" rel="noreferrer">NVD</a>; free, no key.
   </p>
+
+  <ToolHelp>
+    The coloured chip is the <strong>CVSS severity</strong> (0–10): red <code>CRITICAL</code>/<code>HIGH</code> is where
+    you focus, green is low. But the signal that beats raw score is the red <strong>⚠ Exploited in the wild</strong> tag
+    — that means CISA has seen it used in real attacks, so patch it first regardless of its number. The <code>CWE</code>
+    chips name the weakness class, and the reference links go to advisories and fixes. A keyword search is scoped to the
+    first 30 matches — narrow it (add a version) if you don't see yours.
+  </ToolHelp>
 
   <div class="searchrow">
     <input class="field mono" bind:value={query} placeholder="CVE-2021-44228   or   log4j, openssl 3.0, fortinet…" spellcheck="false" autocomplete="off"

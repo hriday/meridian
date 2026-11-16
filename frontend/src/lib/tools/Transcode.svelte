@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Transcode, TranscodeDetect } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let input = "";
   let output = "";
@@ -52,6 +53,13 @@
     Base64, Base64-URL, hex, URL percent-encoding, and JSON pretty/minify — both ways, <strong>locally</strong>. No
     pasting (often sensitive) payloads into base64decode.org / jsonlint. Nothing is stored.
   </p>
+
+  <ToolHelp>
+    The <strong>Output</strong> box holds the converted text; <strong>copy</strong> takes it. If a decode fails
+    you'll get an error — usually the input isn't actually that format (wrong base64 padding, odd-length hex).
+    The <strong>Looks like</strong> chips are auto-detected guesses — click one to decode in a single step.
+    Everything runs locally, so it's safe for sensitive payloads.
+  </ToolHelp>
 
   <textarea class="field mono" bind:value={input} rows="5" spellcheck="false" placeholder="Paste or type here…"></textarea>
 

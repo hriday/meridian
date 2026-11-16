@@ -4,6 +4,7 @@
   import StreamChart from "../metrics/StreamChart.svelte";
   import { subscribe, newStreamID } from "../metrics/metricStream";
   import { StartPingMonitor, StopPingMonitor, SetPingBaseline } from "../../../wailsjs/go/app/App.js";
+  import ToolHelp from "../ToolHelp.svelte";
 
   let target = "1.1.1.1";
   let running = false;
@@ -87,6 +88,14 @@
     whether it's <strong>known-good</strong> or something's off. The chart's shaded band is the
     normal range; spikes and loss are flagged against it. The UI never blocks on the polling.
   </p>
+
+  <ToolHelp>
+    After a short warm-up it learns a <strong>known-good band</strong> and judges everything against it.
+    <strong>STEADY</strong> (green) is normal; <code>DEGRADED</code> or <code>ANOMALY</code> means latency has climbed
+    out of the band, and <code>PACKET LOSS</code> is the serious one. Watch the chart: traces riding inside the shaded
+    band are healthy, spikes above it are the problem moments. Use <strong>Set baseline</strong> after conditions change
+    (e.g. you switched networks) to re-learn what "normal" should be.
+  </ToolHelp>
 
   <form class="row" on:submit|preventDefault={start}>
     <input class="field mono" bind:value={target} placeholder="1.1.1.1  ·  host" aria-label="Target" spellcheck="false" autocomplete="off" />
