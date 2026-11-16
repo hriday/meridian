@@ -22,7 +22,7 @@
     }
   }
 
-  const cls = (s: string) => (s === "pass" ? "ok" : s === "warn" ? "warn" : "bad");
+  const cls = (s: string) => (s === "pass" ? "ok" : s === "warn" ? "warn" : s === "error" ? "neu" : "bad");
   $: foundSelectors = rep ? (rep.dkim || []).filter((d: any) => d.found) : [];
   $: foundNames = foundSelectors.map((d: any) => d.selector).join(", ");
 </script>
@@ -85,12 +85,14 @@
   .card.ok { border-left-color: var(--good, #3fb950); }
   .card.warn { border-left-color: var(--warn, #f5a623); }
   .card.bad { border-left-color: var(--danger, #e5484d); }
+  .card.neu { border-left-color: var(--text-faint, var(--text-dim)); }
   .chead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .mech { font-weight: 650; font-size: 0.9rem; color: var(--text); letter-spacing: .02em; }
   .badge { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: 2px 9px; border-radius: 6px; }
   .badge.ok { background: var(--good, #3fb950); color: #04260f; }
   .badge.warn { background: var(--warn, #f5a623); color: #3a2a00; }
   .badge.bad { background: var(--danger, #e5484d); color: #fff; }
+  .badge.neu { background: var(--well); color: var(--text-dim); border: 1px solid var(--border); }
   .note { margin: 0; font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
   .rec { display: block; margin-top: 7px; font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.76rem; color: var(--text); background: var(--well); border-radius: 6px; padding: 6px 9px; word-break: break-all; }
   .foot { max-width: 820px; font-size: 0.76rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; line-height: 1.6; }

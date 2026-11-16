@@ -14,9 +14,11 @@ import (
 	"github.com/hriday/meridian/internal/certexpiry"
 	"github.com/hriday/meridian/internal/ctlog"
 	"github.com/hriday/meridian/internal/cve"
+	"github.com/hriday/meridian/internal/dnsx"
 	"github.com/hriday/meridian/internal/emailauth"
 	"github.com/hriday/meridian/internal/hashid"
 	"github.com/hriday/meridian/internal/secheaders"
+	"github.com/hriday/meridian/internal/sysconf"
 	"github.com/hriday/meridian/internal/threatintel"
 	"github.com/hriday/meridian/internal/tlsscan"
 )
@@ -306,17 +308,57 @@ func runSubdomains(args []string, stdout, stderr io.Writer) int {
 }
 
 func printSubdomains(stdout io.Writer, subs []ctlog.Subdomain) {
-	fmt.Fprintf(stdout, "%d subdomains from Certificate Transparency\n\n", len(subs))
+	stale := 0
+	for _, s := range subs {
+		if s.Stale {
+			stale++
+		}
+	}
+	fmt.Fprintf(stdout, "%d subdomains from Certificate Transparency", len(subs))
+	if stale > 0 {
+		fmt.Fprintf(stdout, " — %d likely retired", stale)
+	}
+	fmt.Fprint(stdout, "\n\n")
 	for _, s := range subs {
 		name := s.Name
 		if s.Wildcard {
 			name = "*." + name
 		}
-		fmt.Fprintf(stdout, "%-40s %3d certs  (%s → %s)\n", name, s.Certs, s.FirstSeen, s.LastSeen)
+		marker := " "
+		if s.Stale {
+			marker = "×"
+		}
+		fmt.Fprintf(stdout, "%s %-40s %3d certs  (%s → %s)\n", marker, name, s.Certs, s.FirstSeen, s.LastSeen)
+	}
+	if stale > 0 {
+		fmt.Fprint(stdout, "\n× = newest certificate expired over 2 years ago — likely a decommissioned host\n    whose DNS record can probably be pulled. Confirm it no longer resolves first.\n")
 	}
 }
 
 // ---- emailauth -------------------------------------------------------------
+
+// LookupTXT resolves TXT records for name using the robust dnsx resolver (EDNS0,
+// TCP fallback, miekg parsing) rather than the Go stdlib resolver, which fails to
+// unmarshal some large TXT responses — e.g. a domain with many verification
+// records — and would otherwise make emailauth report a present SPF as absent.
+// Values come back as clean, joined strings.
+func LookupTXT(ctx context.Context, name string) ([]string, error) {
+	server := "1.1.1.1"
+	if f := sysconf.Resolvers(); len(f.Values) > 0 {
+		server = f.Values[0]
+	}
+	res, err := dnsx.Query(ctx, name, "TXT", server)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(res.Answers))
+	for _, a := range res.Answers {
+		if strings.EqualFold(a.Type, "TXT") {
+			out = append(out, dnsx.JoinTXT(a.Value))
+		}
+	}
+	return out, nil
+}
 
 func runEmailAuth(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("emailauth", flag.ContinueOnError)
@@ -339,10 +381,7 @@ func runEmailAuth(args []string, stdout, stderr io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	lookup := func(ctx context.Context, name string) ([]string, error) {
-		return net.DefaultResolver.LookupTXT(ctx, name)
-	}
-	rep := emailauth.Check(ctx, lookup, pos[0], sels)
+	rep := emailauth.Check(ctx, LookupTXT, pos[0], sels)
 	if *asJSON {
 		return writeJSON(stdout, stderr, rep)
 	}

@@ -15,9 +15,10 @@ import (
 type Status string
 
 const (
-	StatusPass Status = "pass"
-	StatusWarn Status = "warn"
-	StatusFail Status = "fail"
+	StatusPass  Status = "pass"
+	StatusWarn  Status = "warn"
+	StatusFail  Status = "fail"
+	StatusError Status = "error" // the DNS lookup itself failed — not a verdict
 )
 
 // TXTLookup resolves the TXT records of a name; injected so tests stay offline.
@@ -88,7 +89,12 @@ func Check(ctx context.Context, lookup TXTLookup, domain string, selectors []str
 }
 
 func checkSPF(ctx context.Context, lookup TXTLookup, domain string) SPFResult {
-	txt, _ := lookup(ctx, domain)
+	txt, err := lookup(ctx, domain)
+	if err != nil {
+		// A failed lookup is NOT the same as "no SPF record" — don't claim the
+		// domain can be spoofed when we simply couldn't ask.
+		return SPFResult{Status: StatusError, Note: "Couldn't check SPF — the TXT lookup failed: " + err.Error()}
+	}
 	var spf []string
 	for _, t := range txt {
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(t)), "v=spf1") {
@@ -137,7 +143,10 @@ func spfAllQualifier(rec string) string {
 }
 
 func checkDMARC(ctx context.Context, lookup TXTLookup, domain string) DMARCResult {
-	txt, _ := lookup(ctx, "_dmarc."+domain)
+	txt, err := lookup(ctx, "_dmarc."+domain)
+	if err != nil {
+		return DMARCResult{Status: StatusError, Note: "Couldn't check DMARC — the TXT lookup failed: " + err.Error()}
+	}
 	var rec string
 	for _, t := range txt {
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(t)), "v=dmarc1") {

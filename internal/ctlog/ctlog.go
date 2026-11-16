@@ -31,6 +31,7 @@ type Subdomain struct {
 	Certs     int    `json:"certs"`     // number of CT entries mentioning it
 	FirstSeen string `json:"firstSeen"` // earliest not_before (date)
 	LastSeen  string `json:"lastSeen"`  // latest not_after (date)
+	Stale     bool   `json:"stale"`     // newest cert expired well over a year ago — likely a retired host
 }
 
 type entry struct {
@@ -66,7 +67,29 @@ func Subdomains(ctx context.Context, client Doer, domain string) ([]Subdomain, e
 		}
 		entries = cs
 	}
-	return aggregate(entries, domain), nil
+	out := aggregate(entries, domain)
+	markStale(out, time.Now())
+	return out, nil
+}
+
+// staleAfter is how long past a subdomain's newest certificate expiry we flag it
+// as likely retired: two full ~398-day cert lifetimes with no renewal in CT.
+const staleAfter = 2 * 365 * 24 * time.Hour
+
+// markStale flags subdomains whose most recent certificate (LastSeen = latest
+// not_after) expired more than staleAfter ago — a strong hint the host is
+// decommissioned and its DNS record can be pulled. It is only a hint: the record
+// may still resolve, so callers pair it with a live lookup before deleting.
+func markStale(subs []Subdomain, now time.Time) {
+	for i := range subs {
+		t, err := time.Parse("2006-01-02", subs[i].LastSeen)
+		if err != nil {
+			continue
+		}
+		if now.Sub(t) > staleAfter {
+			subs[i].Stale = true
+		}
+	}
 }
 
 // fetchCrtSh queries crt.sh for every cert mentioning *.domain.

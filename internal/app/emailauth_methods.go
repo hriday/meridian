@@ -2,10 +2,10 @@ package app
 
 import (
 	"context"
-	"net"
 	"strings"
 	"time"
 
+	"github.com/hriday/meridian/internal/cli"
 	"github.com/hriday/meridian/internal/emailauth"
 )
 
@@ -17,15 +17,13 @@ func (a *App) EmailAuthCheck(domain, selectorsCSV string) emailauth.Report {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	lookup := func(ctx context.Context, name string) ([]string, error) {
-		return net.DefaultResolver.LookupTXT(ctx, name)
-	}
-
 	var selectors []string
 	for _, s := range strings.Split(selectorsCSV, ",") {
 		if s = strings.TrimSpace(s); s != "" {
 			selectors = append(selectors, s)
 		}
 	}
-	return emailauth.Check(ctx, lookup, domain, selectors)
+	// Use the robust dnsx-based TXT lookup (the Go stdlib resolver fails on some
+	// large TXT responses, which made emailauth report a present SPF as absent).
+	return emailauth.Check(ctx, cli.LookupTXT, domain, selectors)
 }
