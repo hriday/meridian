@@ -284,3 +284,26 @@ func TestBuildReport(t *testing.T) {
 		t.Errorf("summary = %q", r.Summary)
 	}
 }
+
+func TestRemediateTargetsTheActualWeakness(t *testing.T) {
+	// A server with a PQ-default key exchange but a legacy MAC (the common
+	// Ubuntu-OpenSSH case): the fix should be the MAC, not the key exchange.
+	k := KexInit{
+		Kex:          []string{"sntrup761x25519-sha512@openssh.com", "curve25519-sha256"},
+		CiphersS2C:   []string{"chacha20-poly1305@openssh.com"},
+		CiphersC2S:   []string{"chacha20-poly1305@openssh.com"},
+		MACsS2C:      []string{"hmac-sha2-256-etm@openssh.com", "hmac-sha1"},
+		MACsC2S:      []string{"hmac-sha2-256-etm@openssh.com", "hmac-sha1"},
+		HostKeyAlgos: []string{"rsa-sha2-512", "ssh-ed25519", "ssh-rsa"},
+	}
+	rem := strings.Join(remediate(k, assessPQ(k.Kex)), "\n")
+	if !strings.Contains(rem, "MACs ") {
+		t.Errorf("expected a MACs fix, got: %s", rem)
+	}
+	if strings.Contains(rem, "KexAlgorithms ") {
+		t.Errorf("PQ is already preferred — should not suggest changing KexAlgorithms: %s", rem)
+	}
+	if !strings.Contains(rem, "sshd -t") {
+		t.Errorf("expected a validate/reload step: %s", rem)
+	}
+}

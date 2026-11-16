@@ -67,6 +67,7 @@ type Report struct {
 	PQ           PQStatus  `json:"pq"`
 	Grade        string    `json:"grade"`
 	Findings     []string  `json:"findings"`
+	Remediation  []string  `json:"remediation,omitempty"` // concrete sshd_config fixes to raise the grade
 	Summary      string    `json:"summary"`
 }
 
@@ -257,6 +258,58 @@ func grade(k KexInit, keys []HostKey) (string, []string, PQStatus) {
 	return g, findings, pq
 }
 
+// remediate returns concrete sshd_config directives that would raise the grade,
+// derived from the weaknesses actually present (so it only suggests what this
+// server needs). Empty when there's nothing to fix.
+func remediate(k KexInit, pq PQStatus) []string {
+	var out []string
+
+	for _, c := range dedupeLower(k.CiphersS2C, k.CiphersC2S) {
+		if badCipher(c) {
+			out = append(out, "Restrict ciphers to AEAD only:\n    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com")
+			break
+		}
+	}
+	for _, m := range dedupeLower(k.MACsS2C, k.MACsC2S) {
+		if badMAC(m) || weakMAC(m) {
+			out = append(out, "Restrict MACs to ETM SHA-2 (drops hmac-sha1 and non-ETM MACs):\n    MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,umac-128-etm@openssh.com")
+			break
+		}
+	}
+	weakKexPresent := false
+	for _, x := range k.Kex {
+		if badKex(x) || weakKex(x) {
+			weakKexPresent = true
+			break
+		}
+	}
+	if weakKexPresent || !pq.Preferred {
+		out = append(out, "Prefer a post-quantum key exchange (OpenSSH 9+), dropping SHA-1 KEX:\n    KexAlgorithms sntrup761x25519-sha512@openssh.com,mlkem768x25519-sha256,curve25519-sha256,curve25519-sha256@libssh.org")
+	}
+	hasRSASHA2, dsa, sshRSAOnly := false, false, false
+	for _, h := range k.HostKeyAlgos {
+		hl := strings.ToLower(h)
+		if strings.HasPrefix(hl, "rsa-sha2-") {
+			hasRSASHA2 = true
+		}
+		if strings.HasPrefix(hl, "ssh-dss") {
+			dsa = true
+		}
+	}
+	for _, h := range k.HostKeyAlgos {
+		if strings.EqualFold(h, "ssh-rsa") && !hasRSASHA2 {
+			sshRSAOnly = true
+		}
+	}
+	if dsa || sshRSAOnly {
+		out = append(out, "Use modern host-key signatures (and remove any DSA host key):\n    HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256,ssh-ed25519,ecdsa-sha2-nistp256")
+	}
+	if len(out) > 0 {
+		out = append(out, "Then validate and reload: sudo sshd -t && sudo systemctl reload ssh")
+	}
+	return out
+}
+
 // softwareFromBanner extracts the software string from an SSH identification
 // banner ("SSH-2.0-OpenSSH_9.6" → "OpenSSH_9.6").
 func softwareFromBanner(banner string) string {
@@ -285,6 +338,7 @@ func Build(host, serverID string, k KexInit, keys []HostKey) Report {
 		PQ:           pq,
 		Grade:        g,
 		Findings:     findings,
+		Remediation:  remediate(k, pq),
 	}
 	pqMark := "✗"
 	if pq.Preferred {
