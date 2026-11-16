@@ -171,8 +171,40 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  # Headless CLI binaries for Linux — including arm64 (the Flipper One's Rockchip
+  # RK3576) and 32-bit arm. Pure Go, cross-compiled, no Wails/GUI, so they run on
+  # servers, SBCs and the Flipper One over SSH without a display.
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+      - name: Compute version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=dev-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+          fi
+      - name: Cross-compile meridian-cli for Linux (amd64, arm64, arm)
+        run: |
+          mkdir -p cli-dist
+          for arch in amd64 arm64 arm; do
+            CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build \
+              -ldflags "-s -w -X github.com/hriday/meridian/internal/version.Version=${VERSION}" \
+              -o "cli-dist/meridian-cli-${VERSION}-linux-${arch}" ./cmd/meridian-cli
+          done
+          ls -l cli-dist
+      - name: Upload CLI binaries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: meridian-cli-linux
+          path: cli-dist/*
+
   release:
-    needs: build
+    needs: [build, cli]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
