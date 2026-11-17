@@ -1,12 +1,15 @@
 // Package svcstatus answers "is this online service having an outage right now?"
-// from its public Statuspage.io feed (the /api/v2/summary.json a large share of
-// major services publish) — free and keyless. It's the authoritative-status
-// answer to a Downdetector-style question (Downdetector itself has no free API).
+// from a service's own authoritative status feed — free and keyless, the real
+// answer to a Downdetector-style question (without the crowd reports).
+//
+// Most services publish an Atlassian Statuspage feed (/api/v2/summary.json), and
+// that's the default. A few big providers run their own status pages with their
+// own feeds; those get a per-provider adapter (see apple.go, google.go,
+// azure.go) that maps the provider's feed onto the same Status model.
 package svcstatus
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,29 +24,50 @@ type Doer interface {
 
 const userAgent = "meridian (+https://github.com/hriday/meridian)"
 
-// Known maps a short slug to a service's Statuspage base URL. Custom URLs work
-// too — any Statuspage-backed status page exposes /api/v2/summary.json.
-var Known = map[string]string{
-	"github":       "https://www.githubstatus.com",
-	"cloudflare":   "https://www.cloudflarestatus.com",
-	"discord":      "https://discordstatus.com",
-	"reddit":       "https://www.redditstatus.com",
-	"dropbox":      "https://status.dropbox.com",
-	"twilio":       "https://status.twilio.com",
-	"digitalocean": "https://status.digitalocean.com",
-	"datadog":      "https://status.datadoghq.com",
-	"atlassian":    "https://status.atlassian.com",
-	"npm":          "https://status.npmjs.org",
-	"pagerduty":    "https://status.pagerduty.com",
-	"coinbase":     "https://status.coinbase.com",
-	"openai":       "https://status.openai.com",
-	"zoom":         "https://status.zoom.us",
+// provider describes where and how to read one service's status.
+type provider struct {
+	Name string // display name, e.g. "Apple"
+	Kind string // statuspage | apple | google | azure
+	URL  string // statuspage base, or the custom provider's feed URL
 }
 
-// KnownSlugs returns the known service slugs, sorted.
+// known maps a short slug (also the GUI chip label) to its provider.
+var known = map[string]provider{
+	// Atlassian Statuspage services (the default kind).
+	"github":       {"GitHub", kindStatuspage, "https://www.githubstatus.com"},
+	"cloudflare":   {"Cloudflare", kindStatuspage, "https://www.cloudflarestatus.com"},
+	"discord":      {"Discord", kindStatuspage, "https://discordstatus.com"},
+	"reddit":       {"Reddit", kindStatuspage, "https://www.redditstatus.com"},
+	"dropbox":      {"Dropbox", kindStatuspage, "https://status.dropbox.com"},
+	"twilio":       {"Twilio", kindStatuspage, "https://status.twilio.com"},
+	"digitalocean": {"DigitalOcean", kindStatuspage, "https://status.digitalocean.com"},
+	"datadog":      {"Datadog", kindStatuspage, "https://status.datadoghq.com"},
+	"atlassian":    {"Atlassian", kindStatuspage, "https://status.atlassian.com"},
+	"npm":          {"npm", kindStatuspage, "https://status.npmjs.org"},
+	"pagerduty":    {"PagerDuty", kindStatuspage, "https://status.pagerduty.com"},
+	"coinbase":     {"Coinbase", kindStatuspage, "https://status.coinbase.com"},
+	"openai":       {"OpenAI", kindStatuspage, "https://status.openai.com"},
+	"zoom":         {"Zoom", kindStatuspage, "https://status.zoom.us"},
+
+	// Custom status pages with their own feeds (per-provider adapters).
+	"apple":            {"Apple", kindApple, appleConsumerFeed},
+	"apple-developer":  {"Apple Developer", kindApple, appleDeveloperFeed},
+	"azure":            {"Microsoft Azure", kindAzure, azureFeed},
+	"google-cloud":     {"Google Cloud", kindGoogle, "https://status.cloud.google.com/incidents.json"},
+	"google-workspace": {"Google Workspace", kindGoogle, "https://www.google.com/appsstatus/dashboard/incidents.json"},
+}
+
+const (
+	kindStatuspage = "statuspage"
+	kindApple      = "apple"
+	kindGoogle     = "google"
+	kindAzure      = "azure"
+)
+
+// KnownSlugs returns the known service slugs, sorted (also the GUI chip list).
 func KnownSlugs() []string {
-	out := make([]string, 0, len(Known))
-	for k := range Known {
+	out := make([]string, 0, len(known))
+	for k := range known {
 		out = append(out, k)
 	}
 	sort.Strings(out)
@@ -57,16 +81,17 @@ type Component struct {
 
 type Incident struct {
 	Name      string `json:"name"`
-	Status    string `json:"status"` // investigating | identified | monitoring
+	Status    string `json:"status"` // investigating | identified | monitoring | ongoing
 	Impact    string `json:"impact"` // none | minor | major | critical
 	Shortlink string `json:"shortlink"`
 	UpdatedAt string `json:"updatedAt"`
 }
 
-// Status is the distilled result for one service.
+// Status is the distilled result for one service, shared across every provider.
 type Status struct {
 	Service     string      `json:"service"`
 	URL         string      `json:"url"`
+	Source      string      `json:"source"`      // which feed answered: Statuspage | Apple | Google | Azure
 	Indicator   string      `json:"indicator"`   // none | minor | major | critical
 	Description string      `json:"description"` // e.g. "All Systems Operational"
 	Operational bool        `json:"operational"` // indicator == none
@@ -75,102 +100,83 @@ type Status struct {
 }
 
 // Check fetches and distills a service's status. target is a known slug, a
-// status-page host, or a full URL.
+// status-page host, or a full URL; the provider is detected and the matching
+// adapter handles the feed.
 func Check(ctx context.Context, client Doer, target string) (Status, error) {
-	base, err := resolveBase(target)
+	p, err := resolveProvider(target)
 	if err != nil {
 		return Status{}, err
 	}
-	api := base + "/api/v2/summary.json"
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api, nil)
-	if err != nil {
-		return Status{}, err
+	switch p.Kind {
+	case kindApple:
+		return checkApple(ctx, client, p)
+	case kindGoogle:
+		return checkGoogle(ctx, client, p)
+	case kindAzure:
+		return checkAzure(ctx, client, p)
+	default:
+		return checkStatuspage(ctx, client, p)
 	}
-	req.Header.Set("User-Agent", userAgent)
-	resp, err := client.Do(req)
-	if err != nil {
-		return Status{}, fmt.Errorf("couldn't reach the status page")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return Status{}, fmt.Errorf("no Statuspage feed at %s — is it a Statuspage-backed service?", base)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Status{}, fmt.Errorf("the status page returned %s", resp.Status)
-	}
-
-	var raw summaryJSON
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return Status{}, fmt.Errorf("couldn't read the status feed (not a Statuspage service?)")
-	}
-
-	s := Status{
-		Service:     raw.Page.Name,
-		URL:         base,
-		Indicator:   raw.Status.Indicator,
-		Description: raw.Status.Description,
-		Operational: raw.Status.Indicator == "" || raw.Status.Indicator == "none",
-	}
-	if s.Service == "" {
-		s.Service = base
-	}
-	for _, c := range raw.Components {
-		if c.Status != "" && c.Status != "operational" {
-			s.Impacted = append(s.Impacted, Component{Name: c.Name, Status: c.Status})
-		}
-	}
-	for _, in := range raw.Incidents {
-		if in.Status == "resolved" || in.Status == "postmortem" {
-			continue
-		}
-		s.Incidents = append(s.Incidents, Incident{
-			Name: in.Name, Status: in.Status, Impact: in.Impact,
-			Shortlink: in.Shortlink, UpdatedAt: in.UpdatedAt,
-		})
-	}
-	return s, nil
 }
 
-type summaryJSON struct {
-	Page struct {
-		Name string `json:"name"`
-	} `json:"page"`
-	Status struct {
-		Indicator   string `json:"indicator"`
-		Description string `json:"description"`
-	} `json:"status"`
-	Components []struct {
-		Name   string `json:"name"`
-		Status string `json:"status"`
-	} `json:"components"`
-	Incidents []struct {
-		Name      string `json:"name"`
-		Status    string `json:"status"`
-		Impact    string `json:"impact"`
-		Shortlink string `json:"shortlink"`
-		UpdatedAt string `json:"updated_at"`
-	} `json:"incidents"`
-}
-
-// resolveBase turns a slug / host / URL into a scheme://host base.
-func resolveBase(target string) (string, error) {
+// resolveProvider turns a slug / host / URL into a provider. Known slugs win;
+// otherwise the host is matched against the custom providers, and anything else
+// is assumed to be a Statuspage-backed page.
+func resolveProvider(target string) (provider, error) {
 	t := strings.ToLower(strings.TrimSpace(target))
 	if t == "" {
-		return "", fmt.Errorf("enter a service name or status-page URL")
+		return provider{}, fmt.Errorf("enter a service name or status-page URL")
 	}
-	if b, ok := Known[t]; ok {
-		return b, nil
+	if p, ok := known[t]; ok {
+		return p, nil
 	}
+
+	host := t
+	full := t
 	if strings.Contains(t, "://") {
 		u, err := url.Parse(t)
 		if err != nil || u.Host == "" {
-			return "", fmt.Errorf("that doesn't look like a URL")
+			return provider{}, fmt.Errorf("that doesn't look like a URL")
 		}
-		return u.Scheme + "://" + u.Host, nil
+		host = strings.ToLower(u.Host)
+	} else if !strings.Contains(t, ".") {
+		return provider{}, fmt.Errorf("unknown service %q — paste its status-page URL, or try one of: %s",
+			target, strings.Join(KnownSlugs(), ", "))
 	}
-	if strings.Contains(t, ".") { // bare host
-		return "https://" + strings.TrimSuffix(t, "/"), nil
+
+	switch {
+	case strings.Contains(host, "apple.com"):
+		if strings.Contains(host, "developer") || strings.Contains(full, "developer") {
+			return known["apple-developer"], nil
+		}
+		return known["apple"], nil
+	case strings.Contains(host, "azure") || strings.Contains(host, "azure.status.microsoft"):
+		return known["azure"], nil
+	case strings.Contains(host, "status.cloud.google.com"):
+		return known["google-cloud"], nil
+	case strings.Contains(host, "google.com") && strings.Contains(full, "appsstatus"):
+		return known["google-workspace"], nil
+	case isMicrosoft365(host):
+		return provider{}, fmt.Errorf("Microsoft 365 service health needs an admin sign-in — Microsoft publishes no public, unauthenticated feed. Check it by hand at https://status.cloud.microsoft")
+	case strings.Contains(host, "aws.amazon") || strings.Contains(host, "status.aws") || strings.Contains(host, "health.aws"):
+		return provider{}, fmt.Errorf("AWS only publishes an RSS feed with no machine-readable \"resolved\" flag, so Meridian can't give a reliable up/down yet. Check it by hand at https://health.aws.amazon.com/health/status")
+	default:
+		// Assume Statuspage: use scheme://host as the base.
+		base := "https://" + host
+		if strings.Contains(t, "://") {
+			if u, err := url.Parse(t); err == nil {
+				base = u.Scheme + "://" + u.Host
+			}
+		}
+		return provider{Name: host, Kind: kindStatuspage, URL: strings.TrimSuffix(base, "/")}, nil
 	}
-	return "", fmt.Errorf("unknown service %q — paste its status-page URL, or try one of: %s", target, strings.Join(KnownSlugs(), ", "))
+}
+
+func isMicrosoft365(host string) bool {
+	for _, h := range []string{"office365.com", "status.office.com", "portal.office.com", "status.cloud.microsoft", "office.com"} {
+		if strings.Contains(host, h) {
+			return true
+		}
+	}
+	return false
 }

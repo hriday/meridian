@@ -73,19 +73,40 @@ func TestCheckHTTPError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestResolveBase(t *testing.T) {
-	b, err := resolveBase("github")
+func TestResolveProvider(t *testing.T) {
+	p, err := resolveProvider("github")
 	require.NoError(t, err)
-	require.Equal(t, "https://www.githubstatus.com", b)
+	require.Equal(t, kindStatuspage, p.Kind)
+	require.Equal(t, "https://www.githubstatus.com", p.URL)
 
-	b, err = resolveBase("https://status.example.com/history")
+	p, err = resolveProvider("https://status.example.com/history")
 	require.NoError(t, err)
-	require.Equal(t, "https://status.example.com", b, "path is dropped")
+	require.Equal(t, kindStatuspage, p.Kind)
+	require.Equal(t, "https://status.example.com", p.URL, "path is dropped")
 
-	b, err = resolveBase("status.example.com")
+	p, err = resolveProvider("status.example.com")
 	require.NoError(t, err)
-	require.Equal(t, "https://status.example.com", b, "bare host gets https")
+	require.Equal(t, "https://status.example.com", p.URL, "bare host gets https")
 
-	_, err = resolveBase("notaservice")
+	_, err = resolveProvider("notaservice")
 	require.Error(t, err, "unknown single word is an error, not a bad fetch")
+
+	// Custom providers are detected from the pasted URL.
+	p, err = resolveProvider("https://developer.apple.com/system-status")
+	require.NoError(t, err)
+	require.Equal(t, kindApple, p.Kind)
+	require.Equal(t, appleDeveloperFeed, p.URL, "the Apple developer page maps to the developer feed")
+
+	p, err = resolveProvider("apple")
+	require.NoError(t, err)
+	require.Equal(t, kindApple, p.Kind)
+
+	p, err = resolveProvider("https://status.cloud.google.com/")
+	require.NoError(t, err)
+	require.Equal(t, kindGoogle, p.Kind)
+
+	// Microsoft 365 has no public feed — an honest error, not a bad fetch.
+	_, err = resolveProvider("https://status.cloud.microsoft/")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "admin sign-in")
 }
