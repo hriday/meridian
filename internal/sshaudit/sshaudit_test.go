@@ -297,8 +297,8 @@ func TestRemediateTargetsTheActualWeakness(t *testing.T) {
 		HostKeyAlgos: []string{"rsa-sha2-512", "ssh-ed25519", "ssh-rsa"},
 	}
 	rem := strings.Join(remediate(k, assessPQ(k.Kex)), "\n")
-	if !strings.Contains(rem, "/etc/ssh/sshd_config") {
-		t.Errorf("expected the fix to name where it goes: %s", rem)
+	if !strings.Contains(rem, "/etc/ssh/sshd_config.d/") {
+		t.Errorf("expected the fix to point at a sshd_config.d drop-in: %s", rem)
 	}
 	if !strings.Contains(rem, "MACs ") {
 		t.Errorf("expected a MACs fix, got: %s", rem)
