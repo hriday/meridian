@@ -305,7 +305,7 @@ func remediate(k KexInit, pq PQStatus) []string {
 		out = append(out, "Use modern host-key signatures (and remove any DSA host key):\n    HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256,ssh-ed25519,ecdsa-sha2-nistp256")
 	}
 	if len(out) > 0 {
-		out = append([]string{"Edit /etc/ssh/sshd_config (or a drop-in under /etc/ssh/sshd_config.d/) and set:"}, out...)
+		out = append([]string{"On the server, edit the SSH daemon config /etc/ssh/sshd_config (the server file — not the client /etc/ssh/ssh_config), or a drop-in under /etc/ssh/sshd_config.d/, and set:"}, out...)
 		out = append(out, "Then validate and reload: sudo sshd -t && sudo systemctl reload ssh")
 	}
 	return out
