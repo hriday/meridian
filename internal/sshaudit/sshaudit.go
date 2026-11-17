@@ -305,7 +305,7 @@ func remediate(k KexInit, pq PQStatus) []string {
 		out = append(out, "Use modern host-key signatures (and remove any DSA host key):\n    HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256,ssh-ed25519,ecdsa-sha2-nistp256")
 	}
 	if len(out) > 0 {
-		out = append([]string{"Edit /etc/ssh/sshd_config (or a drop-in under /etc/ssh/sshd_config.d/) and set:"}, out...)
+		out = append([]string{"On the server's SSH daemon config, ADD the setting below — there's usually no line to edit, since sshd uses built-in defaults (which still include the weak algorithms). Because sshd_config includes /etc/ssh/sshd_config.d/ at the top and the FIRST value wins, put it in a drop-in that's read first, e.g. create /etc/ssh/sshd_config.d/10-crypto.conf containing:"}, out...)
 		out = append(out, "Then validate and reload: sudo sshd -t && sudo systemctl reload ssh")
 	}
 	return out
