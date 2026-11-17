@@ -99,3 +99,29 @@ test("the sidebar filter narrows the tool list", async ({ page }) => {
   expect(narrowed).toBeGreaterThan(0);
   expect(narrowed).toBeLessThan(all);
 });
+
+test("service status: a user can pin and remove a custom service chip", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="svcstatus"]').click();
+  await page.locator("main.main").waitFor();
+
+  // Open the add form, enter a name + URL, save.
+  await page.getByRole("button", { name: "+ Add service" }).click();
+  await page.getByPlaceholder("name (optional)").fill("Acme");
+  await page.getByPlaceholder(/status URL/).fill("status.acme.com");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+
+  // The chip is pinned.
+  const chip = page.locator(".chip.custom", { hasText: "Acme" });
+  await expect(chip).toHaveCount(1);
+
+  // It persists across a reload (localStorage).
+  await page.reload();
+  await page.locator('[data-tool="svcstatus"]').click();
+  await expect(page.locator(".chip.custom", { hasText: "Acme" })).toHaveCount(1);
+
+  // Removing it takes it away.
+  await page.locator(".chip.custom", { hasText: "Acme" }).locator(".cx").click();
+  await expect(page.locator(".chip.custom", { hasText: "Acme" })).toHaveCount(0);
+});
