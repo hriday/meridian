@@ -6,3 +6,7 @@ node_modules
 frontend/dist
 *.app
 .playwright-mcp/
+
+# Nix build output
+result
+result-*
