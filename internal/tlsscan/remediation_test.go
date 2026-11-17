@@ -16,6 +16,7 @@ func TestRemediateEmitsConcreteDirectives(t *testing.T) {
 	}
 	ciphers := []Cipher{{Name: "TLS_RSA_WITH_AES_128_CBC_SHA", Secure: false}}
 	out := strings.Join(remediate(protos, ciphers), "\n")
+	require.Contains(t, out, "/etc/nginx") // names where the directives go
 	require.Contains(t, out, "ssl_protocols TLSv1.2 TLSv1.3;")
 	require.Contains(t, out, "ssl_ciphers ")
 	require.Contains(t, out, "nginx -t")

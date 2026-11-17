@@ -21,6 +21,7 @@ func TestRemediateSkipsOKHeaders(t *testing.T) {
 		{Name: "Content-Security-Policy", Grade: GradeMissing},
 	}}
 	out := r.remediate()
-	require.Len(t, out, 1)
-	require.Contains(t, out[0], "Content-Security-Policy: default-src")
+	require.Len(t, out, 2) // a "where to set these" line + the one header fix
+	require.Contains(t, out[0], "add_header")
+	require.Contains(t, out[1], "Content-Security-Policy: default-src")
 }

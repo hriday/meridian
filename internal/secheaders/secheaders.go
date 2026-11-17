@@ -194,6 +194,9 @@ func (r *Report) remediate() []string {
 			out = append(out, fix)
 		}
 	}
+	if len(out) > 0 {
+		out = append([]string{"Set these on every response in your web server or app — nginx: add_header \"<Name>\" \"<value>\" always;   Apache: Header always set <Name> \"<value>\""}, out...)
+	}
 	return out
 }
 

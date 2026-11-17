@@ -239,7 +239,7 @@ func remediate(protos []Protocol, ciphers []Cipher) []string {
 		}
 	}
 	if needProto {
-		out = append(out, "Restrict protocols to TLS 1.2+ and enable 1.3 (nginx):\n    ssl_protocols TLSv1.2 TLSv1.3;")
+		out = append(out, "Restrict protocols to TLS 1.2+ and enable 1.3:\n    ssl_protocols TLSv1.2 TLSv1.3;")
 	}
 	weakCipher := false
 	for _, c := range ciphers {
@@ -248,9 +248,10 @@ func remediate(protos []Protocol, ciphers []Cipher) []string {
 		}
 	}
 	if weakCipher {
-		out = append(out, "Offer only AEAD suites with forward secrecy, dropping CBC/broken ciphers (nginx):\n    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;\n    ssl_prefer_server_ciphers on;")
+		out = append(out, "Offer only AEAD suites with forward secrecy, dropping CBC/broken ciphers:\n    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;\n    ssl_prefer_server_ciphers on;")
 	}
 	if len(out) > 0 {
+		out = append([]string{"In your nginx TLS server block (e.g. /etc/nginx/nginx.conf or /etc/nginx/sites-enabled/<site>), set:"}, out...)
 		out = append(out, "Then validate and reload: sudo nginx -t && sudo systemctl reload nginx")
 	}
 	return out
