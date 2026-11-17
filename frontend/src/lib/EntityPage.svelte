@@ -120,11 +120,6 @@
   <div class="tabbar">
     <button class="tab" class:on={tab === "overview"} on:click={() => (tab = "overview")}>Overview</button>
     <button class="tab" class:on={tab === "registry"} on:click={() => (tab = "registry")}>Registry</button>
-    {#if type === "ip"}
-      <span class="tab dis">Routing <span class="soon">soon</span></span>
-      <span class="tab dis">DNS <span class="soon">soon</span></span>
-      <span class="tab dis">Reachability <span class="soon">soon</span></span>
-    {/if}
   </div>
 
   {#if type === "ip"}
