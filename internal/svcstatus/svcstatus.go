@@ -44,10 +44,9 @@ var known = map[string]provider{
 	"datadog":      {"Datadog", kindStatuspage, "https://status.datadoghq.com"},
 	"atlassian":    {"Atlassian", kindStatuspage, "https://status.atlassian.com"},
 	"npm":          {"npm", kindStatuspage, "https://status.npmjs.org"},
-	"pagerduty":    {"PagerDuty", kindStatuspage, "https://status.pagerduty.com"},
 	"coinbase":     {"Coinbase", kindStatuspage, "https://status.coinbase.com"},
 	"openai":       {"OpenAI", kindStatuspage, "https://status.openai.com"},
-	"zoom":         {"Zoom", kindStatuspage, "https://status.zoom.us"},
+	"zoom":         {"Zoom", kindStatuspage, "https://www.zoomstatus.com"},
 
 	// Custom status pages with their own feeds (per-provider adapters).
 	"apple":            {"Apple", kindApple, appleConsumerFeed},
