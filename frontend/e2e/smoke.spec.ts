@@ -125,3 +125,44 @@ test("service status: a user can pin and remove a custom service chip", async ({
   await page.locator(".chip.custom", { hasText: "Acme" }).locator(".cx").click();
   await expect(page.locator(".chip.custom", { hasText: "Acme" })).toHaveCount(0);
 });
+
+test("sidebar search matches tool keywords across the toolset, not just names", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  const filter = page.locator("input.search");
+
+  // A broad spread of concept/synonym searches, none of which appear in the
+  // tool's visible name — each must still surface the right tool.
+  const cases: [string, string][] = [
+    ["rpki", "bgp"],
+    ["rdap", "lookup"],
+    ["dig", "dns"],
+    ["nslookup", "dns"],
+    ["ssl", "tls"],
+    ["spf", "emailauth"],
+    ["dkim", "emailauth"],
+    ["dnssec", "dnsaudit"],
+    ["iperf", "speedtest"],
+    ["nmap", "ports"],
+    ["base64", "transcode"],
+    ["haveibeenpwned", "breaches"],
+    ["terraform", "tfexposure"],
+    ["oui", "macvendor"],
+    ["statuspage", "svcstatus"],
+  ];
+  for (const [term, id] of cases) {
+    await filter.fill(term);
+    await page.waitForTimeout(50);
+    await expect(page.locator(`nav.side [data-tool="${id}"]`), `"${term}" should surface ${id}`).toBeVisible();
+  }
+
+  // Multi-word queries narrow by every term (token AND).
+  await filter.fill("post quantum");
+  await page.waitForTimeout(50);
+  await expect(page.locator('nav.side [data-tool="sshaudit"]')).toBeVisible();
+
+  // A term in no tool still yields nothing (no false matches).
+  await filter.fill("zzxqnotathing");
+  await page.waitForTimeout(50);
+  await expect(page.locator("nav.side .item")).toHaveCount(0);
+});
