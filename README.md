@@ -150,6 +150,17 @@ scoop install https://raw.githubusercontent.com/hriday/meridian/master/scoop/mer
 (steps below). `.deb` / AUR and Windows `winget` entries aren't published yet
 (the `winget` route is gated on code-signing).
 
+**Nix / NixOS** (flake):
+
+```bash
+nix run    github:hriday/meridian              # run the CLI, nothing installed
+nix profile install github:hriday/meridian     # install meridian-cli for your user
+nix run    github:hriday/meridian#gui          # the desktop app (Linux)
+```
+
+On NixOS, add the CLI to `environment.systemPackages` via the flake's
+`packages.<system>.cli` (the GUI is `packages.<system>.gui`, Linux only).
+
 Builds are attached to each [GitHub Release](../../releases). Meridian is **not
 yet code-signed**, so your OS will warn on first launch — this is expected for an
 open-source app without a paid signing certificate.
