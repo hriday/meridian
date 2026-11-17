@@ -9,8 +9,9 @@ import (
 )
 
 // ServiceStatus reports whether an online service is having an outage, from its
-// public Statuspage.io feed. target is a known slug (e.g. "github") or a
-// status-page URL. Free and keyless.
+// official status feed — Statuspage for most services, with per-provider
+// adapters for Apple, Azure and Google. target is a known slug (e.g. "github",
+// "apple") or a status-page URL. Free and keyless.
 func (a *App) ServiceStatus(target string) (svcstatus.Status, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

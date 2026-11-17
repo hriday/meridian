@@ -45,6 +45,9 @@ func printServiceStatus(stdout io.Writer, s svcstatus.Status) {
 		mark = "OK"
 	}
 	fmt.Fprintf(stdout, "[%s] %s — %s\n", mark, s.Service, s.Description)
+	if s.Source != "" {
+		fmt.Fprintf(stdout, "       source: %s\n", s.Source)
+	}
 	if len(s.Impacted) > 0 {
 		fmt.Fprintln(stdout, "\nAffected components:")
 		for _, c := range s.Impacted {

@@ -4585,6 +4585,7 @@ export namespace svcstatus {
 	export class Status {
 	    service: string;
 	    url: string;
+	    source: string;
 	    indicator: string;
 	    description: string;
 	    operational: boolean;
@@ -4599,6 +4600,7 @@ export namespace svcstatus {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.service = source["service"];
 	        this.url = source["url"];
+	        this.source = source["source"];
 	        this.indicator = source["indicator"];
 	        this.description = source["description"];
 	        this.operational = source["operational"];

@@ -32,9 +32,10 @@
 
 <div class="tool">
   <p class="lede">
-    Check whether an online service is <strong>having an outage right now</strong>, from its official
-    <strong>Statuspage</strong> feed (authoritative status, not crowd reports). Pick a known service or paste any
-    status-page URL (e.g. <span class="mono">status.example.com</span>). Free — no account.
+    Check whether an online service is <strong>having an outage right now</strong>, from its <strong>official status
+    feed</strong> (authoritative status, not crowd reports). Works with any <strong>Statuspage</strong>-backed service
+    plus <strong>Apple</strong>, <strong>Azure</strong> and <strong>Google</strong> Cloud/Workspace — pick a chip or
+    paste a status-page URL. Free — no account.
   </p>
 
   <ToolHelp>
@@ -65,6 +66,7 @@
         <span class="dot {status.operational ? 'ok' : 'bad'}"></span>
         <span class="sname">{status.service}</span>
         <span class="sdesc">{status.description}</span>
+        {#if status.source}<span class="ssrc">via {status.source}</span>{/if}
       </div>
 
       {#if status.impacted && status.impacted.length}
@@ -117,6 +119,7 @@
   .dot.bad { background: var(--danger, #e5484d); }
   .sname { font-weight: 650; font-size: 0.92rem; color: var(--text); }
   .sdesc { font-size: 0.82rem; color: var(--text-dim); }
+  .ssrc { margin-left: auto; font-size: 0.66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint, var(--text-dim)); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; }
   .sect { margin-top: 12px; }
   .sk { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint, var(--text-dim)); font-weight: 650; margin-bottom: 6px; }
   .comp { display: flex; align-items: center; gap: 10px; padding: 3px 0; font-size: 0.82rem; }
