@@ -11,6 +11,52 @@
 
   ServiceStatusKnown().then((k) => (known = k || [])).catch(() => {});
 
+  // User-pinned services, kept per-machine in localStorage (the backend already
+  // accepts any URL, so a custom chip is just a saved check target).
+  type Custom = { label: string; url: string };
+  const LS_KEY = "meridian.svcstatus.custom";
+  let customs: Custom[] = [];
+  let adding = false;
+  let newLabel = "";
+  let newUrl = "";
+
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) customs = JSON.parse(raw) || [];
+  } catch {}
+
+  function saveCustoms() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(customs));
+    } catch {}
+  }
+
+  function labelFromUrl(u: string): string {
+    try {
+      const h = new URL(u.includes("://") ? u : "https://" + u).hostname;
+      return h.replace(/^www\./, "").replace(/^status\./, "");
+    } catch {
+      return u;
+    }
+  }
+
+  function addCustom() {
+    const url = newUrl.trim();
+    if (!url) return;
+    const label = newLabel.trim() || labelFromUrl(url);
+    customs = [...customs.filter((c) => c.url !== url), { label, url }];
+    saveCustoms();
+    newLabel = "";
+    newUrl = "";
+    adding = false;
+    check(url);
+  }
+
+  function removeCustom(url: string) {
+    customs = customs.filter((c) => c.url !== url);
+    saveCustoms();
+  }
+
   async function check(t?: string) {
     const q = (t ?? target).trim();
     if (!q) return;
@@ -56,7 +102,24 @@
     {#each known as k}
       <button class="chip" on:click={() => check(k)}>{k}</button>
     {/each}
+    {#each customs as c (c.url)}
+      <span class="chip custom">
+        <button class="clabel" title={c.url} on:click={() => check(c.url)}>{c.label}</button>
+        <button class="cx" title="Remove" on:click={() => removeCustom(c.url)}>×</button>
+      </span>
+    {/each}
+    <button class="chip add" on:click={() => (adding = !adding)}>+ Add service</button>
   </div>
+
+  {#if adding}
+    <div class="addrow">
+      <input class="field mono afield" bind:value={newLabel} placeholder="name (optional)" spellcheck="false" />
+      <input class="field mono afield" bind:value={newUrl} placeholder="status URL  ·  e.g. status.acme.com" spellcheck="false"
+        on:keydown={(e) => e.key === "Enter" && addCustom()} />
+      <button class="btn abtn" on:click={addCustom} disabled={!newUrl.trim()}>Save</button>
+    </div>
+    <p class="ahint">Any Statuspage, Apple, Azure or Google status URL. Saved on this computer and pinned as a chip.</p>
+  {/if}
 
   {#if error}<p class="err">{error}</p>{/if}
 
@@ -109,6 +172,17 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-width: 620px; }
   .chip { font-size: 0.74rem; background: var(--well); border: 1px solid var(--border); border-radius: 20px; padding: 3px 11px; color: var(--text-dim); cursor: pointer; }
   .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.custom { display: inline-flex; align-items: center; padding: 0; }
+  .chip.custom .clabel { background: none; border: 0; font: inherit; font-size: 0.74rem; color: var(--text-dim); cursor: pointer; padding: 3px 4px 3px 11px; border-radius: 20px 0 0 20px; }
+  .chip.custom:hover { border-color: var(--accent); }
+  .chip.custom .clabel:hover { color: var(--text); }
+  .chip.custom .cx { background: none; border: 0; color: var(--text-faint, var(--text-dim)); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0 9px 0 3px; }
+  .chip.custom .cx:hover { color: var(--bad, #ff6b6b); }
+  .chip.add { border-style: dashed; }
+  .addrow { display: flex; gap: 8px; margin-top: 10px; max-width: 620px; }
+  .afield { padding: 7px 11px; font-size: 0.8rem; }
+  .abtn { padding: 7px 15px; font-size: 0.8rem; }
+  .ahint { max-width: 620px; margin: 6px 0 0; font-size: 0.72rem; color: var(--text-faint, var(--text-dim)); }
   .err { color: var(--danger, #e5484d); font-size: 0.82rem; margin: 12px 0 0; max-width: 620px; line-height: 1.5; }
   .card { border: 1px solid var(--border); border-left-width: 3px; border-radius: 11px; padding: 13px 16px; margin-top: 16px; background: var(--card); }
   .card.ok { border-left-color: var(--good, #3fb950); }
