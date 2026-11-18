@@ -87,6 +87,7 @@
   import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
   import Settings from "./Settings.svelte";
+  import IpChip from "./IpChip.svelte";
   import { requestedTool } from "./nav";
   import CommandPalette from "./CommandPalette.svelte";
   import { AppVersion, CheckForUpdate, CLIInfo, InstallCLI } from "../../wailsjs/go/app/App.js";
@@ -294,6 +295,7 @@
       </svg>
       Meridian
     </span>
+    <IpChip />
     <input
       bind:this={searchEl}
       bind:value={filter}

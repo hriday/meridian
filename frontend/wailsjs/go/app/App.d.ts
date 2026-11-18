@@ -37,6 +37,7 @@ import {netif} from '../models';
 import {jwtinspect} from '../models';
 import {lldp} from '../models';
 import {snmp} from '../models';
+import {myip} from '../models';
 import {lookup} from '../models';
 import {macvendor} from '../models';
 import {ndp} from '../models';
@@ -258,6 +259,8 @@ export function LLDPDiscover():Promise<Array<lldp.Neighbor>>;
 export function LLDPSupported():Promise<boolean>;
 
 export function ListInterfaces(arg1:string,arg2:string):Promise<Array<snmp.Interface>>;
+
+export function LocalNetwork():Promise<myip.Info>;
 
 export function LookupASN(arg1:string):Promise<lookup.ASNReport>;
 

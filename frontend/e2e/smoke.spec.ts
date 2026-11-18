@@ -299,3 +299,40 @@ test("printer status renders state, supplies and ports from a real report", asyn
   await expect(pane.locator(".supply .spct.unk")).toHaveText("level unknown");
   await expect(pane.locator(".port.open")).toHaveCount(2);       // 631 + 9100
 });
+
+test("the IP chip shows local + public IP and expands to interfaces, gateway and NAT", async ({ page }) => {
+  await page.addInitScript(() => {
+    const LOCAL = {
+      primaryIP: "192.168.1.82", primaryIf: "en0", gateway: "192.168.1.1",
+      interfaces: [{ name: "en0", ipv4: ["192.168.1.82"] }, { name: "en5", ipv4: ["10.0.0.3"] }],
+    };
+    const PUBLIC = { publicIP: "203.0.113.45", natType: "Full cone (endpoint-independent)", nat: true, localIP: "192.168.1.82", publicPort: 54321 };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) {
+        if (p === "then") return undefined;
+        if (p === Symbol.iterator) return function* () {};
+        if (p === "length") return 0;
+        if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => "";
+        return bridge(path.concat(String(p)));
+      },
+      apply: () => path.includes("LocalNetwork") ? Promise.resolve(LOCAL)
+        : path.includes("STUNDiscover") ? Promise.resolve(PUBLIC)
+        : Promise.resolve(perm()),
+    });
+    (window as any).go = bridge([]);
+  });
+
+  await page.goto("/");
+  const chip = page.locator(".ipchip .chip");
+  await expect(chip).toContainText("192.168.1.82");  // local, instant
+  await expect(chip).toContainText("203.0.113.45");  // public, after STUN resolves
+
+  await chip.click();
+  const pop = page.locator(".ipchip .pop");
+  await expect(pop).toBeVisible();
+  await expect(pop).toContainText("en0");
+  await expect(pop).toContainText("10.0.0.3");       // the second interface
+  await expect(pop).toContainText("192.168.1.1");    // gateway
+  await expect(pop).toContainText("Full cone");      // NAT type
+});

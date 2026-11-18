@@ -64,6 +64,7 @@ func Catalog() []CommandGroup {
 			{"ntp", "<server> [--json]", "query an NTP server"},
 			{"dns", "<name> [--type A] [--server <ip>] [--transport udp|tcp|dot|doh|doq] [--json]", "DNS lookup (incl. DNS-over-TLS / HTTPS / QUIC)"},
 			{"interfaces", "[--json]", "local network interfaces"},
+			{"myip", "[--local] [--json]", "your local + public IP, gateway and NAT at a glance"},
 		}},
 		{Name: "Local network", Commands: []CommandDoc{
 			{"ping", "<host> [--count 5] [--interval 500ms] [--json]", "ping"},
