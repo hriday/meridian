@@ -46,7 +46,16 @@ var known = map[string]provider{
 	"npm":          {"npm", kindStatuspage, "https://status.npmjs.org"},
 	"coinbase":     {"Coinbase", kindStatuspage, "https://status.coinbase.com"},
 	"openai":       {"OpenAI", kindStatuspage, "https://status.openai.com"},
+	"anthropic":    {"Anthropic", kindStatuspage, "https://status.claude.com"},
 	"zoom":         {"Zoom", kindStatuspage, "https://www.zoomstatus.com"},
+	"vercel":       {"Vercel", kindStatuspage, "https://www.vercel-status.com"},
+	"netlify":      {"Netlify", kindStatuspage, "https://www.netlifystatus.com"},
+	"figma":        {"Figma", kindStatuspage, "https://status.figma.com"},
+	"docker":       {"Docker", kindStatuspage, "https://www.dockerstatus.com"},
+	"mongodb":      {"MongoDB", kindStatuspage, "https://status.mongodb.com"},
+	"hashicorp":    {"HashiCorp", kindStatuspage, "https://status.hashicorp.com"},
+	"pypi":         {"PyPI", kindStatuspage, "https://status.python.org"},
+	"squarespace":  {"Squarespace", kindStatuspage, "https://status.squarespace.com"},
 
 	// Custom status pages with their own feeds (per-provider adapters).
 	"apple":            {"Apple", kindApple, appleConsumerFeed},
