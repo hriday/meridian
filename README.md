@@ -262,6 +262,7 @@ meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on 
 meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
+meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 

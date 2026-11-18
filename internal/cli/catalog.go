@@ -86,6 +86,7 @@ func Catalog() []CommandGroup {
 			{"ptrsweep", "<cidr> [--concurrency 64] [--json]", "reverse-DNS sweep"},
 			{"wol", "<mac> [--bcast 255.255.255.255] [--port 9]", "wake-on-LAN"},
 			{"macvendor", "<mac|oui> [--json]", "MAC vendor lookup"},
+			{"printer", "<host> [--json]", "printer status over IPP — state, out-of-paper/toner, supplies + print ports"},
 			{"speedtest", "<iperf3-host> [--dir download|upload|bidir] [--json]", "throughput test"},
 		}},
 		{Name: "SNMP & monitoring", Commands: []CommandDoc{

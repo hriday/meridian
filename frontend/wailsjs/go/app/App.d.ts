@@ -48,6 +48,7 @@ import {pktscan} from '../models';
 import {mtu} from '../models';
 import {ping} from '../models';
 import {scan} from '../models';
+import {ipp} from '../models';
 import {pwhash} from '../models';
 import {rtp} from '../models';
 import {wordlist} from '../models';
@@ -311,6 +312,8 @@ export function PingHost(arg1:string,arg2:number):Promise<ping.Stats>;
 export function PingSweep(arg1:string,arg2:Array<number>):Promise<Array<scan.HostResult>>;
 
 export function PortScan(arg1:string,arg2:Array<number>):Promise<Array<scan.PortResult>>;
+
+export function PrinterStatus(arg1:string):Promise<ipp.Result>;
 
 export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
 

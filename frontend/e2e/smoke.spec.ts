@@ -261,3 +261,39 @@ test("fc zoning analyzer draws the zone map from real data", async ({ page }) =>
   await expect(svg.locator(".zlabel.fat")).toHaveCount(1);    // Z2 has 3 members
   await expect(svg.locator(".mlabel.shared").first()).toBeVisible(); // 21:..c3 is in 2 zones
 });
+
+test("printer status renders state, supplies and ports from a real report", async ({ page }) => {
+  await page.addInitScript(() => {
+    const REAL = {
+      host: "10.0.0.50", reachable: true, name: "lobby", makeModel: "ACME LaserJet 9000", location: "Lobby",
+      state: "stopped", stateReasons: ["media-empty", "toner-low"], queuedJobs: 1, ippVersions: ["2.0"],
+      supplies: [
+        { name: "Black Toner", level: 8, color: "#000000", type: "toner", max: 100 },
+        { name: "Cyan", level: -1, color: "#00ffff", max: 0 },
+      ],
+      ports: [{ port: 631, name: "IPP", open: true }, { port: 9100, name: "raw / JetDirect", open: true }, { port: 515, name: "LPD", open: false }],
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("PrinterStatus") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "printer"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="printer"]').click();
+  const pane = page.locator("main.main");
+  await pane.locator('input[aria-label="Printer host"]').fill("10.0.0.50");
+  await pane.getByRole("button", { name: "Check" }).click();
+
+  await expect(pane.locator(".pname")).toHaveText("ACME LaserJet 9000");
+  await expect(pane.locator(".state.bad")).toBeVisible();        // stopped
+  await expect(pane.locator(".reason")).toHaveCount(2);          // media-empty, toner-low
+  await expect(pane.locator(".supply")).toHaveCount(2);
+  await expect(pane.locator(".fill.low")).toHaveCount(1);        // 8% toner
+  await expect(pane.locator(".supply .spct.unk")).toHaveText("level unknown");
+  await expect(pane.locator(".port.open")).toHaveCount(2);       // 631 + 9100
+});
