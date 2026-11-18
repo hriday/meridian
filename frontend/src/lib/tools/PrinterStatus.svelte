@@ -75,9 +75,10 @@
           <div class="supplies">
             {#each res.supplies as s}
               <div class="supply">
+                {#if s.color}<span class="swatch" style={`background:${s.color}`} title={s.color}></span>{/if}
                 <span class="sname">{s.name}</span>
                 {#if pct(s) != null}
-                  <span class="bar"><span class="fill" class:low={low(pct(s))} style={`width:${pct(s)}%`}></span></span>
+                  <span class="bar"><span class="fill" class:low={low(pct(s))} style={`width:${pct(s)}%` + (s.color && !low(pct(s)) ? `;background:${s.color}` : "")}></span></span>
                   <span class="spct" class:low={low(pct(s))}>{pct(s)}%</span>
                 {:else}
                   <span class="spct unk">level unknown</span>
@@ -127,6 +128,8 @@
   .reason { font-size: 0.74rem; color: var(--warn, #f5a623); border: 1px solid var(--warn, #f5a623); border-radius: 20px; padding: 2px 10px; text-transform: capitalize; }
   .supplies { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
   .supply { display: flex; align-items: center; gap: 10px; }
+  /* Border + inset ring keeps black and white swatches visible in both themes. */
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; border: 1px solid rgba(128,128,128,.55); box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); }
   .sname { font-size: 0.78rem; color: var(--text); width: 120px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar { flex: 1; height: 8px; background: var(--well); border-radius: 5px; overflow: hidden; }
   .fill { display: block; height: 100%; background: var(--accent); }

@@ -77,6 +77,31 @@ func TestDecodeAndMap(t *testing.T) {
 	require.Equal(t, "#000000", r.Supplies[0].Color)
 }
 
+func TestSupplyColorFromName(t *testing.T) {
+	// A real Samsung C460 reports garbage in marker-colors (black as #FFFFFF,
+	// cyan as #FF5110, …), so the supply NAME is authoritative for the swatch.
+	// The printer's reported colour is only a fallback when the name carries no
+	// colour word.
+	cases := []struct {
+		name, reported, want string
+	}{
+		{"Black Toner_S/N_:CRUM-18040922935", "#FFFFFF", "#000000"},
+		{"Cyan Toner_S/N_:CRUM-19051752210", "#FF5110", "#00AEEF"},
+		{"Magenta Toner_S/N_:CRUM-19051750135", "#13FF73", "#EC008C"},
+		{"Yellow Toner_S/N_:CRUM-19051750279", "#000DFF", "#FFF200"},
+		{"Black Toner", "", "#000000"},         // name works with no reported value
+		{"Photo Black", "garbage", "#000000"},  // substring match, invalid reported ignored
+		{"Imaging Unit", "#3A5F9C", "#3A5F9C"}, // no colour word -> keep a valid reported hex
+		{"Waste Toner Bottle", "", ""},         // no colour word, nothing to show
+		{"Drum Kit", "none", ""},               // invalid reported -> empty, never faked
+	}
+	for _, c := range cases {
+		if got := supplyColor(c.name, c.reported); got != c.want {
+			t.Errorf("supplyColor(%q, %q) = %q, want %q", c.name, c.reported, got, c.want)
+		}
+	}
+}
+
 func TestDecodeRejectsShort(t *testing.T) {
 	_, _, err := decode([]byte{0x02, 0x00, 0x00})
 	require.Error(t, err)
