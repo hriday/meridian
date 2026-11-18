@@ -166,3 +166,26 @@ test("sidebar search matches tool keywords across the toolset, not just names", 
   await page.waitForTimeout(50);
   await expect(page.locator("nav.side .item")).toHaveCount(0);
 });
+
+test("settings: the gear opens Settings and the theme choice persists", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+
+  await page.locator("button.gear").click();
+  const dialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(dialog).toBeVisible();
+
+  // Pick Dark — it applies immediately via data-theme on <html>.
+  await dialog.getByRole("radio", { name: /Dark/ }).click();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("dark");
+
+  // Escape closes it, and the choice survives a reload (localStorage).
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
+    .toBe("dark");
+});
