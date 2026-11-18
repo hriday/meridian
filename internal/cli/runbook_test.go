@@ -198,3 +198,24 @@ func TestRunbooksPreviewPopulated(t *testing.T) {
 		}
 	}
 }
+
+func TestAllRecipeStepsAreRealCommands(t *testing.T) {
+	// Build the set of valid command names from the catalog (the single source
+	// of truth) so a recipe can never ship a step that dispatches to nothing.
+	valid := map[string]bool{}
+	for _, g := range Catalog() {
+		for _, c := range g.Commands {
+			valid[c.Name] = true
+		}
+	}
+	for _, p := range rbProfiles {
+		if len(p.steps) == 0 {
+			t.Errorf("%s: recipe has no steps", p.id)
+		}
+		for _, s := range p.steps {
+			if !valid[s.cmd] {
+				t.Errorf("%s: step %q is not a catalog command", p.id, s.cmd)
+			}
+		}
+	}
+}
