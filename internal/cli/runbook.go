@@ -135,6 +135,69 @@ var rbProfiles = []rbProfile{
 			{"openresolver", []string{"{t}"}},
 		},
 	},
+	{
+		id: "mail-deliverability", name: "Mail Deliverability",
+		desc: "Whether a domain sends trustworthy email: SPF/DKIM/DMARC, DNS hygiene, and MX reachability with STARTTLS.",
+		steps: []rbStep{
+			{"emailauth", []string{"{t}"}},
+			{"dnsaudit", []string{"{t}"}},
+			{"smtp", []string{"{t}"}},
+		},
+	},
+	{
+		id: "dns-posture", name: "DNS Posture",
+		desc: "A domain's DNS health and exposure: records and SPF/DMARC/CAA/DNSSEC, global propagation, zone-transfer and open-resolver exposure.",
+		steps: []rbStep{
+			{"dnsaudit", []string{"{t}"}},
+			{"dnspropagation", []string{"{t}"}},
+			{"axfr", []string{"{t}"}},
+			{"openresolver", []string{"{t}"}},
+		},
+	},
+	{
+		id: "tls-cert-health", name: "TLS & Cert Health",
+		desc: "Certificate validity and expiry plus TLS protocol and cipher posture for a service.",
+		steps: []rbStep{
+			{"tls", []string{"{t}"}},
+			{"certexpiry", []string{"{t}"}},
+			{"cipherscan", []string{"{t}"}},
+		},
+	},
+	{
+		id: "host-reachability", name: "Host Reachability",
+		desc: "Can I reach this host, how fast, by what path, and is the path MTU clean? ICMP + TCP latency, traceroute, and PMTU discovery.",
+		steps: []rbStep{
+			{"ping", []string{"{t}", "--count", "3"}},
+			{"tcpping", []string{"{t}", "443"}},
+			{"trace", []string{"{t}"}},
+			{"pathmtu", []string{"{t}"}},
+		},
+	},
+	{
+		id: "ssh-posture", name: "SSH Posture",
+		desc: "SSH service reachability and crypto hygiene: whether port 22 is open, then the offered algorithms, host keys and post-quantum readiness.",
+		steps: []rbStep{
+			{"tcpping", []string{"{t}", "22"}},
+			{"sshaudit", []string{"{t}"}},
+		},
+	},
+	{
+		id: "routing-intel", name: "Routing Intel",
+		desc: "Who owns and announces an IP or prefix: RIR registration, origin AS, and the BGP looking-glass view with RPKI.",
+		steps: []rbStep{
+			{"lookup", []string{"{t}"}},
+			{"bgp", []string{"{t}"}},
+		},
+	},
+	{
+		id: "threat-check", name: "IP Threat Check",
+		desc: "Reputation and threat context for an IP: ownership, DNS blocklist listings, and known-malicious / C2 intel.",
+		steps: []rbStep{
+			{"lookup", []string{"{t}"}},
+			{"blocklist", []string{"{t}"}},
+			{"threatintel", []string{"{t}"}},
+		},
+	},
 }
 
 // RunbookStepInfo previews one step a profile will run (command + args, with
