@@ -105,13 +105,30 @@ jobs:
         run: |
           set -euo pipefail
           APP=build/bin/meridian.app
+          # Resolve the signing identity from the keychain the import step just
+          # populated. Use MACOS_SIGN_IDENTITY only when it actually matches an
+          # installed identity; otherwise fall back to the sole Developer ID
+          # Application identity present. This avoids the brittle exact-string
+          # trap where a mismatched secret makes codesign fail "no identity
+          # found" even though the certificate imported fine.
+          if [ -n "${IDENTITY:-}" ] && security find-identity -v -p codesigning | grep -qF "$IDENTITY"; then
+            SIGN_ID="$IDENTITY"
+          else
+            SIGN_ID=$(security find-identity -v -p codesigning \
+              | awk -F'"' '/Developer ID Application/{print $2; exit}')
+          fi
+          if [ -z "${SIGN_ID:-}" ]; then
+            echo "::error::No Developer ID Application identity found in the keychain." >&2
+            security find-identity -v -p codesigning >&2 || true
+            exit 1
+          fi
           # Sign inner-out: the embedded CLI first, then the bundle, both with a
           # secure timestamp and the hardened runtime (required for notarization).
           codesign --force --timestamp --options runtime \
-            --sign "$IDENTITY" "$APP/Contents/MacOS/meridian-cli"
+            --sign "$SIGN_ID" "$APP/Contents/MacOS/meridian-cli"
           codesign --force --timestamp --options runtime \
             --entitlements build/darwin/entitlements.plist \
-            --sign "$IDENTITY" "$APP"
+            --sign "$SIGN_ID" "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
       - name: Package macOS DMG
