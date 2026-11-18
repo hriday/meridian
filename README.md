@@ -146,9 +146,14 @@ brew install --cask hriday/meridian/meridian
 scoop install https://raw.githubusercontent.com/hriday/meridian/master/scoop/meridian.json
 ```
 
-**Linux**: grab the `.AppImage` from the [latest release](../../releases/latest)
-(steps below). `.deb` / AUR and Windows `winget` entries aren't published yet
-(the `winget` route is gated on code-signing).
+**Linux**: on Debian/Ubuntu the easiest route is the **`.deb`** — `apt` pulls the
+GTK/WebKit runtime for you, so there's nothing else to install:
+```bash
+sudo apt install ./meridian_*_amd64.deb   # from the latest release
+```
+Or grab the `.AppImage` (steps below; it needs those libraries present already).
+AUR and Windows `winget` entries aren't published yet (the `winget` route is
+gated on code-signing).
 
 **Nix / NixOS** (flake):
 
