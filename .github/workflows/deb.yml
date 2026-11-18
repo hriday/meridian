@@ -1,0 +1,71 @@
+name: deb
+
+# Build the .deb and prove it actually installs on real Ubuntu — apt resolves
+# the GTK/WebKit runtime, and every shared library the GUI needs loads (`ldd`
+# clean). This is what the bare AppImage got wrong.
+
+on:
+  pull_request:
+    paths:
+      - "build/deb/**"
+      - ".github/workflows/deb.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04 # link against 22.04 glibc so it also runs on 24.04+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "20"
+
+      - name: Install Wails + build deps
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.10.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build GUI + CLI
+        run: |
+          wails build -clean -platform linux/amd64 -tags webkit2_41 \
+            -ldflags "-X github.com/hriday/meridian/internal/version.Version=deb-ci"
+          CGO_ENABLED=0 go build -o build/bin/meridian-cli ./cmd/meridian-cli
+
+      - name: Package .deb
+        run: bash build/deb/build-deb.sh 0.0.0 amd64
+
+      - name: Install-test on clean Ubuntu 22.04 and 24.04
+        run: |
+          set -e
+          for img in ubuntu:22.04 ubuntu:24.04; do
+            echo "::group::install test on $img"
+            docker run --rm -v "$PWD/dist:/debs:ro" "$img" bash -euxc '
+              apt-get update -qq
+              apt-get install -y -qq /debs/meridian_*.deb
+              dpkg -s meridian | grep -q "Status: install ok installed"
+              # The whole point: every shared library must resolve.
+              if ldd /usr/bin/meridian | grep -i "not found"; then
+                echo "FAIL: unresolved shared libraries"; exit 1
+              fi
+              # The bundled CLI runs (offline calc, no network needed).
+              meridian-cli subnet 10.0.0.0/24 >/dev/null
+              echo "PASS"
+            '
+            echo "::endgroup::"
+          done
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: meridian-deb
+          path: dist/*.deb
