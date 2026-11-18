@@ -214,3 +214,50 @@ test("fc zoning analyzer accepts a pasted config without a render crash", async 
   await page.waitForTimeout(120);
   expect(errors, errors.join(" | ")).toEqual([]);
 });
+
+test("fc zoning analyzer draws the zone map from real data", async ({ page }) => {
+  // Give this page a bridge that returns a concrete report for AnalyzeFCZoning,
+  // so the SVG actually renders (the default stub returns empty proxies).
+  await page.addInitScript(() => {
+    const REAL = {
+      vendor: "Brocade FOS",
+      counts: { zonesets: 1, zones: 3, aliases: 1, unparsed: 0 },
+      zonesets: [{ name: "C1", active: true, zones: ["Z1", "Z2", "Z3"] }],
+      zones: [
+        { name: "Z1", members: [{ kind: "wwn", value: "21:00:00:1b:32:04:86:c3" }, { kind: "wwn", value: "10:00:00:00:c9:3e:4c:eb" }] },
+        { name: "Z2", members: [{ kind: "wwn", value: "21:00:00:1b:32:04:86:c3" }, { kind: "wwn", value: "50:06:01:60:88:02:90:cb" }, { kind: "wwn", value: "50:06:01:61:88:02:90:cb" }] },
+        { name: "Z3", members: [{ kind: "name", value: "aliasX" }] },
+      ],
+      aliases: [{ name: "aliasX", members: [] }],
+      findings: [],
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) {
+        if (p === "then") return undefined;
+        if (p === Symbol.iterator) return function* () {};
+        if (p === "length") return 0;
+        if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => "";
+        return bridge(path.concat(String(p)));
+      },
+      apply: () => (path.includes("AnalyzeFCZoning") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "fczone"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="fczone"]').click();
+  const pane = page.locator("main.main");
+  await pane.locator("textarea").fill("anything");
+  await pane.getByRole("button", { name: "Analyze" }).click();
+
+  const svg = pane.locator("svg.map");
+  await expect(svg).toBeVisible();
+  await expect(svg.locator(".node.z")).toHaveCount(3);   // 3 zones
+  await expect(svg.locator(".node.m")).toHaveCount(5);   // 5 unique members
+  await expect(svg.locator(".edge")).toHaveCount(6);     // 2+3+1 memberships
+  await expect(svg.locator(".zlabel.fat")).toHaveCount(1);    // Z2 has 3 members
+  await expect(svg.locator(".mlabel.shared").first()).toBeVisible(); // 21:..c3 is in 2 zones
+});
