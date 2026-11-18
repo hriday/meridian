@@ -23,6 +23,8 @@
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
         <string>{{.Info.Copyright}}</string>
+        <key>NSLocalNetworkUsageDescription</key>
+        <string>Meridian needs local network access to reach the devices you point its tools at — printers, routers, switches and other hosts on your LAN (ping, port and printer checks, ARP/mDNS discovery, SNMP). Without it macOS silently blocks those tools. Nothing is stored or sent anywhere.</string>
         {{if .Info.FileAssociations}}
         <key>CFBundleDocumentTypes</key>
         <array>
