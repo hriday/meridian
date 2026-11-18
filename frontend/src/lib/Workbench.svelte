@@ -83,6 +83,7 @@
   import MacVendor from "./tools/MacVendor.svelte";
   import IpSpace from "./tools/IpSpace.svelte";
   import { themePref, cycleTheme, themeIcon, themeLabel } from "./theme";
+  import Settings from "./Settings.svelte";
   import { requestedTool } from "./nav";
   import CommandPalette from "./CommandPalette.svelte";
   import { AppVersion, CheckForUpdate, CLIInfo, InstallCLI } from "../../wailsjs/go/app/App.js";
@@ -204,6 +205,7 @@
 
   let searchEl: HTMLInputElement;
   let filter = "";
+  let settingsOpen = false;
 
   // Version + an explicitly user-initiated update check (no background polling).
   let appVersion = "";
@@ -303,7 +305,12 @@
       <span class="ticon">{themeIcon[$themePref]}</span>
       <span class="tlabel">{themeLabel[$themePref]}</span>
     </button>
+    <button class="theme gear" on:click={() => (settingsOpen = true)} title="Settings" aria-label="Settings">
+      <span class="ticon">⚙</span>
+    </button>
   </header>
+
+  <Settings open={settingsOpen} onClose={() => (settingsOpen = false)} />
 
   <div class="body">
     {#if !sideCollapsed}
