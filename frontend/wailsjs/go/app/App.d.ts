@@ -332,6 +332,8 @@ export function RunbookProfiles():Promise<Array<cli.RunbookInfo>>;
 
 export function RunbookRender(arg1:cli.RunbookData,arg2:string):Promise<string>;
 
+export function RunbookYAML(arg1:string):Promise<string>;
+
 export function SIPProbe(arg1:string,arg2:string,arg3:string):Promise<sipping.Result>;
 
 export function SMTPProbe(arg1:string,arg2:string,arg3:boolean,arg4:boolean):Promise<smtpprobe.Result>;

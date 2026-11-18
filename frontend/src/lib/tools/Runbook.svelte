@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport, SaveRunbookPDF, ImportRunbook } from "../../../wailsjs/go/app/App.js";
+  import { RunbookProfiles, RunRunbook, RunbookRender, SaveReport, SaveRunbookPDF, ImportRunbook, RunbookYAML } from "../../../wailsjs/go/app/App.js";
   import ToolHelp from "../ToolHelp.svelte";
 
   let profiles: any[] = [];
@@ -73,6 +73,19 @@
     }
   }
 
+  // Download the selected built-in recipe as an editable YAML file — the same
+  // format Import accepts, so it's also a starting template.
+  async function downloadRecipe() {
+    if (!profile) return;
+    error = "";
+    try {
+      const yaml = await RunbookYAML(profile);
+      await SaveReport(`${profile}.yaml`, yaml);
+    } catch (e: any) {
+      error = String(e?.message ?? e);
+    }
+  }
+
   async function run() {
     if (loading || !target.trim() || !profile) return;
     loading = true;
@@ -92,8 +105,9 @@
   <p class="lede">
     <strong>Runbooks</strong> run a whole profile of tools against one target and gather the results into a single
     report — one click instead of a dozen. Great for onboarding a domain or triaging a host. Each step is the same
-    engine as the individual tool. Use a built-in profile, or <strong>Import recipe…</strong> to load your own
-    YAML / TOML / JSON profile. Export the finished report to Text, JSON, HTML or PDF.
+    engine as the individual tool. Pick a built-in profile — <strong>Download recipe</strong> grabs it as an editable
+    YAML file to tweak and <strong>Import recipe…</strong> back (YAML / TOML / JSON). Export the finished report to
+    Text, JSON, HTML or PDF.
   </p>
 
   <ToolHelp>
@@ -111,6 +125,9 @@
       on:keydown={(e) => e.key === "Enter" && run()} aria-label="Target" />
     <button class="btn" on:click={run} disabled={loading || !target.trim()}>{loading ? "Running…" : "Run"}</button>
     <button class="btn2" on:click={importRecipe} title="Import a YAML/TOML/JSON recipe">Import recipe…</button>
+    {#if current && !imported.has(profile)}
+      <button class="btn2" on:click={downloadRecipe} title="Download this recipe as an editable YAML file (also a template for your own)">Download recipe</button>
+    {/if}
   </div>
   {#if current}
     <p class="muted">{current.desc}</p>

@@ -526,6 +526,10 @@ export function RunbookRender(arg1, arg2) {
   return window['go']['app']['App']['RunbookRender'](arg1, arg2);
 }
 
+export function RunbookYAML(arg1) {
+  return window['go']['app']['App']['RunbookYAML'](arg1);
+}
+
 export function SIPProbe(arg1, arg2, arg3) {
   return window['go']['app']['App']['SIPProbe'](arg1, arg2, arg3);
 }

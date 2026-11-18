@@ -58,6 +58,11 @@ func (a *App) ImportRunbook() (cli.RunbookInfo, error) {
 	return info, nil
 }
 
+// RunbookYAML returns a built-in recipe as the contents of a YAML file — the
+// same format Import accepts, so a downloaded recipe is also a ready template
+// for writing your own. The GUI saves it via SaveReport.
+func (a *App) RunbookYAML(id string) (string, error) { return cli.RunbookYAML(id) }
+
 // RunbookRender formats an already-run runbook as "json", "html", or markdown
 // ("md"/"txt") — for export, without re-running the tools.
 func (a *App) RunbookRender(d cli.RunbookData, format string) string {
