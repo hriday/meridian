@@ -189,3 +189,14 @@ test("settings: the gear opens Settings and the theme choice persists", async ({
     .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
     .toBe("dark");
 });
+
+test("wwn decoder renders a result card for an input", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="wwn"]').click();
+  await page.locator("main.main").waitFor();
+  const pane = page.locator("main.main");
+  await pane.locator('input[aria-label="WWN / WWPN"]').fill("20:00:00:25:b5:00:00:01");
+  await pane.getByRole("button", { name: "Decode" }).click();
+  await expect(pane.locator(".card")).toBeVisible();
+});

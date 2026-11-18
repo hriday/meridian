@@ -106,6 +106,7 @@ func Catalog() []CommandGroup {
 			{"adaudit", "--dump <file> [--wordlist <path>] [--json]", "AD password audit"},
 			{"ciscopw", "[<config-file>] [--decode <type7>] [--json]", "Cisco password analysis"},
 			{"hashid", "<hash> [--json]", "identify a hash type"},
+			{"wwn", "<wwn|wwpn> [--json]", "decode a Fibre Channel WWN: NAA format, OUI + vendor, re-formats"},
 			{"jwt", "<token> [--secret s | --keyfile f] [--json]", "decode + verify a JWT (local, private)"},
 			{"htpasswd", "[<user>] [--cost 10] [--check <hash>]  (password on stdin)", "bcrypt hash / verify (htpasswd)"},
 			{"totp", "<base32-secret | otpauth-uri> [--json]", "current 2FA (TOTP) code"},

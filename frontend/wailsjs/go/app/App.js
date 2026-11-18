@@ -762,6 +762,10 @@ export function VoipCodecs() {
   return window['go']['app']['App']['VoipCodecs']();
 }
 
+export function WWNDecode(arg1) {
+  return window['go']['app']['App']['WWNDecode'](arg1);
+}
+
 export function WakeOnLAN(arg1, arg2, arg3) {
   return window['go']['app']['App']['WakeOnLAN'](arg1, arg2, arg3);
 }
