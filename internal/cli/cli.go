@@ -126,6 +126,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPrinter(args[1:], stdout, stderr)
 	case "interfaces":
 		return runInterfaces(args[1:], stdout, stderr)
+	case "myip":
+		return runMyIP(args[1:], stdout, stderr)
 	case "nc":
 		return runNC(args[1:], stdout, stderr)
 	case "bgp":

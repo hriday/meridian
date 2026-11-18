@@ -374,6 +374,10 @@ export function ListInterfaces(arg1, arg2) {
   return window['go']['app']['App']['ListInterfaces'](arg1, arg2);
 }
 
+export function LocalNetwork() {
+  return window['go']['app']['App']['LocalNetwork']();
+}
+
 export function LookupASN(arg1) {
   return window['go']['app']['App']['LookupASN'](arg1);
 }
