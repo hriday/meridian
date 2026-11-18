@@ -1810,6 +1810,187 @@ export namespace emailauth {
 
 }
 
+export namespace fczone {
+	
+	export class Member {
+	    kind: string;
+	    value: string;
+	    active?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Member(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.kind = source["kind"];
+	        this.value = source["value"];
+	        this.active = source["active"];
+	    }
+	}
+	export class Alias {
+	    name: string;
+	    members: Member[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Alias(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.members = this.convertValues(source["members"], Member);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Counts {
+	    zonesets: number;
+	    zones: number;
+	    aliases: number;
+	    unparsed: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Counts(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.zonesets = source["zonesets"];
+	        this.zones = source["zones"];
+	        this.aliases = source["aliases"];
+	        this.unparsed = source["unparsed"];
+	    }
+	}
+	export class Finding {
+	    severity: string;
+	    title: string;
+	    detail: string;
+	    object: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Finding(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.severity = source["severity"];
+	        this.title = source["title"];
+	        this.detail = source["detail"];
+	        this.object = source["object"];
+	    }
+	}
+	
+	export class Zone {
+	    name: string;
+	    members: Member[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Zone(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.members = this.convertValues(source["members"], Member);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Zoneset {
+	    name: string;
+	    active: boolean;
+	    zones: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Zoneset(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.active = source["active"];
+	        this.zones = source["zones"];
+	    }
+	}
+	export class Report {
+	    vendor: string;
+	    zonesets: Zoneset[];
+	    zones: Zone[];
+	    aliases: Alias[];
+	    findings: Finding[];
+	    counts: Counts;
+	    unparsed?: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Report(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.vendor = source["vendor"];
+	        this.zonesets = this.convertValues(source["zonesets"], Zoneset);
+	        this.zones = this.convertValues(source["zones"], Zone);
+	        this.aliases = this.convertValues(source["aliases"], Alias);
+	        this.findings = this.convertValues(source["findings"], Finding);
+	        this.counts = this.convertValues(source["counts"], Counts);
+	        this.unparsed = source["unparsed"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+
+}
+
 export namespace fwconfig {
 	
 	export class Address {

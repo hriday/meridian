@@ -144,6 +144,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runWhois(args[1:], stdout, stderr)
 	case "fwanalyze":
 		return runFwAnalyze(args[1:], stdout, stderr)
+	case "fczone":
+		return runFCZone(args[1:], stdout, stderr)
 	case "webanalyze":
 		return runWebAnalyze(args[1:], stdout, stderr)
 	case "blocklist":
