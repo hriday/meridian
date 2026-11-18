@@ -22,9 +22,7 @@ type Doer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// Some status pages (e.g. Datadog) sit behind a WAF that 403s non-browser
-// clients, so we read these public feeds with a browser User-Agent.
-const userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+const userAgent = "meridian (+https://github.com/hriday/meridian)"
 
 // provider describes where and how to read one service's status.
 type provider struct {
@@ -43,7 +41,6 @@ var known = map[string]provider{
 	"dropbox":      {"Dropbox", kindStatuspage, "https://status.dropbox.com"},
 	"twilio":       {"Twilio", kindStatuspage, "https://status.twilio.com"},
 	"digitalocean": {"DigitalOcean", kindStatuspage, "https://status.digitalocean.com"},
-	"datadog":      {"Datadog", kindStatuspage, "https://status.datadoghq.com"},
 	"atlassian":    {"Atlassian", kindStatuspage, "https://status.atlassian.com"},
 	"npm":          {"npm", kindStatuspage, "https://status.npmjs.org"},
 	"coinbase":     {"Coinbase", kindStatuspage, "https://status.coinbase.com"},
