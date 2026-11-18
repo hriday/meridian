@@ -482,6 +482,10 @@ export function PortScan(arg1, arg2) {
   return window['go']['app']['App']['PortScan'](arg1, arg2);
 }
 
+export function PrinterStatus(arg1) {
+  return window['go']['app']['App']['PrinterStatus'](arg1);
+}
+
 export function PwHashCheck(arg1, arg2) {
   return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
 }

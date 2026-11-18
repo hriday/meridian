@@ -122,6 +122,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runWOL(args[1:], stdout, stderr)
 	case "macvendor":
 		return runMACVendor(args[1:], stdout, stderr)
+	case "printer":
+		return runPrinter(args[1:], stdout, stderr)
 	case "interfaces":
 		return runInterfaces(args[1:], stdout, stderr)
 	case "nc":
