@@ -137,12 +137,21 @@ var rbProfiles = []rbProfile{
 	},
 }
 
+// RunbookStepInfo previews one step a profile will run (command + args, with
+// {t} still standing in for the target) so the GUI can show what a recipe does
+// before it runs.
+type RunbookStepInfo struct {
+	Cmd  string   `json:"cmd"`
+	Args []string `json:"args"`
+}
+
 // RunbookInfo describes a profile (for listing in the CLI/GUI).
 type RunbookInfo struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Desc  string `json:"desc"`
-	Steps int    `json:"steps"`
+	ID      string            `json:"id"`
+	Name    string            `json:"name"`
+	Desc    string            `json:"desc"`
+	Steps   int               `json:"steps"`
+	Preview []RunbookStepInfo `json:"preview,omitempty"`
 }
 
 // RunbookStep is one executed step's result.
@@ -166,9 +175,18 @@ type RunbookData struct {
 func Runbooks() []RunbookInfo {
 	out := make([]RunbookInfo, 0, len(rbProfiles))
 	for _, p := range rbProfiles {
-		out = append(out, RunbookInfo{ID: p.id, Name: p.name, Desc: p.desc, Steps: len(p.steps)})
+		out = append(out, infoOf(p))
 	}
 	return out
+}
+
+// infoOf builds the listing info for a profile, including the step preview.
+func infoOf(p rbProfile) RunbookInfo {
+	info := RunbookInfo{ID: p.id, Name: p.name, Desc: p.desc, Steps: len(p.steps)}
+	for _, s := range p.steps {
+		info.Preview = append(info.Preview, RunbookStepInfo{Cmd: s.cmd, Args: s.args})
+	}
+	return info
 }
 
 func findProfile(id string) (rbProfile, bool) {
@@ -248,7 +266,7 @@ func RunbookFileInfo(path string) (RunbookInfo, error) {
 	if err != nil {
 		return RunbookInfo{}, err
 	}
-	return RunbookInfo{ID: p.id, Name: p.name, Desc: p.desc, Steps: len(p.steps)}, nil
+	return infoOf(p), nil
 }
 
 // RunRunbookFile runs a user-defined profile file against target.

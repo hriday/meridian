@@ -46,6 +46,14 @@
   });
 
   $: current = profiles.find((p) => p.id === profile);
+
+  // A step's command with {t} filled in by the typed target (or a placeholder),
+  // so the preview shows exactly what the recipe will run.
+  function resolveStep(s: any, t: string): string {
+    const tgt = t.trim() || "<target>";
+    const args = (s.args || []).map((a: string) => a.replaceAll("{t}", tgt));
+    return [s.cmd, ...args].join(" ");
+  }
   let imported = new Set<string>();
 
   // Import a custom recipe (YAML/TOML/JSON) via a file picker, add it to the
@@ -104,7 +112,19 @@
     <button class="btn" on:click={run} disabled={loading || !target.trim()}>{loading ? "Running…" : "Run"}</button>
     <button class="btn2" on:click={importRecipe} title="Import a YAML/TOML/JSON recipe">Import recipe…</button>
   </div>
-  {#if current}<p class="muted">{current.desc}</p>{/if}
+  {#if current}
+    <p class="muted">{current.desc}</p>
+    {#if current.preview && current.preview.length && !res && !loading}
+      <div class="preview">
+        <div class="pk">What this runs · {current.preview.length} steps</div>
+        <ol class="steps">
+          {#each current.preview as s, i}
+            <li><span class="sn">{i + 1}</span><code>{resolveStep(s, target)}</code></li>
+          {/each}
+        </ol>
+      </div>
+    {/if}
+  {/if}
   {#if loading}<p class="muted">Running {current?.steps} checks — a full path trace is one of them, so give it a moment…</p>{/if}
 
   {#if error}<p class="err">{error}</p>{/if}
@@ -147,6 +167,12 @@
   .btn2 { background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--text-dim); font: inherit; font-size: 0.82rem; cursor: pointer; }
   .btn2:hover { border-color: var(--accent); color: var(--text-strong, var(--text)); }
   .muted { color: var(--text-dim); font-size: 0.78rem; margin: 9px 0 0; }
+  .preview { max-width: 820px; margin-top: 10px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: 9px 13px; background: var(--card); }
+  .preview .pk { font-size: 0.68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 7px; }
+  .preview .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  .preview .steps li { display: flex; align-items: baseline; gap: 9px; }
+  .preview .sn { flex: none; width: 1.3em; text-align: right; font-size: 0.68rem; color: var(--text-faint, var(--text-dim)); }
+  .preview .steps code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.78rem; color: var(--text); overflow-wrap: anywhere; }
   .err { color: var(--danger, #e5484d); font-size: 0.82rem; margin: 12px 0 0; }
   .head { margin: 20px 0 8px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .h { font-size: 1rem; font-weight: 650; color: var(--text-strong, var(--text)); }
