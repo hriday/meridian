@@ -16,6 +16,7 @@ func fetch(ctx context.Context, client Doer, url string) ([]byte, int, error) {
 		return nil, 0, err
 	}
 	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json, text/xml, */*")
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, 0, fmt.Errorf("couldn't reach the status page")
