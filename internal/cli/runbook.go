@@ -263,12 +263,35 @@ func findProfile(id string) (rbProfile, bool) {
 
 // profileFile is the on-disk schema for a user-defined runbook (YAML/TOML/JSON).
 type profileFile struct {
-	Name  string `yaml:"name" toml:"name" json:"name"`
-	Desc  string `yaml:"desc" toml:"desc" json:"desc"`
-	Steps []struct {
-		Cmd  string   `yaml:"cmd" toml:"cmd" json:"cmd"`
-		Args []string `yaml:"args" toml:"args" json:"args"`
-	} `yaml:"steps" toml:"steps" json:"steps"`
+	Name  string        `yaml:"name" toml:"name" json:"name"`
+	Desc  string        `yaml:"desc" toml:"desc" json:"desc"`
+	Steps []profileStep `yaml:"steps" toml:"steps" json:"steps"`
+}
+
+type profileStep struct {
+	Cmd  string   `yaml:"cmd" toml:"cmd" json:"cmd"`
+	Args []string `yaml:"args" toml:"args" json:"args"`
+}
+
+// RunbookYAML renders a built-in profile as a YAML recipe file — the same format
+// Import accepts, so a downloaded recipe doubles as a template for writing your
+// own. {t} in the args is the target, substituted at run time.
+func RunbookYAML(id string) (string, error) {
+	p, ok := findProfile(id)
+	if !ok {
+		return "", fmt.Errorf("unknown runbook %q", id)
+	}
+	pf := profileFile{Name: p.name, Desc: p.desc}
+	for _, s := range p.steps {
+		pf.Steps = append(pf.Steps, profileStep{Cmd: s.cmd, Args: s.args})
+	}
+	out, err := yaml.Marshal(pf)
+	if err != nil {
+		return "", err
+	}
+	header := "# Meridian runbook recipe — edit and re-import via \"Import recipe…\".\n" +
+		"# Each step runs a CLI command; {t} is replaced by your target.\n\n"
+	return header + string(out), nil
 }
 
 // looksLikeProfileFile is true when idOrPath should be read from disk rather than

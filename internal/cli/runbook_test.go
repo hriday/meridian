@@ -219,3 +219,25 @@ func TestAllRecipeStepsAreRealCommands(t *testing.T) {
 		}
 	}
 }
+
+func TestRunbookYAMLReimports(t *testing.T) {
+	// A downloaded recipe must parse back in through the real import path.
+	out, err := RunbookYAML("org-recon")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := filepath.Join(t.TempDir(), "recipe.yaml")
+	if err := os.WriteFile(p, []byte(out), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := RunbookFileInfo(p)
+	if err != nil {
+		t.Fatalf("exported recipe did not re-import: %v", err)
+	}
+	if info.Name != "Org Recon" || info.Steps == 0 {
+		t.Errorf("re-imported info = %+v", info)
+	}
+	if _, err := RunbookYAML("nope"); err == nil {
+		t.Error("expected an error for an unknown recipe")
+	}
+}
