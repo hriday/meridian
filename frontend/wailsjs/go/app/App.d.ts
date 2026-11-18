@@ -66,6 +66,7 @@ import {totp} from '../models';
 import {threatintel} from '../models';
 import {transcode} from '../models';
 import {voipcalc} from '../models';
+import {wwn} from '../models';
 import {wgprobe} from '../models';
 import {whois} from '../models';
 import {wifi} from '../models';
@@ -449,6 +450,8 @@ export function TrapStop():Promise<void>;
 export function VoipBandwidth(arg1:string,arg2:number,arg3:number):Promise<voipcalc.Result>;
 
 export function VoipCodecs():Promise<Array<voipcalc.Codec>>;
+
+export function WWNDecode(arg1:string):Promise<wwn.Result>;
 
 export function WakeOnLAN(arg1:string,arg2:string,arg3:number):Promise<string>;
 

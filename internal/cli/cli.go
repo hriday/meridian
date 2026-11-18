@@ -168,6 +168,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCVE(args[1:], stdout, stderr)
 	case "hashid":
 		return runHashID(args[1:], stdout, stderr)
+	case "wwn":
+		return runWWN(args[1:], stdout, stderr)
 	case "threatintel":
 		return runThreatIntel(args[1:], stdout, stderr)
 	case "ciscopw":

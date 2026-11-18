@@ -5734,3 +5734,42 @@ export namespace wordlist {
 
 }
 
+export namespace wwn {
+	
+	export class Result {
+	    input: string;
+	    bare: string;
+	    canonical: string;
+	    dotted: string;
+	    bits: number;
+	    naa: string;
+	    naaDesc: string;
+	    oui: string;
+	    ouiBare: string;
+	    vsid: string;
+	    vendor: string;
+	    notes: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Result(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.input = source["input"];
+	        this.bare = source["bare"];
+	        this.canonical = source["canonical"];
+	        this.dotted = source["dotted"];
+	        this.bits = source["bits"];
+	        this.naa = source["naa"];
+	        this.naaDesc = source["naaDesc"];
+	        this.oui = source["oui"];
+	        this.ouiBare = source["ouiBare"];
+	        this.vsid = source["vsid"];
+	        this.vendor = source["vendor"];
+	        this.notes = source["notes"];
+	    }
+	}
+
+}
+
