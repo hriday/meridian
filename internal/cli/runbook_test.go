@@ -172,3 +172,29 @@ func TestResolveProfileBuiltinVsFile(t *testing.T) {
 		t.Fatal("missing file should error")
 	}
 }
+
+func TestRunbooksPreviewPopulated(t *testing.T) {
+	for _, p := range Runbooks() {
+		if len(p.Preview) != p.Steps {
+			t.Errorf("%s: preview has %d steps, Steps=%d", p.ID, len(p.Preview), p.Steps)
+		}
+		for i, s := range p.Preview {
+			if strings.TrimSpace(s.Cmd) == "" {
+				t.Errorf("%s step %d: empty command", p.ID, i)
+			}
+		}
+	}
+	// Spot-check a known profile's first step carries the {t} placeholder,
+	// so the GUI can substitute the target.
+	for _, p := range Runbooks() {
+		if p.ID == "org-recon" {
+			if p.Preview[0].Cmd != "whois" {
+				t.Errorf("org-recon first step = %q, want whois", p.Preview[0].Cmd)
+			}
+			joined := strings.Join(p.Preview[0].Args, " ")
+			if !strings.Contains(joined, "{t}") {
+				t.Errorf("org-recon first step args %q should keep the {t} placeholder", joined)
+			}
+		}
+	}
+}
