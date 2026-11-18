@@ -4,8 +4,8 @@
 #   brew tap hriday/meridian https://github.com/hriday/meridian
 #   brew install --cask meridian
 cask "meridian" do
-  version "1.18.7"
-  sha256 "0f944a50b34cc268fc601cc73f482b1c4ac2946380c506257161ae1e0228c01a"
+  version "1.18.8"
+  sha256 "780ce6095478a5da5fb5763079b7f76c2f69d5de739660c7885e8a8ee8279443"
 
   url "https://github.com/hriday/meridian/releases/download/v#{version}/Meridian-v#{version}-macos-universal.dmg"
   name "Meridian"
