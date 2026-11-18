@@ -261,6 +261,7 @@ meridian-cli cipherscan github.com            # TLS protocols + ciphers + PQ, gr
 meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on macOS)
 meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
+cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 

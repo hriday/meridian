@@ -200,3 +200,17 @@ test("wwn decoder renders a result card for an input", async ({ page }) => {
   await pane.getByRole("button", { name: "Decode" }).click();
   await expect(pane.locator(".card")).toBeVisible();
 });
+
+test("fc zoning analyzer accepts a pasted config without a render crash", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="fczone"]').click();
+  const pane = page.locator("main.main");
+  await pane.waitFor();
+  await pane.locator("textarea").fill("Defined configuration:\n cfg: C1 Z1\n zone: Z1 a; b; c\n");
+  await pane.getByRole("button", { name: "Analyze" }).click();
+  await page.waitForTimeout(120);
+  expect(errors, errors.join(" | ")).toEqual([]);
+});

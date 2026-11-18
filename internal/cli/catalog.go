@@ -123,6 +123,7 @@ func Catalog() []CommandGroup {
 		}},
 		{Name: "Config insight", Commands: []CommandDoc{
 			{"fwanalyze", "[<config-file>] [--vendor auto] [--json]", "firewall config analysis — FortiGate/ASA/IOS/NX-OS/SRX/Junos/PAN-OS/Arista/VyOS/pfSense (stdin ok)"},
+			{"fczone", "[<config-file>] [--json]", "Fibre Channel zoning analysis — Cisco MDS `show zoneset` / Brocade `cfgshow` (stdin ok)"},
 			{"webanalyze", "[<file>] [--server nginx] [--json]", "web-server config analysis (stdin ok)"},
 			{"tfexposure", "[<file>] [--source hcl|plan] [--json]", "Terraform exposure scan — AWS/GCP/Azure (stdin ok)"},
 			{"cfgdiff", "<old-file> <new-file> [--json]", "section-aware config diff"},

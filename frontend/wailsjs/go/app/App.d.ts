@@ -4,6 +4,7 @@ import {pwaudit} from '../models';
 import {arpscan} from '../models';
 import {axfr} from '../models';
 import {ciscopw} from '../models';
+import {fczone} from '../models';
 import {fwconfig} from '../models';
 import {tfscan} from '../models';
 import {webconf} from '../models';
@@ -90,6 +91,8 @@ export function ARPSupported():Promise<boolean>;
 export function AXFRTest(arg1:string,arg2:string):Promise<axfr.Report>;
 
 export function AnalyzeCiscoPasswords(arg1:string):Promise<Array<ciscopw.Secret>>;
+
+export function AnalyzeFCZoning(arg1:string):Promise<fczone.Report>;
 
 export function AnalyzeFirewall(arg1:string,arg2:string):Promise<Array<fwconfig.Analysis>>;
 
