@@ -250,7 +250,7 @@ func mapAttrs(r *Result, a map[string][]attrVal) {
 		r.Supplies = append(r.Supplies, Supply{
 			Name:  names[i],
 			Level: at(levels, i),
-			Color: at(colors, i),
+			Color: supplyColor(names[i], at(colors, i)),
 			Type:  at(types, i),
 			Max:   at(highs, i),
 		})
@@ -331,6 +331,56 @@ func allNum(v []attrVal) []int {
 	}
 	return out
 }
+
+// supplyColor picks the swatch colour for a supply. The supply NAME is
+// authoritative: many printers report nonsense in marker-colors (a real Samsung
+// C460 reports black toner as #FFFFFF, cyan as #FF5110, …), but the name the
+// user reads — "Black Toner", "Cyan Toner" — is reliable. We fall back to the
+// printer's reported colour only for supplies whose name has no colour word
+// (drums, imaging units, waste bottles), and never invent one.
+func supplyColor(name, reported string) string {
+	lname := strings.ToLower(name)
+	for _, c := range supplyColorKeywords {
+		if strings.Contains(lname, c.key) {
+			return c.hex
+		}
+	}
+	if isHexColor(reported) {
+		return strings.ToUpper(reported)
+	}
+	return ""
+}
+
+// Canonical swatches for standard toner/ink colour words. First match wins, so
+// order only matters where one word contains another (none here).
+var supplyColorKeywords = []struct{ key, hex string }{
+	{"black", "#000000"},
+	{"cyan", "#00AEEF"},
+	{"magenta", "#EC008C"},
+	{"yellow", "#FFF200"},
+	{"grey", "#9E9E9E"},
+	{"gray", "#9E9E9E"},
+	{"red", "#E53935"},
+	{"green", "#43A047"},
+	{"blue", "#1E88E5"},
+	{"orange", "#FB8C00"},
+	{"white", "#FFFFFF"},
+}
+
+// isHexColor reports whether s is a "#RRGGBB" string, without pulling in regexp.
+func isHexColor(s string) bool {
+	if len(s) != 7 || s[0] != '#' {
+		return false
+	}
+	for i := 1; i < 7; i++ {
+		c := s[i]
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
+}
+
 func at[T any](s []T, i int) T {
 	var zero T
 	if i < len(s) {

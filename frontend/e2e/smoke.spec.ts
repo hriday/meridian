@@ -293,6 +293,8 @@ test("printer status renders state, supplies and ports from a real report", asyn
   await expect(pane.locator(".state.bad")).toBeVisible();        // stopped
   await expect(pane.locator(".reason")).toHaveCount(2);          // media-empty, toner-low
   await expect(pane.locator(".supply")).toHaveCount(2);
+  // The toner colour renders as a swatch (black toner -> black swatch, not faked).
+  await expect(pane.locator(".supply").first().locator(".swatch")).toHaveCSS("background-color", "rgb(0, 0, 0)");
   await expect(pane.locator(".fill.low")).toHaveCount(1);        // 8% toner
   await expect(pane.locator(".supply .spct.unk")).toHaveText("level unknown");
   await expect(pane.locator(".port.open")).toHaveCount(2);       // 631 + 9100
