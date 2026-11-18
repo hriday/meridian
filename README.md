@@ -179,8 +179,19 @@ open-source app without a paid signing certificate.
 - **Linux** — download the `.AppImage`, then:
   ```bash
   chmod +x Meridian-*-linux-x86_64.AppImage
-  ./Meridian-*-linux-x86_64.AppImage
+
+  # The GUI needs GTK3 + WebKitGTK 4.1 at runtime (not bundled):
+  sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0        # Debian/Ubuntu
+
+  # Run it. On Ubuntu 22.04+ (no libfuse2 by default) use extract-and-run:
+  ./Meridian-*-linux-x86_64.AppImage --appimage-extract-and-run
+  # …or install FUSE and run normally:  sudo apt install libfuse2   # (24.04: libfuse2t64)
   ```
+  Two gotchas on a fresh Ubuntu, both missing runtime pieces — not app bugs:
+  `error while loading shared libraries: libwebkit2gtk-4.1.so.0` → install the
+  libs above; `AppImages require FUSE to run` → use `--appimage-extract-and-run`
+  (or `libfuse2`). The static **[`meridian-cli`](#command-line-meridian-cli)**
+  binary has *no* dependencies if you just want the headless toolkit.
 
 ### Homebrew (macOS)
 
