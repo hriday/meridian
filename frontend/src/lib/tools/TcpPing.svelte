@@ -59,7 +59,7 @@
       <span class="vtext">{rep.verdict}</span>
       {#if rep.address}<span class="vaddr">{rep.address}</span>{/if}
     </div>
-    {#if rep.received === 0}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
+    {#if rep.received === 0 && !(rep.probes ?? []).some((p) => /refused/i.test(p.err ?? ""))}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
 
     <div class="tiles">
       <div class="tile"><span class="tl">Loss</span><span class="tv">{rep.lossPct}%</span><span class="ts">{rep.received}/{rep.sent}</span></div>

@@ -133,7 +133,7 @@
     <p class="caption">{rows.length} SNMP responder{rows.length === 1 ? "" : "s"}{total ? ` in ${cidr.trim()}` : ""} · sorted by address · v2c · 1s timeout</p>
   {:else if !scanning && scanned > 0 && !err}
     <p class="caption">No hosts answered SNMP in {cidr.trim()} — check the community and that SNMP is enabled.</p>
-    <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: cidr.trim().split("/")[0] })}>Run Local Network Diagnostic →</button>
+    <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: "" })}>Run Local Network Diagnostic →</button>
   {/if}
 </div>
 

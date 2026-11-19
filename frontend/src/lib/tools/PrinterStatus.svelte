@@ -56,6 +56,8 @@
   </div>
 
   {#if error}<p class="err">{error}</p>{/if}
+  <!-- Genuine unreachability only: the backend errors with "no response on the print ports" when no print port is open. A reachable printer that merely ignores IPP comes back as a note, not an error. -->
+  {#if error.includes("no response on the print ports")}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
 
   {#if res}
     {#if res.reachable}
@@ -93,7 +95,6 @@
       </div>
     {:else}
       <p class="note">{res.note || "The printer didn't answer IPP."}</p>
-      <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>
     {/if}
 
     {#if res.ports && res.ports.length}
