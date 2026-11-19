@@ -90,6 +90,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	switch args[0] {
+	case "netdiag":
+		return runNetDiag(args[1:], stdout, stderr)
 	case "batch":
 		return runBatch(args[1:], stdout, stderr)
 	case "runbook":
