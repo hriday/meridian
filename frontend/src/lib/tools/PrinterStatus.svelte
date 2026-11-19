@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PrinterStatus } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
@@ -92,6 +93,7 @@
       </div>
     {:else}
       <p class="note">{res.note || "The printer didn't answer IPP."}</p>
+      <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>
     {/if}
 
     {#if res.ports && res.ports.length}
@@ -143,4 +145,6 @@
   .pk { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; }
   .port { font-size: 0.73rem; color: var(--text-faint, var(--text-dim)); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
   .port.open { color: var(--good, #3fb950); border-color: var(--good, #3fb950); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

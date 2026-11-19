@@ -1,5 +1,6 @@
 <script lang="ts">
   import { TCPPing } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
@@ -58,6 +59,7 @@
       <span class="vtext">{rep.verdict}</span>
       {#if rep.address}<span class="vaddr">{rep.address}</span>{/if}
     </div>
+    {#if rep.received === 0}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
 
     <div class="tiles">
       <div class="tile"><span class="tl">Loss</span><span class="tv">{rep.lossPct}%</span><span class="ts">{rep.received}/{rep.sent}</span></div>
@@ -111,4 +113,6 @@
   .fill { width: 100%; border-radius: 2px 2px 0 0; }
   .fill.ok { background: var(--good, #3fb950); }
   .fill.miss { background: var(--danger, #e5484d); opacity: .35; }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

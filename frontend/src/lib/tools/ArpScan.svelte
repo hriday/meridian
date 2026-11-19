@@ -1,5 +1,6 @@
 <script lang="ts">
   import { ARPScan, ARPSupported } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let loading = false;
@@ -68,6 +69,7 @@
       <span class="count">{res.hosts.length}</span> host{res.hosts.length === 1 ? "" : "s"} on
       <span class="mono">{res.subnet}</span> <span class="dim">· {res.interface}</span>
     </div>
+    {#if !res.hosts.length}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: "" })}>Run Local Network Diagnostic →</button>{/if}
     {#if res.hosts.length}
       <table class="tbl">
         <thead><tr><th>IP</th><th>MAC</th><th>Vendor</th></tr></thead>
@@ -107,4 +109,6 @@
   .spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .mono { font-family: var(--font-mono); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

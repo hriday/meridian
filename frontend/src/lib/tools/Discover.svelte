@@ -1,5 +1,6 @@
 <script lang="ts">
   import { DiscoverLAN } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let seconds = 8;
@@ -52,6 +53,7 @@
   {#if res}
     {#if !nonEmpty(res)}
       <div class="empty">Nothing answered. If you expected devices, check you're on the LAN (not a VPN/guest network) and that mDNS/SSDP isn't filtered.</div>
+      <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: "" })}>Run Local Network Diagnostic →</button>
     {:else}
       {#if res.services && res.services.length}
         <div class="sec">
@@ -117,4 +119,6 @@
   .txt { margin-top: 7px; display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { font-size: 0.68rem; background: var(--well); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--text-dim); }
   .mono { font-family: var(--font-mono, ui-monospace, monospace); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

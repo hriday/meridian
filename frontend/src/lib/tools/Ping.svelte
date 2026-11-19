@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PingHost } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let host = "1.1.1.1";
@@ -90,6 +91,7 @@
     <div class="verdict" class:good={healthy(stats)} class:warn={stats.available && !healthy(stats)} class:bad={!stats.available}>
       <span class="vlabel">{stats.host}{#if stats.ip && stats.ip !== stats.host} · {stats.ip}{/if}</span>
       <span class="vnote">{verdict(stats)}</span>
+      {#if stats.available && stats.received === 0}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
     </div>
 
     {#if stats.available}
@@ -175,4 +177,6 @@
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; margin: 0; }
   dt { color: var(--text-dim); font-size: 0.82rem; }
   dd { margin: 0; font-size: 0.86rem; color: var(--text); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>
