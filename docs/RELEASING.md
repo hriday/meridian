@@ -20,19 +20,27 @@ builds and uploads the three binaries as **workflow artifacts** and **does not
 create a Release** (the release job is gated on `refs/tags/`). Download the
 artifacts from the run to smoke-test a build.
 
-## Adding code signing later (not done in v1)
-v1 ships **unsigned**. To remove the first-launch OS warnings, add signing to
-`release.yml` using repository **secrets** (Settings → Secrets and variables →
-Actions):
+## Code signing
 
-- **macOS notarization** — import an Apple *Developer ID Application* cert from
-  `MACOS_CERT_P12` (base64) + `MACOS_CERT_PASSWORD`, sign the `.app`, then
-  notarize with `APPLE_ID` / `APPLE_TEAM_ID` / `APPLE_APP_PASSWORD` (e.g. via
-  `xcrun notarytool`) before building the DMG.
-- **Windows Authenticode** — sign `meridian.exe` with `signtool` using a cert in
-  `WINDOWS_CERT_PFX` (base64) + `WINDOWS_CERT_PASSWORD`.
+**macOS — done (since v1.18.9).** `release.yml` imports an Apple *Developer ID
+Application* cert, codesigns the `.app` with the hardened runtime, notarizes the
+DMG, and staples the ticket, so the build opens with no first-launch workaround.
+It runs only when the signing secrets are present (Settings → Secrets and
+variables → Actions):
 
-These secret names are placeholders — nothing references them yet.
+- `MACOS_CERTIFICATE_P12` (base64 of the `.p12`) + `MACOS_CERTIFICATE_PASSWORD`
+- `MACOS_SIGN_IDENTITY` (full cert name) + `MACOS_TEAM_ID` (10-char code)
+- `MACOS_NOTARY_APPLE_ID` + `MACOS_NOTARY_PASSWORD` (app-specific password)
+
+The codesign step auto-detects the Developer ID identity from the keychain, and
+notarization polls Apple in a loop that survives transient network blips. The
+`packaging` branch runs the full sign+notarize pipeline **without publishing**,
+for pre-tag verification.
+
+**Windows — still unsigned.** To drop SmartScreen warnings, sign `meridian.exe`
+with `signtool` using an Authenticode cert in `WINDOWS_CERT_PFX` (base64) +
+`WINDOWS_CERT_PASSWORD`. These secret names are placeholders — nothing references
+them yet.
 
 ## Pre-public checklist
 Before flipping the repo to public:

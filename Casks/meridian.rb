@@ -21,6 +21,9 @@ cask "meridian" do
 
   app "meridian.app"
 
+  # The app is signed with a Developer ID and notarized by Apple, so it opens
+  # normally with no first-launch workaround.
+
   zap trash: [
     "~/Library/Application Support/Meridian",
     "~/Library/Application Support/meridian",
@@ -30,11 +33,4 @@ cask "meridian" do
     "~/Library/Saved Application State/com.wails.meridian.savedState",
     "~/Library/WebKit/com.wails.meridian",
   ]
-
-  caveats <<~EOS
-    Meridian is not yet code-signed, so macOS blocks it on first launch:
-      * macOS 14 and earlier: right-click the app -> Open -> Open.
-      * macOS 15 (Sequoia) and later: System Settings -> Privacy & Security ->
-        scroll to the "meridian was blocked" notice -> Open Anyway.
-  EOS
 end

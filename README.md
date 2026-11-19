@@ -166,17 +166,11 @@ nix run    github:hriday/meridian#gui          # the desktop app (Linux)
 On NixOS, add the CLI to `environment.systemPackages` via the flake's
 `packages.<system>.cli` (the GUI is `packages.<system>.gui`, Linux only).
 
-Builds are attached to each [GitHub Release](../../releases). Meridian is **not
-yet code-signed**, so your OS will warn on first launch — this is expected for an
-open-source app without a paid signing certificate.
+Builds are attached to each [GitHub Release](../../releases). The macOS build is
+code-signed with a Developer ID and notarized by Apple, so it opens normally.
+The Windows build isn't code-signed yet, so SmartScreen may warn on first launch.
 
-- **macOS** — download the `.dmg`, drag Meridian to Applications, then launch it
-  the first time:
-  - **macOS 14 and earlier:** right-click the app → **Open** → **Open**.
-  - **macOS 15 (Sequoia) and later:** a double-click will be blocked; open
-    **System Settings → Privacy & Security**, scroll to the "meridian was blocked"
-    notice, and click **Open Anyway**.
-
+- **macOS** — download the `.dmg`, drag Meridian to Applications, and open it.
   Universal build (Apple Silicon + Intel).
 - **Windows** — install with **Scoop** (above) or download the `.exe` and run
   it. SmartScreen may show "Windows protected your PC" → **More info → Run
@@ -216,9 +210,8 @@ brew trust --cask hriday/meridian/meridian   # trust just this cask
 brew install --cask meridian
 ```
 
-The cask installs the universal `.dmg` from the latest release. Because the app
-isn't code-signed yet, follow the macOS first-launch steps above (the cask
-repeats them). Upgrade with `brew upgrade --cask meridian`.
+The cask installs the universal `.dmg` from the latest release. The app is signed
+and notarized, so it opens normally. Upgrade with `brew upgrade --cask meridian`.
 
 ### Scoop (Windows)
 
