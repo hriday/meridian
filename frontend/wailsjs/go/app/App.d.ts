@@ -33,6 +33,7 @@ import {httpcheck} from '../models';
 import {ipspace} from '../models';
 import {hashid} from '../models';
 import {ikeprobe} from '../models';
+import {netdiag} from '../models';
 import {netif} from '../models';
 import {jwtinspect} from '../models';
 import {lldp} from '../models';
@@ -297,6 +298,8 @@ export function NetflowStart(arg1:number):Promise<void>;
 export function NetflowStop():Promise<void>;
 
 export function NetflowTop(arg1:number,arg2:boolean):Promise<app.NetflowView>;
+
+export function NetworkDiagnostic(arg1:string):Promise<netdiag.Report>;
 
 export function OpenResolverTest(arg1:string):Promise<openresolver.Report>;
 

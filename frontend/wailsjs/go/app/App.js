@@ -450,6 +450,10 @@ export function NetflowTop(arg1, arg2) {
   return window['go']['app']['App']['NetflowTop'](arg1, arg2);
 }
 
+export function NetworkDiagnostic(arg1) {
+  return window['go']['app']['App']['NetworkDiagnostic'](arg1);
+}
+
 export function OpenResolverTest(arg1) {
   return window['go']['app']['App']['OpenResolverTest'](arg1);
 }
