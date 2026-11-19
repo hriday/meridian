@@ -41,6 +41,7 @@ type StepResult struct {
 // Observations are the facts gathered by the probes.
 type Observations struct {
 	GOOS                                   string
+	IdentityOK                             bool // true only when the addressing probe succeeded
 	HasGateway, IsLinkLocal, IPv6Only      bool
 	GatewayReachable                       bool
 	InternetReachable, InternetIntercepted bool
@@ -63,14 +64,13 @@ type Report struct {
 
 // Classify applies the verdict table. It is pure and deterministic.
 func Classify(o Observations) Verdict {
-	// IPv6-only hosts have no routable IPv4 gateway by design; never call that
-	// a DHCP failure, and don't guess further.
-	if o.IPv6Only {
+	// Without a successful addressing probe nothing downstream is trustworthy.
+	if !o.IdentityOK {
 		return VerdictInconclusive
 	}
-	// An errored probe never yields a confident guess (e.g. ICMP unavailable
-	// must not read as host down).
-	if o.ProbeError != "" {
+	// IPv6-only hosts have no routable IPv4 gateway by design; this must come
+	// before the DHCP row so they are never mislabeled DHCP_FAILED.
+	if o.IPv6Only {
 		return VerdictInconclusive
 	}
 	if !o.HasGateway || o.IsLinkLocal {
@@ -78,6 +78,11 @@ func Classify(o Observations) Verdict {
 	}
 	if !o.GatewayReachable {
 		return VerdictGatewayUnreachable
+	}
+	// Past addressing: an errored internet/peer probe never yields a confident
+	// guess (e.g. ICMP unavailable must not read as host down).
+	if o.ProbeError != "" {
+		return VerdictInconclusive
 	}
 
 	peers := o.PeersReached

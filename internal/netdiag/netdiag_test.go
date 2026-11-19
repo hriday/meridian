@@ -8,7 +8,7 @@ import (
 // healthy returns observations for a fully healthy network.
 func healthy() Observations {
 	return Observations{
-		GOOS: "linux", HasGateway: true, GatewayReachable: true,
+		GOOS: "linux", IdentityOK: true, HasGateway: true, GatewayReachable: true,
 		InternetReachable: true, PeerSampleConfident: true,
 		PeersTried: 3, PeersReached: 3,
 	}
@@ -59,7 +59,7 @@ func TestClassify_Table(t *testing.T) {
 }
 
 func TestClassify_IPv6OnlyIsInconclusive(t *testing.T) {
-	o := Observations{IPv6Only: true, HasGateway: false}
+	o := Observations{IdentityOK: true, IPv6Only: true, HasGateway: false}
 	if got := Classify(o); got != VerdictInconclusive {
 		t.Errorf("got %q, want inconclusive (not dhcp_failed)", got)
 	}
@@ -183,5 +183,29 @@ func TestDescribe_EveryVerdictHasCopy(t *testing.T) {
 				t.Errorf("%s/%s: no fixes", goos, v)
 			}
 		}
+	}
+}
+
+func TestClassify_LaterProbeErrorDoesNotMaskAddressing(t *testing.T) {
+	o := healthy()
+	o.IsLinkLocal = true
+	o.ProbeError = "internet probe failed"
+	if got := Classify(o); got != VerdictDHCPFailed {
+		t.Errorf("link-local + later probe error: got %q, want dhcp_failed", got)
+	}
+	o = healthy()
+	o.GatewayReachable = false
+	o.ProbeError = "peer probe failed"
+	if got := Classify(o); got != VerdictGatewayUnreachable {
+		t.Errorf("gateway down + later probe error: got %q, want gateway_unreachable", got)
+	}
+}
+
+func TestClassify_IdentityNotOKIsInconclusive(t *testing.T) {
+	o := healthy()
+	o.IdentityOK = false
+	o.HasGateway = false // would otherwise be dhcp_failed
+	if got := Classify(o); got != VerdictInconclusive {
+		t.Errorf("got %q, want inconclusive", got)
 	}
 }
