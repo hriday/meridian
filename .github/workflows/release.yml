@@ -105,13 +105,30 @@ jobs:
         run: |
           set -euo pipefail
           APP=build/bin/meridian.app
+          # Resolve the signing identity from the keychain the import step just
+          # populated. Use MACOS_SIGN_IDENTITY only when it actually matches an
+          # installed identity; otherwise fall back to the sole Developer ID
+          # Application identity present. This avoids the brittle exact-string
+          # trap where a mismatched secret makes codesign fail "no identity
+          # found" even though the certificate imported fine.
+          if [ -n "${IDENTITY:-}" ] && security find-identity -v -p codesigning | grep -qF "$IDENTITY"; then
+            SIGN_ID="$IDENTITY"
+          else
+            SIGN_ID=$(security find-identity -v -p codesigning \
+              | awk -F'"' '/Developer ID Application/{print $2; exit}')
+          fi
+          if [ -z "${SIGN_ID:-}" ]; then
+            echo "::error::No Developer ID Application identity found in the keychain." >&2
+            security find-identity -v -p codesigning >&2 || true
+            exit 1
+          fi
           # Sign inner-out: the embedded CLI first, then the bundle, both with a
           # secure timestamp and the hardened runtime (required for notarization).
           codesign --force --timestamp --options runtime \
-            --sign "$IDENTITY" "$APP/Contents/MacOS/meridian-cli"
+            --sign "$SIGN_ID" "$APP/Contents/MacOS/meridian-cli"
           codesign --force --timestamp --options runtime \
             --entitlements build/darwin/entitlements.plist \
-            --sign "$IDENTITY" "$APP"
+            --sign "$SIGN_ID" "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
 
       - name: Package macOS DMG
@@ -136,12 +153,54 @@ jobs:
         run: |
           set -euo pipefail
           DMG="dist/Meridian-${VERSION}-macos-universal.dmg"
-          # Submit to Apple's notary service and block until it returns a verdict.
-          xcrun notarytool submit "$DMG" \
+          # Upload once and capture the submission id WITHOUT --wait. notarytool's
+          # own --wait aborts the whole job on any transient network error (we hit
+          # NSURLError -1009 "no network route" after a ~3h Apple backlog), which
+          # throws away a submission Apple was still processing. Upload, then poll
+          # ourselves in a loop that shrugs off those blips.
+          SUBMIT_JSON=$(xcrun notarytool submit "$DMG" \
             --apple-id "$APPLE_ID" \
             --password "$NOTARY_PASSWORD" \
             --team-id "$TEAM_ID" \
-            --wait
+            --output-format json)
+          echo "$SUBMIT_JSON"
+          SUBMISSION_ID=$(printf '%s' "$SUBMIT_JSON" | jq -r '.id // ""')
+          if [ -z "$SUBMISSION_ID" ]; then
+            echo "::error::Could not parse the notarization submission id." >&2
+            exit 1
+          fi
+          echo "Notarization submission: $SUBMISSION_ID"
+          # Poll for a terminal verdict. A failed poll (network blip) just retries;
+          # only a non-Accepted terminal status or the overall deadline fails us.
+          DEADLINE=$(( $(date +%s) + 60 * 60 ))   # give Apple up to an hour
+          STATUS="In Progress"
+          while :; do
+            if INFO_JSON=$(xcrun notarytool info "$SUBMISSION_ID" \
+                  --apple-id "$APPLE_ID" \
+                  --password "$NOTARY_PASSWORD" \
+                  --team-id "$TEAM_ID" \
+                  --output-format json 2>/dev/null); then
+              STATUS=$(printf '%s' "$INFO_JSON" | jq -r '.status // ""')
+              echo "Notarization status: ${STATUS:-unknown}"
+              case "$STATUS" in
+                Accepted) break ;;
+                "In Progress"|"") : ;;
+                *)
+                  echo "::error::Notarization was not accepted (status: $STATUS)." >&2
+                  xcrun notarytool log "$SUBMISSION_ID" \
+                    --apple-id "$APPLE_ID" --password "$NOTARY_PASSWORD" \
+                    --team-id "$TEAM_ID" >&2 || true
+                  exit 1 ;;
+              esac
+            else
+              echo "notarytool info poll failed (transient) — retrying."
+            fi
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "::error::Notarization timed out after 60 min (submission $SUBMISSION_ID still '${STATUS:-unknown}'). Apple's queue is likely still backlogged; re-run later." >&2
+              exit 1
+            fi
+            sleep 30
+          done
           # Staple the ticket so Gatekeeper passes offline, on first launch.
           xcrun stapler staple "$DMG"
           xcrun stapler validate "$DMG"
