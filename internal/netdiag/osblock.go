@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
 	"syscall"
 	"time"
@@ -33,7 +34,19 @@ func OSBlockCheck(ctx context.Context, peers []string) (OSBlockState, string) {
 	if osBlockProvider == nil {
 		return OSBlockCouldNotDetermine, "OS-block check not supported on this platform"
 	}
-	return osBlockProvider(ctx, peers)
+	return osBlockProvider(ctx, plainIPv4Peers(peers))
+}
+
+// plainIPv4Peers keeps only zone-free IPv4 literals so nothing but an address
+// can ever reach a shell command line (defense in depth).
+func plainIPv4Peers(peers []string) []string {
+	out := make([]string, 0, len(peers))
+	for _, p := range peers {
+		if a, err := netip.ParseAddr(p); err == nil && a.Is4() && a.Zone() == "" {
+			out = append(out, a.String())
+		}
+	}
+	return out
 }
 
 // osBlockCheck is the pure comparison. For each peer: baseline reaches but

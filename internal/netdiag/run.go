@@ -220,7 +220,7 @@ func Run(ctx context.Context, opts Options, onStep func(StepResult)) (Report, er
 func validateTarget(ctx context.Context, t string) (string, error) {
 	t = strings.TrimSpace(t)
 	if a, err := netip.ParseAddr(t); err == nil {
-		return a.String(), nil
+		return cleanIPv4(a)
 	}
 	ip, err := resolveHost(ctx, t)
 	if err != nil {
@@ -229,6 +229,15 @@ func validateTarget(ctx context.Context, t string) (string, error) {
 	a, err := netip.ParseAddr(ip)
 	if err != nil {
 		return "", err
+	}
+	return cleanIPv4(a)
+}
+
+// cleanIPv4 accepts only a plain, zone-free IPv4 (v1 is IPv4-only). ParseAddr
+// accepts "fe80::1%anything", so the zone text must never reach a shell.
+func cleanIPv4(a netip.Addr) (string, error) {
+	if !a.Is4() || a.Zone() != "" {
+		return "", fmt.Errorf("%q is not a plain IPv4 address", a.String())
 	}
 	return a.String(), nil
 }

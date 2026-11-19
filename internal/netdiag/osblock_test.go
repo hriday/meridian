@@ -51,3 +51,10 @@ func TestOwnReach_RefusedCountsAsReached(t *testing.T) {
 		t.Error("wrapped ECONNREFUSED must classify as refused")
 	}
 }
+
+func TestPlainIPv4Peers_DropsEverythingButIPv4(t *testing.T) {
+	got := plainIPv4Peers([]string{"192.168.1.2", "fe80::1%x;calc.exe", "2001:db8::1", "x; calc", "10.0.0.1"})
+	if len(got) != 2 || got[0] != "192.168.1.2" || got[1] != "10.0.0.1" {
+		t.Fatalf("got %v", got)
+	}
+}

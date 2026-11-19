@@ -2,6 +2,7 @@ package netdiag
 
 import (
 	"context"
+	"net/netip"
 	"sync"
 	"testing"
 )
@@ -93,17 +94,30 @@ func TestRun_StreamsStepsInOrder(t *testing.T) {
 	}
 }
 
-func TestRun_UnresolvableTargetNotInPeers(t *testing.T) {
-	fakeEnv(t, map[string]bool{"192.168.1.1": true}, isoNeigh, OSBlockNotBlocked, true)
-	var got []string
-	osBlockFn = func(_ context.Context, p []string) (OSBlockState, string) { got = p; return OSBlockNotBlocked, "" }
-	r, _ := Run(context.Background(), Options{Target: "x; calc.exe"}, nil)
-	for _, p := range got {
-		if p == "x; calc.exe" {
-			t.Fatal("raw target reached OSBlockCheck")
+func TestRun_HostileTargetsNeverReachOSBlock(t *testing.T) {
+	for _, tgt := range []string{"x; calc.exe", "fe80::1%x;calc.exe", "2001:db8::1", "fe80::1%en0"} {
+		fakeEnv(t, map[string]bool{"192.168.1.1": true}, isoNeigh, OSBlockNotBlocked, true)
+		var got []string
+		osBlockFn = func(_ context.Context, p []string) (OSBlockState, string) { got = p; return OSBlockNotBlocked, "" }
+		r, _ := Run(context.Background(), Options{Target: tgt}, nil)
+		if len(got) == 0 {
+			t.Fatalf("%q: osBlockFn never ran, test would be vacuous", tgt)
+		}
+		for _, p := range got {
+			if a, err := netip.ParseAddr(p); err != nil || !a.Is4() || a.Zone() != "" {
+				t.Fatalf("%q: non-IPv4 peer %q reached osBlockFn", tgt, p)
+			}
+		}
+		if r.Verdict != VerdictInconclusive {
+			t.Fatalf("%q: got %v, want inconclusive", tgt, r.Verdict)
 		}
 	}
-	if r.Verdict != VerdictInconclusive {
-		t.Fatalf("unresolvable target should be inconclusive, got %v", r.Verdict)
+}
+
+func TestRun_ReachableTargetNotHostDown(t *testing.T) {
+	fakeEnv(t, map[string]bool{"192.168.1.1": true, "192.168.1.50": true}, isoNeigh, OSBlockNotBlocked, true)
+	r, _ := Run(context.Background(), Options{Target: "192.168.1.50"}, nil)
+	if r.Verdict == VerdictHostDown || r.Verdict != VerdictAllClear {
+		t.Fatalf("got %v, want all_clear", r.Verdict)
 	}
 }
