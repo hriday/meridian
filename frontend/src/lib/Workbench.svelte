@@ -405,7 +405,7 @@
         <button class="updbtn" on:click={() => BrowserOpenURL(upURL)}>All releases ↗</button>
       </div>
       {#if upDownload}
-        <p class="updnote">Downloads <span class="mono">{upAsset}</span>. Meridian isn't code-signed, so the first launch needs the one-time step in the README (right-click → Open on macOS; "More info → Run anyway" on Windows).</p>
+        <p class="updnote">Downloads <span class="mono">{upAsset}</span>.{#if upOS === "Windows"} Windows isn't code-signed yet, so the first launch needs a one-time step: <b>More info → Run anyway</b> at the SmartScreen prompt.{/if}</p>
       {/if}
     </div>
   </div>
