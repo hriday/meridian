@@ -26,7 +26,7 @@ func darwinBaseline(ctx context.Context, peer string, port int) (bool, bool) {
 	if _, err := exec.LookPath(nc); err != nil {
 		return false, false
 	}
-	out, err := exec.CommandContext(ctx, nc, "-z", "-G1", peer, strconv.Itoa(port)).CombinedOutput()
+	out, err := exec.CommandContext(ctx, nc, "-vz", "-G1", peer, strconv.Itoa(port)).CombinedOutput()
 	if ctx.Err() != nil {
 		return false, false // killed probe did not really run
 	}
