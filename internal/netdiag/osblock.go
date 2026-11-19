@@ -76,8 +76,13 @@ func tcpReach(ctx context.Context, peer string, port int) (bool, bool) {
 		c.Close()
 		return true, true
 	}
-	if errors.Is(err, syscall.ECONNREFUSED) {
+	if isRefused(err) {
 		return true, true
 	}
 	return false, true
+}
+
+// isRefused reports whether err is a connection-refused (RST) error.
+func isRefused(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED) || isRefusedPlatform(err)
 }

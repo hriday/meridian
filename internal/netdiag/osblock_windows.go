@@ -5,13 +5,13 @@ package netdiag
 import (
 	"context"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
 // NOTE: environment-dependent; verified manually, not by unit tests.
 //
-// Baseline is the system ping.exe (ICMP, not subject to per-app firewall
-// rules on TCP). Network category and Defender firewall profile state are
+// Baseline is the PowerShell TcpClient (same TCP port as own, non-Meridian process). Network category and Defender firewall profile state are
 // best-effort corroboration appended to the detail string.
 func init() {
 	osBlockProvider = func(ctx context.Context, peers []string) (OSBlockState, string) {
@@ -23,19 +23,24 @@ func init() {
 	}
 }
 
-func windowsBaseline(ctx context.Context, peer string, _ int) (bool, bool) {
-	p, err := exec.LookPath("ping.exe")
+func windowsBaseline(ctx context.Context, peer string, port int) (bool, bool) {
+	ps, err := exec.LookPath("powershell.exe")
 	if err != nil {
 		return false, false
 	}
-	err = exec.CommandContext(ctx, p, "-n", "1", "-w", "1000", peer).Run()
-	if err == nil {
-		return true, true
+	// Same-protocol, same-port TCP probe from a non-Meridian process. Refused
+	// (WSAECONNREFUSED 10061) counts as reached, matching tcpReach.
+	script := "$c=New-Object Net.Sockets.TcpClient;" +
+		"try{$a=$c.BeginConnect('" + peer + "'," + strconv.Itoa(port) + ",$null,$null);" +
+		"if($a.AsyncWaitHandle.WaitOne(1500)){try{$c.EndConnect($a);'reached'}catch{if($_.Exception.InnerException.ErrorCode -eq 10061){'reached'}else{'unreached'}}}else{'unreached'}}catch{'unreached'}"
+	out, err := exec.CommandContext(ctx, ps, "-NoProfile", "-Command", script).Output()
+	if ctx.Err() != nil {
+		return false, false
 	}
-	if _, isExit := err.(*exec.ExitError); isExit {
-		return false, true
+	if err != nil {
+		return false, false
 	}
-	return false, false
+	return strings.TrimSpace(string(out)) == "reached", true
 }
 
 func windowsCorroboration(ctx context.Context) string {
