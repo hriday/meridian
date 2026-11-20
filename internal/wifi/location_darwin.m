@@ -1,27 +1,62 @@
 #import <CoreLocation/CoreLocation.h>
 #import <CoreWLAN/CoreWLAN.h>
+#import <Foundation/Foundation.h>
 #import <string.h>
 #import "location_darwin.h"
 
-// A single retained manager: CLLocationManager must stay alive for the
-// authorization prompt to appear and for the status to be queryable.
-static CLLocationManager *gManager = nil;
+// The authorization status is cached here and kept current by the delegate.
+// A CLLocationManager only reports an accurate status once it has been created
+// on a thread with a live run loop and its delegate has been called — querying
+// a fresh manager off the main thread returns "notDetermined" even when the
+// grant exists, which is the bug this replaces.
+static volatile CLAuthorizationStatus gStatus = kCLAuthorizationStatusNotDetermined;
 
-static CLLocationManager *manager(void) {
-    if (gManager == nil) {
-        gManager = [[CLLocationManager alloc] init];
+@interface MeridianLocDelegate : NSObject <CLLocationManagerDelegate>
+@end
+
+@implementation MeridianLocDelegate
+- (void)locationManagerDidChangeAuthorization:(CLLocationManager *)m {
+    if (@available(macOS 11.0, *)) {
+        gStatus = m.authorizationStatus;
     }
-    return gManager;
+}
+@end
+
+static CLLocationManager *gManager = nil;
+static MeridianLocDelegate *gDelegate = nil;
+
+// runOnMain runs block synchronously on the main queue (where CLLocationManager
+// needs to live), unless already on the main thread. The dispatch_sync is safe
+// only because these entry points are invoked solely from Go-bound methods,
+// which Wails runs on goroutines — never on the main OS thread (which drives the
+// Cocoa loop). Calling them from the main thread could deadlock via dispatch_once.
+static void runOnMain(void (^block)(void)) {
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
+
+// ensureManager creates the shared manager on the main thread with a delegate
+// and seeds the cached status, exactly once.
+static void ensureManager(void) {
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        runOnMain(^{
+            gDelegate = [[MeridianLocDelegate alloc] init];
+            gManager = [[CLLocationManager alloc] init];
+            gManager.delegate = gDelegate;
+            if (@available(macOS 11.0, *)) {
+                gStatus = gManager.authorizationStatus; // seed before the delegate fires
+            }
+        });
+    });
 }
 
 const char *meridian_location_status(void) {
-    CLAuthorizationStatus st;
-    if (@available(macOS 11.0, *)) {
-        st = [manager() authorizationStatus];
-    } else {
-        st = [CLLocationManager authorizationStatus];
-    }
-    switch (st) {
+    ensureManager();
+    switch (gStatus) {
         case kCLAuthorizationStatusNotDetermined:    return "notDetermined";
         case kCLAuthorizationStatusRestricted:       return "restricted";
         case kCLAuthorizationStatusDenied:           return "denied";
@@ -31,13 +66,13 @@ const char *meridian_location_status(void) {
 }
 
 void meridian_request_location(void) {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        CLLocationManager *m = manager();
-        [m requestWhenInUseAuthorization];
+    ensureManager();
+    runOnMain(^{
+        [gManager requestWhenInUseAuthorization];
         // A brief location start nudges macOS to register an actual use by this
         // app, which is what unlocks SSID visibility via airportd. We don't need
-        // coordinates, so no delegate is required.
-        [m startUpdatingLocation];
+        // coordinates, so no delegate callback for location is required.
+        [gManager startUpdatingLocation];
     });
 }
 
@@ -49,5 +84,72 @@ char *meridian_current_ssid(void) {
             return NULL;
         }
         return strdup([ssid UTF8String]);
+    }
+}
+
+static NSString *bandString(CWChannelBand b) {
+    switch (b) {
+        case kCWChannelBand2GHz: return @"2GHz";
+        case kCWChannelBand5GHz: return @"5GHz";
+        default:
+            if (@available(macOS 12.0, *)) {
+                if (b == kCWChannelBand6GHz) return @"6GHz";
+            }
+            return @"";
+    }
+}
+
+static NSString *widthString(CWChannelWidth w) {
+    switch (w) {
+        case kCWChannelWidth20MHz:  return @"20MHz";
+        case kCWChannelWidth40MHz:  return @"40MHz";
+        case kCWChannelWidth80MHz:  return @"80MHz";
+        case kCWChannelWidth160MHz: return @"160MHz";
+        default:                    return @"";
+    }
+}
+
+char *meridian_scan_networks(void) {
+    @autoreleasepool {
+        CWInterface *iface = [[CWWiFiClient sharedWiFiClient] interface];
+        if (iface == nil) {
+            return NULL;
+        }
+        NSError *err = nil;
+        NSSet<CWNetwork *> *nets = [iface scanForNetworksWithSSID:nil error:&err];
+        if (nets == nil) {
+            return NULL;
+        }
+        NSString *connBSSID = [iface bssid];
+        NSMutableArray *arr = [NSMutableArray array];
+        for (CWNetwork *n in nets) {
+            NSString *bssid = n.bssid ? n.bssid : @"";
+            // Exclude the connected AP (it is reported separately as "current").
+            if (connBSSID.length > 0 && bssid.length > 0 &&
+                [bssid caseInsensitiveCompare:connBSSID] == NSOrderedSame) {
+                continue;
+            }
+            CWChannel *ch = n.wlanChannel;
+            NSString *ssid = n.ssid ? n.ssid : @"";
+            [arr addObject:@{
+                @"ssid":    ssid,
+                @"bssid":   bssid,
+                @"channel": @(ch ? (NSInteger)ch.channelNumber : 0),
+                @"band":    ch ? bandString(ch.channelBand) : @"",
+                @"width":   ch ? widthString(ch.channelWidth) : @"",
+                @"rssi":    @((NSInteger)n.rssiValue),
+            }];
+        }
+        NSData *json = [NSJSONSerialization dataWithJSONObject:arr options:0 error:&err];
+        if (json == nil) {
+            return NULL;
+        }
+        // Autoreleased (this file compiles under MRC): strdup copies the bytes
+        // before the enclosing @autoreleasepool drains and frees s.
+        NSString *s = [[[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] autorelease];
+        if (s == nil) {
+            return NULL;
+        }
+        return strdup([s UTF8String]);
     }
 }

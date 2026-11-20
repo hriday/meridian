@@ -36,6 +36,12 @@ func Status(ctx context.Context) (Info, error) {
 		}
 	}
 
+	// Neighbor SSIDs are always redacted in system_profiler's separate-process
+	// output. An in-process CoreWLAN scan reads them under the app's own grant;
+	// when it returns names, they replace the redacted list. An empty scan
+	// (unsupported, or no grant) leaves the redacted neighbors and the banner.
+	mergeScan(&info, scanNeighbors())
+
 	// Recompute redaction across the connected network and its neighbors, then
 	// tailor the note to what's actually hidden and the authorization state.
 	currentHidden := isRedacted(info.Current.SSID)
