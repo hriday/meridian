@@ -71,7 +71,10 @@ test("key tools run their action and render results without error", async ({ pag
     if (await input.count()) {
       await input.fill("example.com").catch(() => {});
     }
-    const btn = page.locator("main.main button:not([disabled])").first();
+    // Skip the ToolHelp "How to read this" disclosure (`.chip`), which is the
+    // first button in most tools — clicking it would toggle help and never run
+    // the action, so the result block (where render crashes hide) never mounts.
+    const btn = page.locator("main.main button:not([disabled]):not(.chip)").first();
     if (await btn.count()) {
       await btn.click().catch(() => {});
     }
@@ -335,4 +338,47 @@ test("the IP chip shows local + public IP and expands to interfaces, gateway and
   await expect(pop).toContainText("10.0.0.3");       // the second interface
   await expect(pop).toContainText("192.168.1.1");    // gateway
   await expect(pop).toContainText("Full cone");      // NAT type
+});
+
+test("security headers renders the scorecard, rows and remediation from a real report", async ({ page }) => {
+  // The generic RUN_TOOLS pass drives sechdr with an empty proxy; this one feeds
+  // a concrete Report so the full result markup renders — including the
+  // "How to improve" block, which referenced an undefined `rep` and crashed the
+  // render for anyone who ran a real scan (shipped unseen; Go-only CI + the
+  // proxy stub both missed it).
+  await page.addInitScript(() => {
+    const REAL = {
+      url: "https://example.com", finalUrl: "https://example.com/", https: true, status: 200,
+      score: 72, grade: "B",
+      headers: [
+        { name: "Strict-Transport-Security", present: true, value: "max-age=63072000", grade: "ok", note: "HSTS set with a long max-age.", owasp: "A05 Security Misconfiguration" },
+        { name: "Content-Security-Policy", present: false, value: "", grade: "bad", note: "No CSP — the strongest XSS defence is absent.", owasp: "A03 Injection" },
+      ],
+      remediation: ["Content-Security-Policy: default-src 'self'", "Permissions-Policy: geolocation=(), camera=()"],
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("SecurityHeaders") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "sechdr"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="sechdr"]').click();
+  const pane = page.locator("main.main");
+  await pane.locator("input").first().fill("example.com");
+  await pane.getByRole("button", { name: "Scan headers" }).click();
+
+  await expect(pane.locator(".scorecard .grade")).toHaveText("B");
+  await expect(pane.locator(".hrow")).toHaveCount(2);              // the two header rows
+  await expect(pane.locator(".improve")).toBeVisible();           // the block that was crashing
+  await expect(pane.locator(".improve .fix")).toHaveCount(2);     // both remediation lines
+  expect(errors, errors.join(" | ")).toEqual([]);
 });
