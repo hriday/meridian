@@ -80,10 +80,10 @@
         </div>
       {/each}
     </div>
-    {#if rep.remediation && rep.remediation.length}
+    {#if report.remediation && report.remediation.length}
       <div class="improve">
         <div class="ih">How to improve — toward grade A</div>
-        {#each rep.remediation as s}<pre class="fix">{s}</pre>{/each}
+        {#each report.remediation as s}<pre class="fix">{s}</pre>{/each}
       </div>
     {/if}
     <p class="foot">OWASP tags reference the <a href="https://owasp.org/Top10/" target="_blank" rel="noreferrer">OWASP Top 10 (2021)</a>. Good headers reduce risk but aren't a full assessment.</p>
