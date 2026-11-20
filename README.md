@@ -83,6 +83,14 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
   IP-space inventory to surface untracked hosts, MAC changes (possible rogues)
   and records that no longer answer, then import/update in one step.
+- **Local Network Diagnostic** — "why can't I reach this?" Walks DHCP → gateway →
+  captive portal → internet → the target and reads off one verdict, cause and
+  fix (incl. **the OS is blocking Meridian** — macOS Local Network privacy /
+  Windows firewall — and **client isolation**). Deterministic, no AI. Runs
+  unprivileged on macOS, Linux and Windows; IPv4 only. Several LAN tools — Ping,
+  TCP ping, Port scan, ARP scan, Discover, Ping sweep, Printer and SNMP sweep —
+  offer a **Run Local Network Diagnostic** button when the target doesn't reply,
+  pre-seeded with that host. <!-- TODO: screenshot (owner to capture live) -->
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
   **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
 
@@ -269,6 +277,7 @@ meridian-cli sshaudit github.com               # SSH algos, host keys, post-quan
 meridian-cli cipherscan github.com            # TLS protocols + ciphers + PQ, graded
 meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on macOS)
 meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
+meridian-cli netdiag 10.0.0.50                  # why can't I reach it? one verdict + cause + fix (--json)
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports

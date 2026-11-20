@@ -3,6 +3,7 @@
   import { SnmpSweep, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
   import { newStreamID } from "../metrics/metricStream";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let cidr = "10.0.0.0/24";
@@ -132,6 +133,7 @@
     <p class="caption">{rows.length} SNMP responder{rows.length === 1 ? "" : "s"}{total ? ` in ${cidr.trim()}` : ""} · sorted by address · v2c · 1s timeout</p>
   {:else if !scanning && scanned > 0 && !err}
     <p class="caption">No hosts answered SNMP in {cidr.trim()} — check the community and that SNMP is enabled.</p>
+    <button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: "" })}>Run Local Network Diagnostic →</button>
   {/if}
 </div>
 
@@ -170,4 +172,6 @@
   .r { text-align: right; }
 
   .caption { max-width: 880px; margin-top: 12px; font-size: 0.72rem; color: var(--text-faint); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

@@ -67,6 +67,7 @@ func Catalog() []CommandGroup {
 			{"myip", "[--local] [--json]", "your local + public IP, gateway and NAT at a glance"},
 		}},
 		{Name: "Local network", Commands: []CommandDoc{
+			{"netdiag", "[host] [--json]", "Diagnose why local-network resources are unreachable"},
 			{"ping", "<host> [--count 5] [--interval 500ms] [--json]", "ping"},
 			{"pingmon", "<host> [--interval 1s] [--json]", "live ping (Ctrl-C to stop)"},
 			{"tcpping", "<host> <port> [--count 5] [--interval 500ms] [--json]", "TCP connect latency + loss (ping a port; works when ICMP is blocked)"},

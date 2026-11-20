@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { PortScan, ScanCommonPorts, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let host = "127.0.0.1";
@@ -80,6 +81,7 @@
       {/if}
     </div>
     {#if err}<div class="hint">{err}</div>{/if}
+    {#if !scanning && results.length > 0 && openCount === 0}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
   </div>
 
   {#if results.length}
@@ -127,4 +129,6 @@
   .pill.good { color: var(--good, #5ad17a); background: var(--good-bg, #102516); }
   .pill.soon { color: var(--text-faint); border: 1px solid var(--pill-border); }
   .pill.dim { color: var(--text-faint); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

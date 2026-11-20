@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PrinterStatus } from "../../../wailsjs/go/app/App.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let host = "";
@@ -55,6 +56,8 @@
   </div>
 
   {#if error}<p class="err">{error}</p>{/if}
+  <!-- Genuine unreachability only: the backend errors with "no response on the print ports" when no print port is open. A reachable printer that merely ignores IPP comes back as a note, not an error. -->
+  {#if error.includes("no response on the print ports")}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: host.trim() })}>Run Local Network Diagnostic →</button>{/if}
 
   {#if res}
     {#if res.reachable}
@@ -143,4 +146,6 @@
   .pk { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; }
   .port { font-size: 0.73rem; color: var(--text-faint, var(--text-dim)); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
   .port.open { color: var(--good, #3fb950); border-color: var(--good, #3fb950); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>

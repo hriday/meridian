@@ -2,6 +2,7 @@
   import { onDestroy } from "svelte";
   import { PingSweep, ScanStop } from "../../../wailsjs/go/app/App.js";
   import { EventsOn, EventsOff } from "../../../wailsjs/runtime/runtime.js";
+  import { requestedTool } from "../nav";
   import ToolHelp from "../ToolHelp.svelte";
 
   let cidr = "192.168.1.0/24";
@@ -68,6 +69,7 @@
     </div>
     <div class="cap">ICMP echo first, then a TCP connect to the fallback ports for hosts that filter ICMP.</div>
     {#if err}<div class="hint">{err}</div>{/if}
+    {#if !scanning && !err && probed > 0 && hosts.length === 0}<button class="diag" type="button" on:click={() => requestedTool.set({ tool: "netdiag", value: "" })}>Run Local Network Diagnostic →</button>{/if}
   </div>
 
   {#if hosts.length}
@@ -110,4 +112,6 @@
   .pill { font-size: 0.66rem; padding: 1px 8px; border-radius: 20px; }
   .pill.good { color: var(--good, #5ad17a); background: var(--good-bg, #102516); }
   .pill.soon { color: var(--text-faint); border: 1px solid var(--pill-border); }
+  .diag { margin-top: 8px; align-self: flex-start; background: transparent; color: var(--accent); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  .diag:hover { border-color: var(--accent); }
 </style>
