@@ -310,8 +310,105 @@ export namespace app {
 
 }
 
+export namespace meshtastic {
+
+	export class Node {
+	    num: number;
+	    id: string;
+	    longName: string;
+	    shortName: string;
+	    hwModel: string;
+	    role: string;
+	    snr: number;
+	    hopsAway?: number;
+	    lastHeard: number;
+	    viaMqtt: boolean;
+	    battery?: number;
+	    voltage: number;
+	    hasPosition: boolean;
+	    lat: number;
+	    lon: number;
+	    altitudeM: number;
+
+	    static createFrom(source: any = {}) {
+	        return new Node(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.num = source["num"];
+	        this.id = source["id"];
+	        this.longName = source["longName"];
+	        this.shortName = source["shortName"];
+	        this.hwModel = source["hwModel"];
+	        this.role = source["role"];
+	        this.snr = source["snr"];
+	        this.hopsAway = source["hopsAway"];
+	        this.lastHeard = source["lastHeard"];
+	        this.viaMqtt = source["viaMqtt"];
+	        this.battery = source["battery"];
+	        this.voltage = source["voltage"];
+	        this.hasPosition = source["hasPosition"];
+	        this.lat = source["lat"];
+	        this.lon = source["lon"];
+	        this.altitudeM = source["altitudeM"];
+	    }
+	}
+	export class Snapshot {
+	    transport: string;
+	    target: string;
+	    myNodeNum: number;
+	    firmware: string;
+	    hwModel: string;
+	    me?: Node;
+	    nodes: Node[];
+	    channelUtil: number;
+	    airUtilTx: number;
+	    nodeCount: number;
+	    takenAt: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Snapshot(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.transport = source["transport"];
+	        this.target = source["target"];
+	        this.myNodeNum = source["myNodeNum"];
+	        this.firmware = source["firmware"];
+	        this.hwModel = source["hwModel"];
+	        this.me = this.convertValues(source["me"], Node);
+	        this.nodes = this.convertValues(source["nodes"], Node);
+	        this.channelUtil = source["channelUtil"];
+	        this.airUtilTx = source["airUtilTx"];
+	        this.nodeCount = source["nodeCount"];
+	        this.takenAt = source["takenAt"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace arpscan {
-	
+
 	export class Host {
 	    ip: string;
 	    mac: string;

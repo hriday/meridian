@@ -126,6 +126,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runMACVendor(args[1:], stdout, stderr)
 	case "printer":
 		return runPrinter(args[1:], stdout, stderr)
+	case "mesh":
+		return runMeshtastic(args[1:], stdout, stderr)
 	case "interfaces":
 		return runInterfaces(args[1:], stdout, stderr)
 	case "myip":
