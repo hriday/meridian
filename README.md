@@ -83,15 +83,13 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
   IP-space inventory to surface untracked hosts, MAC changes (possible rogues)
   and records that no longer answer, then import/update in one step.
-- **Local Network Diagnostic** — "why can't I reach this?" Run it (optionally
-  pointed at a host) and it walks an ordered set of probes — DHCP, gateway,
-  captive portal, internet, then the target — and reads off one plain-language
-  verdict, cause and fix: DHCP failed, gateway unreachable, captive portal,
-  internet down (LAN fine), **the OS is blocking Meridian** (macOS Local Network
-  privacy / Windows firewall), **client isolation** (hotspot/guest Wi-Fi), local
-  access blocked, or host down (network fine, that host isn't). Deterministic —
-  no AI — runs unprivileged on macOS, Linux and Windows (IPv4). Every LAN tool
-  that can't reach its target offers a **Run Local Network Diagnostic** button,
+- **Local Network Diagnostic** — "why can't I reach this?" Walks DHCP → gateway →
+  captive portal → internet → the target and reads off one verdict, cause and
+  fix (incl. **the OS is blocking Meridian** — macOS Local Network privacy /
+  Windows firewall — and **client isolation**). Deterministic, no AI. Runs
+  unprivileged on macOS, Linux and Windows; IPv4 only. Several LAN tools — Ping,
+  TCP ping, Port scan, ARP scan, Discover, Ping sweep, Printer and SNMP sweep —
+  offer a **Run Local Network Diagnostic** button when the target doesn't reply,
   pre-seeded with that host. <!-- TODO: screenshot (owner to capture live) -->
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
   **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
