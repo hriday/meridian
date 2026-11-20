@@ -494,6 +494,10 @@ export function PrinterStatus(arg1) {
   return window['go']['app']['App']['PrinterStatus'](arg1);
 }
 
+export function MeshtasticSnapshot(arg1) {
+  return window['go']['app']['App']['MeshtasticSnapshot'](arg1);
+}
+
 export function PwHashCheck(arg1, arg2) {
   return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
 }

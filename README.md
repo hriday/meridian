@@ -78,6 +78,11 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   talkers, TCP resets/retransmits, DNS errors, TLS SNIs seen), **Wi-Fi analyzer**
   (channel, signal/SNR, neighbors + a channel map showing co-channel contention —
   macOS; Linux via `nmcli` and Windows via `netsh` give channel/signal/security).
+- **Meshtastic mesh** — connect to a Meshtastic LoRa node over **USB serial** or
+  **TCP** (`:4403`) and read its **node database**: every node it currently sees,
+  with per-neighbor **SNR**, hop distance (`direct` = one-hop RF neighbor), channel
+  airtime, battery and position. Read-only — it only asks the node to dump its
+  config — and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
@@ -281,6 +286,7 @@ meridian-cli netdiag 10.0.0.50                  # why can't I reach it? one verd
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
+meridian-cli mesh /dev/cu.usbserial-10         # Meshtastic node snapshot — node db, SNR/hops, airtime (or: mesh 192.168.1.50)
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 

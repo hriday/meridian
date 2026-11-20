@@ -89,6 +89,7 @@ func Catalog() []CommandGroup {
 			{"wol", "<mac> [--bcast 255.255.255.255] [--port 9]", "wake-on-LAN"},
 			{"macvendor", "<mac|oui> [--json]", "MAC vendor lookup"},
 			{"printer", "<host> [--json]", "printer status over IPP — state, out-of-paper/toner, supplies + print ports"},
+			{"mesh", "<serial-device|host> [--json]", "Meshtastic node snapshot — node db, per-neighbor SNR/hops, channel airtime, positions (USB serial or TCP :4403)"},
 			{"speedtest", "<iperf3-host> [--dir download|upload|bidir] [--json]", "throughput test"},
 		}},
 		{Name: "SNMP & monitoring", Commands: []CommandDoc{

@@ -3,6 +3,7 @@ module github.com/hriday/meridian
 go 1.26.0
 
 require (
+	buf.build/gen/go/meshtastic/protobufs/protocolbuffers/go v1.36.12-20261120172058-0600c505f67e.2
 	github.com/BurntSushi/toml v1.2.1
 	github.com/appshubcc/go-iperf3 v0.1.0
 	github.com/aws/aws-sdk-go-v2 v1.48.0
@@ -24,11 +25,13 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/wailsapp/wails/v2 v2.10.1
 	github.com/zclconf/go-cty v1.20.0
+	go.bug.st/serial v1.8.0
 	go.yaml.in/yaml/v3 v3.0.5
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.62.0
 	golang.org/x/sys v0.50.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (

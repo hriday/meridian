@@ -48,7 +48,7 @@ test("every tool mounts and renders without a console error", async ({ page }) =
 // — catching "x is not iterable" / undefined-field crashes in result markup.
 const RUN_TOOLS = [
   "lookup", "subnet", "dnsaudit", "axfr", "openresolver",
-  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois",
+  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh",
 ];
 
 test("key tools run their action and render results without error", async ({ page }) => {
@@ -380,5 +380,44 @@ test("security headers renders the scorecard, rows and remediation from a real r
   await expect(pane.locator(".hrow")).toHaveCount(2);              // the two header rows
   await expect(pane.locator(".improve")).toBeVisible();           // the block that was crashing
   await expect(pane.locator(".improve .fix")).toHaveCount(2);     // both remediation lines
+  expect(errors, errors.join(" | ")).toEqual([]);
+});
+
+test("meshtastic renders the node header and mesh rows from a real snapshot", async ({ page }) => {
+  await page.addInitScript(() => {
+    const REAL = {
+      transport: "tcp", target: "192.168.1.50:4403", myNodeNum: 100,
+      firmware: "2.5.3.abcdef", hwModel: "HELTEC_V3",
+      me: { num: 100, id: "!00000064", longName: "Base", shortName: "BASE", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
+      nodes: [
+        { num: 200, id: "!000000c8", longName: "Hilltop", shortName: "HILL", role: "Client", snr: 6.3, hopsAway: 1, lastHeard: Math.floor(Date.now() / 1000) - 120, viaMqtt: false, battery: 72, voltage: 3.9, hasPosition: true, lat: 37.5, lon: -122.3, altitudeM: 84 },
+        { num: 300, id: "!0000012c", longName: "Ridge", shortName: "", role: "", snr: -11, hopsAway: 3, lastHeard: 0, viaMqtt: false, battery: null, voltage: 0, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
+      ],
+      channelUtil: 12.5, airUtilTx: 3.2, nodeCount: 3, takenAt: "2026-11-20T00:00:00Z",
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("MeshtasticSnapshot") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "mesh"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="mesh"]').click();
+  const pane = page.locator("main.main");
+  await pane.locator("input").first().fill("192.168.1.50");
+  await pane.getByRole("button", { name: "Read node" }).click();
+
+  await expect(pane.locator(".nodehead .nname")).toHaveText("Base");
+  await expect(pane.locator(".noderow")).toHaveCount(2);         // two neighbours
+  await expect(pane.locator(".noderow").first()).toContainText("Hilltop");
+  await expect(pane.locator(".noderow").first().locator("a")).toHaveText("37.5000, -122.3000"); // position link
   expect(errors, errors.join(" | ")).toEqual([]);
 });
