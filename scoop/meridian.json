@@ -1,12 +1,12 @@
 {
-  "version": "1.19.2",
+  "version": "1.19.3",
   "description": "Cross-platform network engineer's toolkit (GUI).",
   "homepage": "https://github.com/hriday/meridian",
   "license": "Apache-2.0",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/hriday/meridian/releases/download/v1.19.2/Meridian-v1.19.2-windows-amd64.exe#/meridian.exe",
-      "hash": "eedfc3127c4bce361f5fd57fa038f6df2bea23d263aa2e943669956cd66b2689"
+      "url": "https://github.com/hriday/meridian/releases/download/v1.19.3/Meridian-v1.19.3-windows-amd64.exe#/meridian.exe",
+      "hash": "c19ee8dcb6ac3ea5ca5194799b130eb47a20d6d0683cf0fadd168595ff51ddf9"
     }
   },
   "bin": "meridian.exe",
