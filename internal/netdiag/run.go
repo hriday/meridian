@@ -164,7 +164,7 @@ func Run(ctx context.Context, opts Options, onStep func(StepResult)) (Report, er
 	}
 	wg.Wait()
 
-	reachedAny, failedLikely := 0, 0
+	reachedAny, failedLikely, triedFailed := 0, 0, 0
 	likely := map[string]bool{}
 	for _, s := range seeded {
 		likely[s] = true
@@ -176,14 +176,21 @@ func Run(ctx context.Context, opts Options, onStep func(StepResult)) (Report, er
 		}
 		if p == target {
 			obs.TargetReached = r.reached
+			if !r.reached {
+				triedFailed++
+				failedLikely++ // the user's own failed target is a likely-up peer
+			}
 			continue
 		}
 		obs.PeersTried++
 		if r.reached {
 			obs.PeersReached++
 			reachedAny++
-		} else if likely[p] {
-			failedLikely++
+		} else {
+			triedFailed++
+			if likely[p] {
+				failedLikely++
+			}
 		}
 	}
 	if target != "" && (target == gw || target == ip) {
@@ -196,8 +203,10 @@ func Run(ctx context.Context, opts Options, onStep func(StepResult)) (Report, er
 		emit("peers", "fail", fmt.Sprintf("0 of %d peers answered", obs.PeersTried))
 	}
 
-	// 5. OS-block check, only when it can change the verdict.
-	if obs.InternetReachable && obs.PeersReached == 0 && !obs.TargetReached && obs.PeerSampleConfident {
+	// 5. OS-block check: whenever at least one peer Meridian itself probed
+	// failed (the explicit target counts). A positive result is definitive,
+	// so this is not gated on sample confidence.
+	if obs.InternetReachable && obs.PeersReached == 0 && !obs.TargetReached && triedFailed > 0 {
 		peers := sample
 		if len(peers) > maxOSBlockPeers {
 			peers = peers[:maxOSBlockPeers]

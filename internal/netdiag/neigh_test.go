@@ -70,3 +70,11 @@ func TestNeighbors_ParsesIPAndMAC(t *testing.T) {
 		t.Errorf("windows: %+v", got)
 	}
 }
+
+func TestNeighbors_LinuxCarriesRealState(t *testing.T) {
+	withRaw(t, procARP)
+	got, _ := Neighbors(context.Background())
+	if len(got) != 2 || got[0].State != "reachable" || got[1].State != "stale" {
+		t.Errorf("proc states: %+v", got)
+	}
+}

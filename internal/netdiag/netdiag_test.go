@@ -81,7 +81,7 @@ func TestClassify_UnconfidentPeerSampleIsInconclusive(t *testing.T) {
 	o := healthy()
 	o.PeersTried, o.PeersReached = 1, 0
 	o.PeerSampleConfident = false
-	for _, s := range []OSBlockState{OSBlockUnknown, OSBlockBlocked, OSBlockNotBlocked, OSBlockCouldNotDetermine} {
+	for _, s := range []OSBlockState{OSBlockUnknown, OSBlockNotBlocked, OSBlockCouldNotDetermine} {
 		o.OSBlock = s
 		if got := Classify(o); got != VerdictInconclusive {
 			t.Errorf("OSBlock=%d: got %q, want inconclusive", s, got)
@@ -207,5 +207,14 @@ func TestClassify_IdentityNotOKIsInconclusive(t *testing.T) {
 	o.HasGateway = false // would otherwise be dhcp_failed
 	if got := Classify(o); got != VerdictInconclusive {
 		t.Errorf("got %q, want inconclusive", got)
+	}
+}
+
+func TestClassify_OSBlockingFiresWithoutConfidence(t *testing.T) {
+	o := healthy()
+	o.PeerSampleConfident, o.OSBlock = false, OSBlockBlocked
+	o.PeersReached, o.InternetReachable = 0, true
+	if got := Classify(o); got != VerdictOSBlockingMeridian {
+		t.Errorf("got %q", got)
 	}
 }

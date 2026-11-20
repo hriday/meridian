@@ -3,6 +3,7 @@ package netdiag
 import (
 	"context"
 	"net/netip"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -119,5 +120,35 @@ func TestRun_ReachableTargetNotHostDown(t *testing.T) {
 	r, _ := Run(context.Background(), Options{Target: "192.168.1.50"}, nil)
 	if r.Verdict == VerdictHostDown || r.Verdict != VerdictAllClear {
 		t.Fatalf("got %v, want all_clear", r.Verdict)
+	}
+}
+
+func TestRun_TargetBlockedNoNeighbors_OSBlocking(t *testing.T) {
+	fakeEnv(t, map[string]bool{"192.168.1.1": true}, nil, OSBlockBlocked, true)
+	r, _ := Run(context.Background(), Options{Target: "192.168.1.50"}, nil)
+	if r.Verdict != VerdictOSBlockingMeridian {
+		t.Fatalf("got %v, want os_blocking_meridian", r.Verdict)
+	}
+}
+
+func TestRun_ThinSampleNotConfident_Inconclusive(t *testing.T) {
+	for _, st := range []OSBlockState{OSBlockNotBlocked, OSBlockCouldNotDetermine} {
+		fakeEnv(t, map[string]bool{"192.168.1.1": true}, nil, st, true)
+		r, _ := Run(context.Background(), Options{Target: "192.168.1.50"}, nil)
+		if r.Verdict != VerdictInconclusive {
+			t.Fatalf("OSBlock=%d: got %v, want inconclusive", st, r.Verdict)
+		}
+	}
+}
+
+func TestRun_ConfidentIsolationSoftCopy(t *testing.T) {
+	fakeEnv(t, map[string]bool{"192.168.1.1": true}, isoNeigh, OSBlockNotBlocked, true)
+	r, _ := Run(context.Background(), Options{}, nil)
+	if r.Verdict != VerdictClientIsolation {
+		t.Fatalf("got %v, want client_isolation", r.Verdict)
+	}
+	all := strings.ToLower(strings.Join(append(r.Causes, r.Statement), " "))
+	if !strings.Contains(all, "powered off") || strings.Contains(all, "the network isolates clients") {
+		t.Fatalf("copy not softened: %q", all)
 	}
 }

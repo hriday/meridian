@@ -50,7 +50,7 @@ func parseNeighbors(out string) []Neighbor {
 		var ip, mac string
 		state := "reachable"
 		switch {
-		case len(f) >= 4 && f[1] == "at" && strings.HasPrefix(f[0], "(") || len(f) >= 4 && f[2] == "at" && strings.HasPrefix(f[1], "("):
+		case (len(f) >= 4 && f[1] == "at" && strings.HasPrefix(f[0], "(")) || (len(f) >= 4 && f[2] == "at" && strings.HasPrefix(f[1], "(")):
 			i := 0
 			if f[1] != "at" {
 				i = 1
@@ -59,8 +59,12 @@ func parseNeighbors(out string) []Neighbor {
 			mac = f[i+2]
 		case len(f) >= 4 && net.ParseIP(f[0]) != nil && strings.HasPrefix(f[2], "0x"):
 			ip, mac = f[0], f[3]
-			if f[2] == "0x0" { // ATF_COM unset: incomplete/failed
+			switch f[2] {
+			case "0x0": // ATF_COM unset: incomplete/failed
 				continue
+			case "0x2": // ATF_COM only: resolved
+			default: // complete but not plain 0x2 (e.g. permanent/published)
+				state = "stale"
 			}
 		case len(f) >= 3 && net.ParseIP(f[0]) != nil:
 			ip, mac = f[0], f[1]

@@ -101,18 +101,19 @@ func Classify(o Observations) Verdict {
 	}
 
 	if peers == 0 {
-		// Zero peers is only trusted when the sample was confident.
+		// A positive OS-block signature is hard proof (a TCC-exempt baseline
+		// reached a peer Meridian's own connect could not), independent of
+		// sample size. The other zero-peer verdicts need a confident sample.
+		if o.OSBlock == OSBlockBlocked {
+			return VerdictOSBlockingMeridian
+		}
 		if !o.PeerSampleConfident {
 			return VerdictInconclusive
 		}
-		switch o.OSBlock {
-		case OSBlockBlocked:
-			return VerdictOSBlockingMeridian
-		case OSBlockNotBlocked:
+		if o.OSBlock == OSBlockNotBlocked {
 			return VerdictClientIsolation
-		default: // CouldNotDetermine, or the check never ran
-			return VerdictLocalAccessBlocked
 		}
+		return VerdictLocalAccessBlocked // CouldNotDetermine, or the check never ran
 	}
 
 	if o.TargetGiven && !o.TargetReached {
@@ -155,9 +156,15 @@ func Describe(o Observations, v Verdict) Report {
 			r.Fixes = []string{"Review ufw/firewalld/iptables rules for outbound local traffic and allow it."}
 		}
 	case VerdictClientIsolation:
-		r.Statement = "No other device on this network is reachable, even with a baseline check outside Meridian: the network isolates clients."
-		r.Causes = []string{"Hotspot or guest Wi-Fi with client (AP) isolation enabled."}
-		r.Fixes = []string{"Switch to a non-guest network or disable client isolation on the access point/router."}
+		r.Statement = "Meridian can't reach other devices on this local network (the internet and gateway are fine)."
+		r.Causes = []string{
+			"This network may isolate clients from each other, which is common on guest or hotspot Wi-Fi.",
+			"Or the other devices are simply powered off or asleep.",
+		}
+		r.Fixes = []string{
+			"If you're on guest or hotspot Wi-Fi, switch to your normal LAN.",
+			"Otherwise check that the devices you expect are powered on.",
+		}
 	case VerdictLocalAccessBlocked:
 		r.Statement = "Meridian can't reach any device on this local network (the gateway and internet are fine)."
 		r.Causes = []string{
