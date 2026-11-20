@@ -88,6 +88,15 @@ func Run(ctx context.Context, opts Options, onStep func(StepResult)) (Report, er
 		emit("gateway", "fail", gw+" did not answer")
 	}
 	if !reached {
+		// Before concluding the router is dead, rule out the OS blocking us:
+		// if a TCC/firewall-exempt baseline reaches the gateway that our own
+		// connect cannot, the block is on this machine (a definitive signature).
+		if avail {
+			if st, detail := osBlockFn(ctx, []string{gw}); st == OSBlockBlocked {
+				obs.GatewayOSBlocked = true
+				emit("osblock", "fail", detail)
+			}
+		}
 		return finish()
 	}
 

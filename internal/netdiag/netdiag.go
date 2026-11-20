@@ -44,6 +44,10 @@ type Observations struct {
 	IdentityOK                             bool // true only when the addressing probe succeeded
 	HasGateway, IsLinkLocal, IPv6Only      bool
 	GatewayReachable                       bool
+	// GatewayOSBlocked is true only when the gateway probe failed AND a
+	// TCC/firewall-exempt baseline reached the gateway that Meridian's own
+	// connect could not — i.e. the OS is blocking Meridian, not a dead router.
+	GatewayOSBlocked                       bool
 	InternetReachable, InternetIntercepted bool
 	PeerSampleConfident                    bool
 	PeersTried, PeersReached               int
@@ -77,6 +81,12 @@ func Classify(o Observations) Verdict {
 		return VerdictDHCPFailed
 	}
 	if !o.GatewayReachable {
+		// A positive OS-block signature against the gateway is hard proof the
+		// block is on this machine, not the router — definitive, so it is not
+		// gated on anything else (the same rule as the peer-level signature).
+		if o.GatewayOSBlocked {
+			return VerdictOSBlockingMeridian
+		}
 		return VerdictGatewayUnreachable
 	}
 	// Past addressing: an errored internet/peer probe never yields a confident
@@ -143,7 +153,7 @@ func Describe(o Observations, v Verdict) Report {
 		r.Causes = []string{"The ISP or WAN link is down.", "The router lost its upstream connection."}
 		r.Fixes = []string{"Restart the modem/router.", "Check the ISP status page or contact the provider."}
 	case VerdictOSBlockingMeridian:
-		r.Statement = "This machine is blocking Meridian from reaching local devices, while the gateway and internet are fine."
+		r.Statement = "This machine is blocking Meridian from the local network — the fix is a setting on this machine, not a network problem."
 		switch o.GOOS {
 		case "darwin":
 			r.Causes = []string{"macOS Local Network privacy has not been granted to Meridian."}

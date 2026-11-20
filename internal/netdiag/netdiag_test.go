@@ -23,6 +23,7 @@ func TestClassify_Table(t *testing.T) {
 		{"1 no gateway", func(o *Observations) { o.HasGateway = false }, VerdictDHCPFailed},
 		{"1 link local", func(o *Observations) { o.IsLinkLocal = true }, VerdictDHCPFailed},
 		{"2 gateway unreachable", func(o *Observations) { o.GatewayReachable = false }, VerdictGatewayUnreachable},
+		{"2 gateway blocked by OS", func(o *Observations) { o.GatewayReachable = false; o.GatewayOSBlocked = true }, VerdictOSBlockingMeridian},
 		{"3 captive", func(o *Observations) { o.InternetReachable = false; o.InternetIntercepted = true }, VerdictCaptivePortal},
 		{"4 internet down", func(o *Observations) { o.InternetReachable = false }, VerdictInternetDown},
 		{"5 os blocking", func(o *Observations) {

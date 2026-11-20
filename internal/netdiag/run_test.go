@@ -47,6 +47,26 @@ func TestRun_MacOSBlockPath(t *testing.T) {
 	}
 }
 
+// When the gateway probe fails because the OS is blocking Meridian (not
+// because the router is down), a positive OS-block signature against the
+// gateway must flip the verdict to OS_BLOCKING_MERIDIAN, not GATEWAY_UNREACHABLE.
+func TestRun_GatewayBlockedByOS(t *testing.T) {
+	fakeEnv(t, map[string]bool{}, nil, OSBlockBlocked, true) // gateway not in reach map => fails
+	r, _ := Run(context.Background(), Options{}, nil)
+	if r.Verdict != VerdictOSBlockingMeridian {
+		t.Fatalf("got %v, want os_blocking_meridian", r.Verdict)
+	}
+}
+
+// A genuinely dead gateway (no positive OS-block signature) stays GATEWAY_UNREACHABLE.
+func TestRun_GatewayDownStaysUnreachable(t *testing.T) {
+	fakeEnv(t, map[string]bool{}, nil, OSBlockCouldNotDetermine, true)
+	r, _ := Run(context.Background(), Options{}, nil)
+	if r.Verdict != VerdictGatewayUnreachable {
+		t.Fatalf("got %v, want gateway_unreachable", r.Verdict)
+	}
+}
+
 func TestRun_GatewayExcludedFromPeers(t *testing.T) {
 	var mu sync.Mutex
 	var probed []string
