@@ -9,5 +9,11 @@
   <true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
   <true/>
+  <!-- Required to reach Location Services under the hardened runtime. The
+       NSLocation* usage strings in Info.plist are necessary but not sufficient:
+       without this entitlement macOS blocks CoreLocation, so the Wi-Fi
+       analyzer can never get the grant that reveals neighbor SSIDs. -->
+  <key>com.apple.security.personal-information.location</key>
+  <true/>
 </dict>
 </plist>
