@@ -19,6 +19,8 @@ func TestClassify(t *testing.T) {
 		{"meshnode.local", "tcp", "meshnode.local:4403"},
 		{"tcp://10.0.0.9", "tcp", "10.0.0.9:4403"},
 		{"  10.0.0.9  ", "tcp", "10.0.0.9:4403"},
+		{"2001:db8::1", "tcp", "[2001:db8::1]:4403"},
+		{"[2001:db8::1]:4403", "tcp", "[2001:db8::1]:4403"},
 	}
 	for _, c := range cases {
 		gotT, gotA := classify(c.in)

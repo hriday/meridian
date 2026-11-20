@@ -62,14 +62,22 @@ func (c *streamConn) writeMsg(m proto.Message) error {
 }
 
 // readMsg reads the next framed packet (resynchronising past any inter-frame
-// noise) and unmarshals it into m. It gives up with errReadTimeout once deadline
-// passes with no complete frame.
+// noise) and unmarshals it into m. A frame whose payload won't parse — the
+// resync having locked onto noise that merely looked like a header — is skipped
+// rather than failed, so one false frame can't discard a dump in progress. It
+// gives up with errReadTimeout once deadline passes with no complete frame.
 func (c *streamConn) readMsg(m proto.Message, deadline time.Time) error {
-	payload, err := c.readFrame(deadline)
-	if err != nil {
-		return err
+	for {
+		payload, err := c.readFrame(deadline)
+		if err != nil {
+			return err
+		}
+		proto.Reset(m)
+		if err := proto.Unmarshal(payload, m); err != nil {
+			continue // not a real frame; resync to the next.
+		}
+		return nil
 	}
-	return proto.Unmarshal(payload, m)
 }
 
 func (c *streamConn) readFrame(deadline time.Time) ([]byte, error) {
@@ -130,6 +138,13 @@ func (c *streamConn) readFull(p []byte, deadline time.Time) error {
 func (c *streamConn) readByte(deadline time.Time) (byte, error) {
 	var b [1]byte
 	for {
+		// Check the deadline before every read, not only on an empty one — a
+		// serial line that streams bytes without ever forming a valid frame (a
+		// GPS, a console, a mis-identified device) would otherwise never let the
+		// resync loop return, hanging past the budget and past ctx.
+		if !time.Now().Before(deadline) {
+			return 0, errReadTimeout
+		}
 		n, err := c.rw.Read(b[:])
 		if n > 0 {
 			return b[0], nil
@@ -140,10 +155,7 @@ func (c *streamConn) readByte(deadline time.Time) (byte, error) {
 			}
 			return 0, err
 		}
-		// n == 0, err == nil: a serial inter-tick with no data.
-		if !time.Now().Before(deadline) {
-			return 0, errReadTimeout
-		}
+		// n == 0, err == nil: a serial inter-tick with no data; loop and re-check.
 	}
 }
 

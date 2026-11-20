@@ -26,9 +26,8 @@ func runMeshtastic(args []string, stdout, stderr io.Writer) int {
 	defer cancel()
 	snap, err := meshtastic.Read(ctx, pos[0])
 	if err != nil {
-		if *asJSON {
-			return writeJSON(stdout, stderr, snap)
-		}
+		// Report the failure on stderr and exit non-zero even in --json mode —
+		// never print a zero-value snapshot to stdout and claim success.
 		fmt.Fprintln(stderr, err)
 		return 1
 	}

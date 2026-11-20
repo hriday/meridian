@@ -80,14 +80,16 @@ func classify(target string) (transport, addr string) {
 			return "serial", t
 		}
 	}
-	if t != "" && !strings.Contains(t, ":") {
-		t += ":4403"
+	// Ensure a host:port, supplying Meshtastic's default 4403 when no port is
+	// given. net.JoinHostPort brackets an IPv6 literal correctly; SplitHostPort
+	// succeeds only when a port is already present.
+	if t != "" {
+		if _, _, err := net.SplitHostPort(t); err != nil {
+			t = net.JoinHostPort(t, "4403")
+		}
 	}
 	return "tcp", t
 }
-
-// serialTimeouter is the subset of serial.Port used to bound reads.
-type serialTimeouter interface{ SetReadTimeout(time.Duration) error }
 
 // deadliner is implemented by net.Conn.
 type deadliner interface{ SetReadDeadline(time.Time) error }
@@ -158,8 +160,11 @@ func Read(ctx context.Context, target string) (Snapshot, error) {
 		}
 		var fr pb.FromRadio
 		if err := conn.readMsg(&fr, deadline); err != nil {
-			if isReadTimeout(err) || errors.Is(err, io.EOF) {
-				break // node went quiet or closed; use what we have.
+			// Quiet, closed, or a mid-stream glitch after we already have useful
+			// frames: stop and assemble what we collected rather than discard it.
+			// Only an error before any frame arrived is reported as a failure.
+			if len(frames) > 0 || isReadTimeout(err) || errors.Is(err, io.EOF) {
+				break
 			}
 			return Snapshot{}, fmt.Errorf("meshtastic: reading from node: %w", err)
 		}
