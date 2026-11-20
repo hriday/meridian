@@ -2,6 +2,47 @@ package wifi
 
 import "testing"
 
+// When an in-process CoreWLAN scan returns real neighbor SSIDs, they replace
+// the redacted system_profiler list and co-channel is recomputed against the
+// connected channel.
+func TestMergeScan_ReplacesNeighborsAndRecomputesCoChannel(t *testing.T) {
+	info := Info{
+		Current:   Network{SSID: "home", Channel: 149},
+		Neighbors: []Network{{SSID: "<redacted>", Channel: 11}, {SSID: "<redacted>", Channel: 149}},
+	}
+	scanned := []Network{
+		{SSID: "neighbor-a", Channel: 11, Band: "2GHz", RSSI: -60},
+		{SSID: "neighbor-b", Channel: 149, Band: "5GHz", RSSI: -42},
+		{SSID: "neighbor-c", Channel: 149, Band: "5GHz", RSSI: -50},
+	}
+	mergeScan(&info, scanned)
+	if len(info.Neighbors) != 3 || info.Neighbors[0].SSID != "neighbor-a" {
+		t.Fatalf("scan SSIDs did not replace redacted list: %+v", info.Neighbors)
+	}
+	if info.CoChannel != 2 {
+		t.Errorf("want 2 co-channel neighbors on ch 149, got %d", info.CoChannel)
+	}
+	if info.Neighbors[0].CoChannel || !info.Neighbors[1].CoChannel || !info.Neighbors[2].CoChannel {
+		t.Errorf("co-channel flags wrong: %+v", info.Neighbors)
+	}
+}
+
+// An empty scan (scan unsupported or unauthorized) keeps the existing
+// neighbors untouched, but co-channel is still recomputed.
+func TestMergeScan_EmptyKeepsExistingNeighbors(t *testing.T) {
+	info := Info{
+		Current:   Network{Channel: 6},
+		Neighbors: []Network{{SSID: "<redacted>", Channel: 6}},
+	}
+	mergeScan(&info, nil)
+	if len(info.Neighbors) != 1 || info.Neighbors[0].SSID != "<redacted>" {
+		t.Fatalf("empty scan must keep existing neighbors: %+v", info.Neighbors)
+	}
+	if info.CoChannel != 1 || !info.Neighbors[0].CoChannel {
+		t.Errorf("co-channel not recomputed on kept neighbors: %+v", info)
+	}
+}
+
 // Trimmed from real `system_profiler SPAirPortDataType` on macOS 26 (Tahoe).
 const sample = `Wi-Fi:
 

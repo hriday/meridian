@@ -19,4 +19,13 @@ void meridian_request_location(void);
 // when not connected or not authorized. The caller frees the result with free().
 char *meridian_current_ssid(void);
 
+// meridian_scan_networks runs an in-process CoreWLAN active scan and returns the
+// neighboring APs (the connected AP excluded) as a JSON array of objects with
+// keys ssid, bssid, channel, band, width, rssi. Because the scan runs in THIS
+// process, the app's Location grant applies and SSIDs are real; without the
+// grant macOS returns the networks with empty ssids (the Go side drops those
+// and falls back to system_profiler). Returns NULL on error. Caller frees with
+// free().
+char *meridian_scan_networks(void);
+
 #endif

@@ -143,6 +143,24 @@ func finalizeSignalOnly(info *Info) {
 	}
 }
 
+// mergeScan overlays an in-process CoreWLAN scan onto info: when the scan
+// returned any networks, its real-SSID neighbors replace the (possibly
+// redacted) system_profiler list; an empty scan leaves them as-is. Either way
+// co-channel is recomputed against the connected channel. Pure (no cgo).
+func mergeScan(info *Info, scanned []Network) {
+	if len(scanned) > 0 {
+		info.Neighbors = scanned
+	}
+	info.CoChannel = 0
+	ch := info.Current.Channel
+	for i := range info.Neighbors {
+		info.Neighbors[i].CoChannel = ch != 0 && info.Neighbors[i].Channel == ch
+		if info.Neighbors[i].CoChannel {
+			info.CoChannel++
+		}
+	}
+}
+
 func snr(n Network) int {
 	if n.RSSI == 0 && n.Noise == 0 {
 		return 0
