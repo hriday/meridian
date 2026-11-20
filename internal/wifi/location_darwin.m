@@ -26,7 +26,10 @@ static CLLocationManager *gManager = nil;
 static MeridianLocDelegate *gDelegate = nil;
 
 // runOnMain runs block synchronously on the main queue (where CLLocationManager
-// needs to live), unless already on the main thread.
+// needs to live), unless already on the main thread. The dispatch_sync is safe
+// only because these entry points are invoked solely from Go-bound methods,
+// which Wails runs on goroutines — never on the main OS thread (which drives the
+// Cocoa loop). Calling them from the main thread could deadlock via dispatch_once.
 static void runOnMain(void (^block)(void)) {
     if ([NSThread isMainThread]) {
         block();
@@ -141,7 +144,9 @@ char *meridian_scan_networks(void) {
         if (json == nil) {
             return NULL;
         }
-        NSString *s = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+        // Autoreleased (this file compiles under MRC): strdup copies the bytes
+        // before the enclosing @autoreleasepool drains and frees s.
+        NSString *s = [[[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding] autorelease];
         if (s == nil) {
             return NULL;
         }
