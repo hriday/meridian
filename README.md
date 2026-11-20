@@ -83,6 +83,16 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
   IP-space inventory to surface untracked hosts, MAC changes (possible rogues)
   and records that no longer answer, then import/update in one step.
+- **Local Network Diagnostic** — "why can't I reach this?" Run it (optionally
+  pointed at a host) and it walks an ordered set of probes — DHCP, gateway,
+  captive portal, internet, then the target — and reads off one plain-language
+  verdict, cause and fix: DHCP failed, gateway unreachable, captive portal,
+  internet down (LAN fine), **the OS is blocking Meridian** (macOS Local Network
+  privacy / Windows firewall), **client isolation** (hotspot/guest Wi-Fi), local
+  access blocked, or host down (network fine, that host isn't). Deterministic —
+  no AI — runs unprivileged on macOS, Linux and Windows (IPv4). Every LAN tool
+  that can't reach its target offers a **Run Local Network Diagnostic** button,
+  pre-seeded with that host. <!-- TODO: screenshot (owner to capture live) -->
 - **Ping sweep**, **PTR sweep**, **Port scan**, **Wake-on-LAN**, **MAC vendor**,
   **Speed test** (iperf3 client), **VoIP bandwidth** (codec call capacity planner).
 
@@ -269,6 +279,7 @@ meridian-cli sshaudit github.com               # SSH algos, host keys, post-quan
 meridian-cli cipherscan github.com            # TLS protocols + ciphers + PQ, graded
 meridian-cli tcptrace cloudflare.com 443       # TCP-SYN traceroute (no sudo on macOS)
 meridian-cli discover                          # mDNS/Bonjour + SSDP/UPnP LAN scan
+meridian-cli netdiag 10.0.0.50                  # why can't I reach it? one verdict + cause + fix (--json)
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
