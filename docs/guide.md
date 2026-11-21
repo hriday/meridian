@@ -276,6 +276,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | NTP | query an NTP server (stratum/offset/verdict) | `ntp` |
 | DNS | any record, any resolver, DNSSEC signals; UDP/TCP or DoT/DoH/DoQ | `dns` |
 | Interfaces | local network interfaces | `interfaces` |
+| Tools overview | every tool in Meridian, grouped as in the sidebar, with a plain-English note on what each does; **Export tools overview (PDF)** to share or print | GUI (`docs` is the CLI equivalent) |
 
 ### Local network
 
@@ -351,6 +352,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
 | Runbook | composite audit — run a profile of tools into one report. Pick a **built-in recipe** (org-recon, audit-domain, web-posture, vpn-check, triage-host, triage-l2) or **Import** your own YAML/TOML/JSON. CLI: md/json/html; in the app, **export to Text / JSON / HTML / PDF** | `runbook` + GUI |
 | Tool reference | generate this whole tool reference (every command + recipe) as Markdown, HTML or PDF — in the app, **Export reference (PDF)** from the command-line page | `docs` + GUI |
+| Tools overview | the GUI counterpart to the command reference: every tool grouped as in the sidebar with a plain-English description, browsable and exportable as a PDF (**Tools overview** tool, under Local / environment) | GUI |
 
 ### Config insight
 

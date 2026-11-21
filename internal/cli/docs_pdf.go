@@ -80,6 +80,106 @@ func RenderDocsPDF() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// RenderGUIReferencePDF lays the GUI Tools overview out as a PDF: the same
+// branded header band as the command reference, then each sidebar group as a
+// section with one row per tool (friendly name + what-it-does). It renders from
+// GUICatalog, the GUI counterpart to Catalog, so it matches the in-app overview.
+func RenderGUIReferencePDF() ([]byte, error) {
+	const (
+		marginX  = 15.0
+		contentW = 180.0
+	)
+	groups := GUICatalog()
+	title, tools := guiMeta(groups)
+	generated := docsGeneratedLine()
+
+	pdf := fpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(marginX, 15, marginX)
+	pdf.SetAutoPageBreak(true, 16)
+	tr := pdf.UnicodeTranslatorFromDescriptor("")
+	pageW, pageH := pdf.GetPageSize()
+
+	pdf.SetFooterFunc(func() {
+		pdf.SetY(-12)
+		pdf.SetFont("Helvetica", "", 7)
+		pdf.SetTextColor(150, 150, 155)
+		pdf.CellFormat(0, 5, tr(generated), "", 0, "L", false, 0, "")
+		pdf.CellFormat(0, 5, fmt.Sprintf("Page %d", pdf.PageNo()), "", 0, "R", false, 0, "")
+	})
+
+	pdf.AddPage()
+
+	// Header band.
+	pdf.SetFillColor(15, 42, 46)
+	pdf.Rect(0, 0, pageW, 34, "F")
+	pdf.SetXY(marginX, 8)
+	pdf.SetFont("Helvetica", "B", 8)
+	pdf.SetTextColor(90, 200, 180)
+	pdf.CellFormat(0, 5, tr("MERIDIAN  ·  TOOLS OVERVIEW"), "", 1, "L", false, 0, "")
+	pdf.SetX(marginX)
+	pdf.SetFont("Helvetica", "B", 19)
+	pdf.SetTextColor(255, 255, 255)
+	pdf.CellFormat(0, 10, tr(title), "", 1, "L", false, 0, "")
+	pdf.SetX(marginX)
+	pdf.SetFont("Helvetica", "", 9)
+	pdf.SetTextColor(200, 218, 214)
+	pdf.CellFormat(0, 5, tr(fmt.Sprintf("%d tools across %d groups        %s", tools, len(groups), generated)), "", 1, "L", false, 0, "")
+
+	pdf.SetY(40)
+	pdf.SetX(marginX)
+	pdf.SetFont("Helvetica", "", 9)
+	pdf.SetTextColor(110, 114, 120)
+	pdf.MultiCell(contentW, 4.6, tr("Everything Meridian does, grouped as in the app's sidebar. Every tool is also a `meridian-cli` command — see the command-line reference for the exact syntax."), "", "L", false)
+	pdf.Ln(2)
+
+	for _, g := range groups {
+		drawDocsGroupHeading(pdf, tr, g.Name, "", marginX, contentW, pageH)
+		for _, t := range g.Tools {
+			drawGUITool(pdf, tr, t.Name, t.Desc, marginX, contentW, pageH)
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := pdf.Output(&buf); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// drawGUITool renders one GUI tool: its friendly name (bold) with the
+// description wrapped beneath, keeping the pair together across a page break.
+func drawGUITool(pdf *fpdf.Fpdf, tr func(string) string, name, desc string, marginX, contentW, pageH float64) {
+	nameTxt := tr(sanitizePDF(name))
+	descTxt := ""
+	if strings.TrimSpace(desc) != "" {
+		descTxt = tr(sanitizePDF(desc))
+	}
+	// Measure the wrapped name+description so the pair never splits across a page
+	// break: count lines in each font/width, then break only if the whole block
+	// won't clear the auto-page-break margin.
+	pdf.SetFont("Helvetica", "B", 9.5)
+	blockH := float64(len(pdf.SplitLines([]byte(nameTxt), contentW))) * 5
+	if descTxt != "" {
+		pdf.SetFont("Helvetica", "", 8.5)
+		blockH += float64(len(pdf.SplitLines([]byte(descTxt), contentW-3))) * 4.2
+	}
+	if pdf.GetY()+blockH > pageH-16 {
+		pdf.AddPage()
+	}
+
+	pdf.SetX(marginX)
+	pdf.SetFont("Helvetica", "B", 9.5)
+	pdf.SetTextColor(20, 50, 55)
+	pdf.MultiCell(contentW, 5, nameTxt, "", "L", false)
+	if descTxt != "" {
+		pdf.SetX(marginX + 3)
+		pdf.SetFont("Helvetica", "", 8.5)
+		pdf.SetTextColor(70, 74, 80)
+		pdf.MultiCell(contentW-3, 4.2, descTxt, "", "L", false)
+	}
+	pdf.Ln(1.8)
+}
+
 // drawDocsGroupHeading draws a section bar for a catalog group, keeping it off
 // the very bottom of a page so it never orphans from its first command.
 func drawDocsGroupHeading(pdf *fpdf.Fpdf, tr func(string) string, name, note string, marginX, contentW, pageH float64) {
