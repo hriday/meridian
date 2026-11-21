@@ -124,6 +124,17 @@ var rbProfiles = []rbProfile{
 		},
 	},
 	{
+		id: "triage-l2", name: "L2 Path / Uplink",
+		desc: "What's between this machine and the router: link speed/duplex (the hub tell), a switch's LLDP/CDP advertisement, ARP neighbours on the LAN, and reachability to the gateway. Target is your gateway IP. LLDP/ARP capture needs sudo/BPF.",
+		steps: []rbStep{
+			{"linkpath", []string{}},
+			{"lldp", []string{}},
+			{"arpscan", []string{}},
+			{"ping", []string{"{t}", "--count", "3"}},
+			{"trace", []string{"{t}"}},
+		},
+	},
+	{
 		id: "triage-host", name: "Triage Host",
 		desc: "Reachability, latency, path, TLS, common open ports and open-resolver exposure for a host.",
 		steps: []rbStep{

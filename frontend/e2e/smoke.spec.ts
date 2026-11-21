@@ -48,7 +48,7 @@ test("every tool mounts and renders without a console error", async ({ page }) =
 // — catching "x is not iterable" / undefined-field crashes in result markup.
 const RUN_TOOLS = [
   "lookup", "subnet", "dnsaudit", "axfr", "openresolver",
-  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals",
+  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals", "linkpath",
 ];
 
 test("key tools run their action and render results without error", async ({ page }) => {
@@ -518,5 +518,46 @@ test("connected peripherals renders the device list and security flags from a re
   await expect(pane.locator(".co.unk").first()).toBeVisible();                 // unknown-vendor badge
   await expect(pane.locator(".flag.info")).toHaveCount(1);                     // the receiver's info flag
   await expect(pane.locator(".prow").last()).toContainText("SanDisk");         // clean device ranks last
+  expect(errors, errors.join(" | ")).toEqual([]);
+});
+
+test("link inspector renders the verdict and findings from a real report", async ({ page }) => {
+  await page.addInitScript(() => {
+    const REAL = {
+      iface: "en5", gateway: "192.168.1.1", wireless: false, linkKnown: true,
+      speedMbps: 100, duplex: "half", media: "100baseTX", lldpStatus: "needs-privilege",
+      neighbors: [],
+      verdict: "A hub is almost certainly in the path (the link is half-duplex).",
+      findings: [
+        { level: "found", text: "Half-duplex link (100 Mb/s, half duplex). A hub shares the medium and forces half-duplex." },
+        { level: "limit", text: "Couldn't listen for switch advertisements — raw capture needs elevated privilege." },
+        { level: "limit", text: "An unmanaged switch is invisible to every check here." },
+      ],
+      takenAt: "2026-11-21T00:00:00Z",
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("LinkInspect") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "linkpath"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="linkpath"]').click();
+  const pane = page.locator("main.main");
+  await pane.getByRole("button", { name: "Inspect link" }).click();
+
+  await expect(pane.locator(".verdict.warn")).toContainText("hub is almost certainly"); // hub verdict → amber
+  await expect(pane.locator(".findrow")).toHaveCount(3);
+  await expect(pane.locator(".findrow").first()).toContainText("Half-duplex");
+  await expect(pane.locator(".fmark.found").first()).toBeVisible();
+  await expect(pane.locator(".facts")).toContainText("192.168.1.1");               // gateway fact
   expect(errors, errors.join(" | ")).toEqual([]);
 });

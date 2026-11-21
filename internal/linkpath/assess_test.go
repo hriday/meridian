@@ -1,0 +1,91 @@
+package linkpath
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/hriday/meridian/internal/lldp"
+)
+
+func hasFinding(fs []Finding, level, sub string) bool {
+	for _, f := range fs {
+		if f.Level == level && strings.Contains(f.Text, sub) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestAssess_switchFromLLDP(t *testing.T) {
+	sw := lldp.Neighbor{Protocol: "LLDP", SystemName: "core-sw1", PortID: "Gi0/12", Capabilities: []string{"Bridge"}, MgmtIP: "192.168.1.2"}
+	v, fs := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, []lldp.Neighbor{sw}, "ok", "192.168.1.1")
+	if !strings.Contains(v, "switch is directly attached") {
+		t.Errorf("verdict = %q, want a switch-detected verdict", v)
+	}
+	if !hasFinding(fs, "found", "core-sw1") || !hasFinding(fs, "found", "Gi0/12") {
+		t.Errorf("expected a finding naming the switch and port: %+v", fs)
+	}
+	if !hasFinding(fs, "good", "Full-duplex") {
+		t.Errorf("expected the full-duplex good finding")
+	}
+}
+
+func TestAssess_hubFromHalfDuplex(t *testing.T) {
+	v, fs := assess(linkState{known: true, duplex: "half", speedMbps: 100}, nil, "needs-privilege", "192.168.1.1")
+	if !strings.Contains(v, "hub is almost certainly") {
+		t.Errorf("verdict = %q, want a hub verdict", v)
+	}
+	if !hasFinding(fs, "found", "Half-duplex") {
+		t.Errorf("expected the half-duplex finding: %+v", fs)
+	}
+	if !hasFinding(fs, "limit", "elevated privilege") {
+		t.Errorf("expected the needs-privilege limit finding")
+	}
+}
+
+func TestAssess_fullDuplexCleanButHedged(t *testing.T) {
+	v, fs := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, nil, "ok", "192.168.1.1")
+	if !strings.Contains(v, "No hub or announced switch") {
+		t.Errorf("verdict = %q, want the clean-but-hedged verdict", v)
+	}
+	// The unmanaged-switch blind spot must always be stated.
+	if !hasFinding(fs, "limit", "unmanaged switch is invisible") {
+		t.Errorf("the unmanaged-switch caveat must always be present: %+v", fs)
+	}
+}
+
+func TestAssess_fullDuplexNeedsPrivilegePointsToRecipe(t *testing.T) {
+	v, _ := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, nil, "needs-privilege", "192.168.1.1")
+	if !strings.Contains(v, "No hub detected") || !strings.Contains(v, "recipe") {
+		t.Errorf("verdict = %q, want a 'no hub, run recipe' verdict", v)
+	}
+}
+
+func TestAssess_routerItselfIsNotASwitch(t *testing.T) {
+	gw := lldp.Neighbor{Protocol: "LLDP", SystemName: "gw", Capabilities: []string{"Router"}, MgmtIP: "192.168.1.1"}
+	v, fs := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, []lldp.Neighbor{gw}, "ok", "192.168.1.1")
+	if strings.Contains(v, "switch is directly attached") {
+		t.Errorf("the gateway router must not be reported as an intermediate switch: %q", v)
+	}
+	if !hasFinding(fs, "info", "router itself") {
+		t.Errorf("expected a finding identifying the device as the router: %+v", fs)
+	}
+}
+
+func TestAssess_repeaterIsAHub(t *testing.T) {
+	rep := lldp.Neighbor{Protocol: "LLDP", SystemName: "oldhub", Capabilities: []string{"Repeater"}}
+	v, _ := assess(linkState{known: true, duplex: "full", speedMbps: 100}, []lldp.Neighbor{rep}, "ok", "192.168.1.1")
+	if !strings.Contains(v, "hub is almost certainly") {
+		t.Errorf("an LLDP Repeater should drive a hub verdict, got %q", v)
+	}
+}
+
+func TestAssess_wireless(t *testing.T) {
+	v, fs := assess(linkState{wireless: true}, nil, "skipped-wireless", "192.168.1.1")
+	if !strings.Contains(v, "Wi-Fi") {
+		t.Errorf("verdict = %q, want the Wi-Fi verdict", v)
+	}
+	if !hasFinding(fs, "limit", "access point") {
+		t.Errorf("expected the can't-see-past-AP caveat: %+v", fs)
+	}
+}

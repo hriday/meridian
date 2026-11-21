@@ -92,6 +92,7 @@ func Catalog() []CommandGroup {
 			{"mesh", "<serial-device|host> [--json]", "Meshtastic node snapshot — node db, per-neighbor SNR/hops, channel airtime, positions (USB serial or TCP :4403)"},
 			{"ble", "[--seconds 6] [--json]", "Bluetooth LE nearby survey — advertising devices with signal (RSSI), name and company (macOS needs Bluetooth permission)"},
 			{"peripherals", "[--json]", "connected peripherals — USB devices attached now (mice, keyboards, 2.4 GHz receivers, storage, serial), vendor-resolved, with security call-outs (alias: usb)"},
+			{"linkpath", "[--wait 35s] [--json]", "link inspector — is a hub or switch between you and the router? Reads link speed/duplex (hub tell) + listens for a switch via LLDP/CDP (alias: uplink; LLDP needs sudo/BPF)"},
 			{"speedtest", "<iperf3-host> [--dir download|upload|bidir] [--json]", "throughput test"},
 		}},
 		{Name: "SNMP & monitoring", Commands: []CommandDoc{
