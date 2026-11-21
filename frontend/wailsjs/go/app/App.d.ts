@@ -4,6 +4,7 @@ import {pwaudit} from '../models';
 import {meshtastic} from '../models';
 import {ble} from '../models';
 import {peripherals} from '../models';
+import {linkpath} from '../models';
 import {arpscan} from '../models';
 import {axfr} from '../models';
 import {ciscopw} from '../models';
@@ -329,6 +330,8 @@ export function MeshtasticSnapshot(arg1:string):Promise<meshtastic.Snapshot>;
 export function BLESurvey(arg1:number):Promise<ble.Survey>;
 
 export function PeripheralsSurvey():Promise<peripherals.Survey>;
+
+export function LinkInspect(arg1:number):Promise<linkpath.Report>;
 
 export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
 

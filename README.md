@@ -97,6 +97,16 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   *plugged in* — it can't see wireless devices in the air — and the flags are prompts
   to verify, never verdicts: **no flags is not a clean bill of health**. Cross-platform
   (system_profiler / sysfs / PnP); point-in-time, no history.
+- **Link inspector** — is there a **hub or switch between this machine and the
+  router**? A host usually can't tell (an unmanaged switch has no IP and announces
+  nothing), so this gathers the signals that *do* betray one: the link's **duplex**
+  (a hub forces half-duplex) read host-locally with no privilege, plus a managed
+  switch's **LLDP/CDP** advertisement (needs sudo/BPF) naming the switch and your
+  port. It returns an **honest, hedged verdict** — *"a hub is almost certainly in
+  the path"*, *"a managed switch core-sw1 is directly attached"*, or *"nothing
+  detected, but an unmanaged switch could still be invisible"* — and always states
+  its blind spots. CLI `linkpath` (alias `uplink`); the **`triage-l2` runbook
+  recipe** adds ARP neighbours and gateway reachability.
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
@@ -302,6 +312,8 @@ cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / 
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
 meridian-cli mesh /dev/cu.usbserial-10         # Meshtastic node snapshot — node db, SNR/hops, airtime (or: mesh 192.168.1.50)
 meridian-cli peripherals                       # USB devices attached now — receivers, keyboards, storage + security call-outs (alias: usb)
+meridian-cli linkpath                          # is a hub/switch between you and the router? link duplex + LLDP/CDP (alias: uplink)
+meridian-cli runbook triage-l2 192.168.1.1     # full L2 path report: link + LLDP + ARP neighbours + gateway reachability
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 

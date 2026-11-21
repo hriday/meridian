@@ -132,6 +132,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runBLE(args[1:], stdout, stderr)
 	case "peripherals", "usb":
 		return runPeripherals(args[1:], stdout, stderr)
+	case "linkpath", "uplink":
+		return runLinkPath(args[1:], stdout, stderr)
 	case "interfaces":
 		return runInterfaces(args[1:], stdout, stderr)
 	case "myip":

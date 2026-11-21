@@ -506,6 +506,10 @@ export function PeripheralsSurvey() {
   return window['go']['app']['App']['PeripheralsSurvey']();
 }
 
+export function LinkInspect(arg1) {
+  return window['go']['app']['App']['LinkInspect'](arg1);
+}
+
 export function PwHashCheck(arg1, arg2) {
   return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
 }
