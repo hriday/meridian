@@ -11,15 +11,16 @@ import (
 // Save dialog, returning the chosen path (or "" if cancelled). The GUI uses this
 // instead of browser print-to-PDF, which is a no-op in the macOS webview.
 func (a *App) SaveDocsPDF() (string, error) {
-	data, err := cli.RenderDocsPDF()
-	if err != nil {
-		return "", err
-	}
+	// Ask for the destination first, so cancelling costs nothing to render.
 	path, err := wruntime.SaveFileDialog(a.lookupCtx(), wruntime.SaveDialogOptions{
 		DefaultFilename: "meridian-tool-reference.pdf",
 		Title:           "Save the tool reference as PDF",
 	})
 	if err != nil || path == "" {
+		return "", err
+	}
+	data, err := cli.RenderDocsPDF()
+	if err != nil {
 		return "", err
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {

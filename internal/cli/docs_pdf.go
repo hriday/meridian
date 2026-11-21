@@ -18,7 +18,8 @@ func RenderDocsPDF() ([]byte, error) {
 		marginX  = 15.0
 		contentW = 180.0
 	)
-	title, tools, generated := docsMeta()
+	groups := Catalog()
+	title, tools, generated := docsMeta(groups)
 
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(marginX, 15, marginX)
@@ -50,7 +51,7 @@ func RenderDocsPDF() ([]byte, error) {
 	pdf.SetX(marginX)
 	pdf.SetFont("Helvetica", "", 9)
 	pdf.SetTextColor(200, 218, 214)
-	pdf.CellFormat(0, 5, tr(fmt.Sprintf("%d tools across %d groups        %s", tools, len(Catalog()), generated)), "", 1, "L", false, 0, "")
+	pdf.CellFormat(0, 5, tr(fmt.Sprintf("%d tools across %d groups        %s", tools, len(groups), generated)), "", 1, "L", false, 0, "")
 
 	pdf.SetY(40)
 	pdf.SetX(marginX)
@@ -59,7 +60,7 @@ func RenderDocsPDF() ([]byte, error) {
 	pdf.MultiCell(contentW, 4.6, tr("Every tool is in the desktop app and as `meridian-cli <command>`. Most commands accept --json for machine-readable output."), "", "L", false)
 	pdf.Ln(2)
 
-	for _, g := range Catalog() {
+	for _, g := range groups {
 		drawDocsGroupHeading(pdf, tr, g.Name, g.Note, marginX, contentW, pageH)
 		for _, c := range g.Commands {
 			drawDocsCommand(pdf, tr, c.Name, c.Args, c.Desc, marginX, contentW, pageH)
@@ -112,11 +113,14 @@ func drawDocsCommand(pdf *fpdf.Fpdf, tr func(string) string, name, usage, desc s
 	pdf.SetX(marginX)
 	pdf.SetFont("Courier", "B", 9)
 	pdf.SetTextColor(20, 50, 55)
+	maxNameW := contentW * 0.45
 	nameW := pdf.GetStringWidth(name) + 3
-	if nameW > contentW*0.45 {
-		nameW = contentW * 0.45
+	display := name
+	if nameW > maxNameW { // a very long name is truncated so it can't overrun the usage column
+		nameW = maxNameW
+		display = truncateToWidth(pdf, name, maxNameW-2)
 	}
-	pdf.CellFormat(nameW, 5, tr(name), "", 0, "L", false, 0, "")
+	pdf.CellFormat(nameW, 5, tr(display), "", 0, "L", false, 0, "")
 	pdf.SetFont("Courier", "", 7.5)
 	pdf.SetTextColor(130, 134, 140)
 	pdf.MultiCell(contentW-nameW, 5, tr(sanitizePDF(wrapLong(usage, 70))), "", "L", false)
@@ -127,4 +131,17 @@ func drawDocsCommand(pdf *fpdf.Fpdf, tr func(string) string, name, usage, desc s
 		pdf.MultiCell(contentW-3, 4.2, tr(sanitizePDF(desc)), "", "L", false)
 	}
 	pdf.Ln(1.6)
+}
+
+// truncateToWidth trims s (in the current font) until it plus an ASCII ellipsis
+// fits within maxW mm, so a long name can't overrun its cell.
+func truncateToWidth(pdf *fpdf.Fpdf, s string, maxW float64) string {
+	if pdf.GetStringWidth(s) <= maxW {
+		return s
+	}
+	r := []rune(s)
+	for len(r) > 1 && pdf.GetStringWidth(string(r)+"...") > maxW {
+		r = r[:len(r)-1]
+	}
+	return string(r) + "..."
 }
