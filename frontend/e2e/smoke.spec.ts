@@ -425,8 +425,13 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   await expect(pane.locator(".noderow").first()).toContainText("Hilltop");
   await expect(pane.locator(".noderow").first().locator("a")).toHaveText("37.5000, -122.3000"); // position link
 
-  // The node map renders a Leaflet map with a marker per positioned node:
-  // "my node" (Base) + Hilltop = 2, with Base styled as the distinct "me" marker.
+  // The map is opt-in: Leaflet does not run until "Show map" is clicked (it froze
+  // the macOS webview when it auto-initialised). Before clicking, there is no map.
+  await expect(pane.locator(".mapbox")).toHaveCount(0);
+  await pane.getByRole("button", { name: "Show map" }).click();
+
+  // After opting in, Leaflet renders a marker per positioned node: "my node"
+  // (Base) + Hilltop = 2, with Base as the distinct "me" marker.
   await expect(pane.locator(".mapbox.leaflet-container")).toBeVisible(); // Leaflet adds the class to the div itself
   await expect(pane.locator(".mk")).toHaveCount(2);
   await expect(pane.locator(".mk.me")).toHaveCount(1);
