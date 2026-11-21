@@ -1,6 +1,9 @@
 <script lang="ts">
   import { MeshtasticSnapshot } from "../../../wailsjs/go/app/App.js";
   import ToolHelp from "../ToolHelp.svelte";
+  import { onDestroy, afterUpdate } from "svelte";
+  import L from "leaflet";
+  import "leaflet/dist/leaflet.css";
 
   let target = "";
   let snap: any = null;
@@ -53,6 +56,78 @@
     if (n.battery > 100) return "powered";
     return n.battery + "%";
   }
+
+  // --- Node map (Leaflet + OpenStreetMap tiles) ---------------------------
+  // Leaflet itself is bundled into the app; only the map tiles are fetched from
+  // OpenStreetMap, and only once a snapshot with positioned nodes is shown.
+  let mapEl: HTMLDivElement;
+  let map: any = null;
+  let layer: any = null;
+
+  function positioned(s: any): any[] {
+    // Strict checks: a real position has hasPosition === true AND finite numeric
+    // coordinates. This also keeps a marker off the map for any malformed node.
+    const ok = (n: any) => n?.hasPosition === true && Number.isFinite(n?.lat) && Number.isFinite(n?.lon);
+    const out: any[] = [];
+    if (ok(s?.me)) out.push({ ...s.me, _me: true });
+    for (const n of s?.nodes || []) if (ok(n)) out.push(n);
+    return out;
+  }
+  function esc(s: string): string {
+    return String(s).replace(/[&<>"]/g, (c) => (({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" } as any)[c]));
+  }
+
+  $: pts = snap ? positioned(snap) : [];
+
+  // Sync the map after the DOM updates, so the <div bind:this={mapEl}> exists
+  // when we hand it to Leaflet. Keyed so it only re-syncs when the positioned
+  // set actually changes (not on every unrelated render, e.g. the loading flag).
+  let mapKey = "";
+  afterUpdate(() => {
+    // Key on every field a marker renders (position, signal, name, hops), not
+    // just position, so the map can never show a marker that disagrees with the
+    // node list. In practice run() clears snap between scans, so the map is torn
+    // down and rebuilt each scan anyway; this keeps the keyed sync correct on its
+    // own, independent of that reset.
+    const key = pts.map((p) => JSON.stringify([p._me ? 1 : 0, p.num, p.lat, p.lon, p.snr, p.longName, p.shortName, p.id, p.hopsAway, p.viaMqtt])).join("|");
+    if (key !== mapKey) {
+      mapKey = key;
+      syncMap(mapEl, pts);
+    }
+  });
+
+  function syncMap(el: HTMLDivElement | undefined, points: any[]) {
+    if (!el || !points.length) {
+      if (map) { map.remove(); map = null; layer = null; }
+      return;
+    }
+    if (!map) {
+      map = L.map(el, { zoomControl: true, attributionControl: true });
+      // OSM's current tile endpoint (the a/b/c subdomains are deprecated).
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors",
+      }).addTo(map);
+    }
+    if (layer) layer.remove();
+    layer = L.layerGroup().addTo(map);
+    const ll: [number, number][] = [];
+    for (const p of points) {
+      const cls = p._me ? "me" : snrClass(p.snr);
+      const m = L.marker([p.lat, p.lon], {
+        icon: L.divIcon({ className: "mkwrap", html: `<span class="mk ${cls}"></span>`, iconSize: [16, 16], iconAnchor: [8, 8] }),
+      }).addTo(layer);
+      const detail = p._me ? "this node" : `SNR ${Number(p.snr).toFixed(1)} dB &middot; ${esc(hops(p))}`;
+      m.bindPopup(`<b>${esc(nodeName(p))}</b><br>${detail}`);
+      ll.push([p.lat, p.lon]);
+    }
+    if (ll.length === 1) map.setView(ll[0], 14);
+    else map.fitBounds(ll, { padding: [28, 28] });
+    // The container may have been sized after creation; let Leaflet re-measure.
+    setTimeout(() => map && map.invalidateSize(), 0);
+  }
+
+  onDestroy(() => { if (map) { map.remove(); map = null; } });
 </script>
 
 <div class="tool">
@@ -68,7 +143,9 @@
     its TCP API (<code>192.168.1.50</code>, default port <code>4403</code>). Each row is one node: the coloured dot and
     <strong>SNR</strong> are the last-heard signal (green is strong, amber usable, red marginal), <strong>hops</strong>
     is how many relays away it sits (<code>direct</code> is a one-hop RF neighbour), and <code>via MQTT</code> means it
-    was seen through an internet gateway rather than over the air.
+    was seen through an internet gateway rather than over the air. Nodes that report a position are
+    plotted on the <strong>map</strong> (your node as a square), which loads OpenStreetMap tiles — the
+    only time this tool reaches the internet.
   </ToolHelp>
 
   <div class="searchrow">
@@ -93,6 +170,14 @@
         <div class="metric"><div class="mv mono">{snap.nodeCount}</div><div class="ml">nodes seen</div></div>
       </div>
     </div>
+
+    {#if pts.length}
+      <div class="mapwrap">
+        <div class="maphead">Node map · {pts.length} positioned {pts.length === 1 ? "node" : "nodes"}</div>
+        <div class="mapbox" bind:this={mapEl}></div>
+        <div class="maphint">Map tiles load from OpenStreetMap when this is shown — the only outbound request this tool makes.</div>
+      </div>
+    {/if}
 
     {#if snap.nodes && snap.nodes.length}
       <div class="card">
@@ -159,6 +244,18 @@
   .nmeta { font-size: 0.78rem; color: var(--text-dim); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 6px; line-height: 1.5; }
   .nmeta a { color: var(--accent); text-decoration: none; }
   .nmeta a:hover { text-decoration: underline; }
+
+  .mapwrap { max-width: 820px; margin: 0 0 14px; }
+  .maphead { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .mapbox { height: 320px; border: 1px solid var(--border); border-radius: 11px; overflow: hidden; z-index: 0; background: var(--well); }
+  .maphint { font-size: 0.7rem; color: var(--text-faint, var(--text-dim)); margin-top: 5px; }
+  /* Leaflet injects marker HTML outside Svelte's style scope, so these are global. */
+  :global(.mk) { display: block; width: 13px; height: 13px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.35); box-sizing: border-box; }
+  :global(.mk.good) { background: #3fb950; }
+  :global(.mk.warn) { background: #d6a531; }
+  :global(.mk.bad) { background: #f0616a; }
+  :global(.mk.me) { background: var(--accent, #3b82f6); border-radius: 3px; }
+  :global(.leaflet-container) { font: inherit; }
 
   .empty { max-width: 820px; padding: 14px; border: 1px dashed var(--border); border-radius: 11px; font-size: 0.82rem; color: var(--text-dim); }
   .foot { max-width: 820px; font-size: 0.74rem; color: var(--text-faint, var(--text-dim)); margin: 12px 0 0; }

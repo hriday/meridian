@@ -81,8 +81,9 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
 - **Meshtastic mesh** — connect to a Meshtastic LoRa node over **USB serial** or
   **TCP** (`:4403`) and read its **node database**: every node it currently sees,
   with per-neighbor **SNR**, hop distance (`direct` = one-hop RF neighbor), channel
-  airtime, battery and position. Read-only — it only asks the node to dump its
-  config — and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
+  airtime, battery and position — nodes that report a location are plotted on a
+  **map** (OpenStreetMap). Read-only — it only asks the node to dump its config —
+  and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
 - **Bluetooth LE survey** — scan for the Bluetooth Low Energy devices advertising
   nearby (phones, watches, earbuds, beacons, sensors) using this machine's own
   radio, each with **signal** (RSSI), name and advertised company. Listen-only —
