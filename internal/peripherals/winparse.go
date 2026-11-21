@@ -61,7 +61,67 @@ func parsePnP(b []byte) ([]rawDevice, error) {
 			classes:    pnpClasses(e.PNPClass, e.Name),
 		})
 	}
-	return out, nil
+	return dedupByVIDPID(out), nil
+}
+
+// dedupByVIDPID collapses the several Win32_PnPEntity rows that one physical
+// device produces — a composite device's parent plus each of its interfaces all
+// carry the same VID/PID — into a single device whose classes are the union of
+// the interfaces'. Linux (one sysfs dir per device) and macOS (one tree node
+// per device) don't duplicate, so only Windows needs this. Two physically
+// identical devices (same VID/PID) collapse into one row; that's an accepted
+// trade for an inventory keyed on hardware identity, and noted in the UI copy.
+// Entries with no VID/PID are kept as-is.
+func dedupByVIDPID(in []rawDevice) []rawDevice {
+	byKey := map[uint32]*rawDevice{}
+	var order []uint32
+	var out []rawDevice
+	for _, d := range in {
+		if !d.hasIDs {
+			out = append(out, d)
+			continue
+		}
+		k := id32(d.vendorID, d.productID)
+		ex := byKey[k]
+		if ex == nil {
+			cp := d
+			byKey[k] = &cp
+			order = append(order, k)
+			continue
+		}
+		have := map[string]bool{}
+		for _, c := range ex.classes {
+			have[c] = true
+		}
+		for _, c := range d.classes {
+			if !have[c] {
+				ex.classes = append(ex.classes, c)
+				have[c] = true
+			}
+		}
+		if cleanManufacturer(ex.vendorName) == "" {
+			ex.vendorName = d.vendorName
+		}
+		if isGenericWinName(ex.name) && !isGenericWinName(d.name) {
+			ex.name = d.name
+		}
+	}
+	for _, k := range order {
+		out = append(out, *byKey[k])
+	}
+	return out
+}
+
+// isGenericWinName spots Windows' placeholder device names, so dedup prefers a
+// more descriptive sibling ("USB Receiver" over "USB Composite Device").
+func isGenericWinName(s string) bool {
+	low := strings.ToLower(s)
+	for _, g := range []string{"composite device", "hid-compliant", "usb input device", "hid keyboard device", "hid-compliant mouse"} {
+		if strings.Contains(low, g) {
+			return true
+		}
+	}
+	return false
 }
 
 // pnpClasses maps a Windows PNPClass (and name, as a fallback) to our classes.
@@ -73,7 +133,7 @@ func pnpClasses(class, name string) []string {
 		return []string{"mouse", "hid"}
 	case "hidclass":
 		return []string{"hid"}
-	case "diskdrive", "usbstor", "wpd":
+	case "diskdrive", "usbstor":
 		return []string{"mass-storage"}
 	case "camera", "image":
 		return []string{"video"}

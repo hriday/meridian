@@ -38,6 +38,15 @@ func walkUSB(node any, out *[]rawDevice) {
 			name, _ := v["_name"].(string)
 			mfr, _ := v["manufacturer"].(string)
 			serial, _ := v["serial_num"].(string)
+			var classes []string
+			// system_profiler hangs a "Media" array (and a "bsd_name") off USB
+			// mass-storage devices. It's the one interface class the USB feed
+			// exposes; HID classes come separately from ioreg. Detecting it here
+			// is what lets the Storage kind and the keyboard+storage (BadUSB)
+			// flag fire on macOS.
+			if isMacStorage(v) {
+				classes = append(classes, "mass-storage")
+			}
 			*out = append(*out, rawDevice{
 				name:       name,
 				vendorID:   vid,
@@ -45,6 +54,7 @@ func walkUSB(node any, out *[]rawDevice) {
 				hasIDs:     vok && pok,
 				vendorName: mfr,
 				serial:     serial,
+				classes:    classes,
 			})
 		}
 		walkUSB(v["_items"], out)
@@ -75,6 +85,18 @@ func parseMacID(s string) (uint16, bool) {
 
 func isHex(r rune) bool {
 	return (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+}
+
+// isMacStorage reports whether a system_profiler USB node is a mass-storage
+// device — it carries a "Media" array or a "bsd_name" (the disk device node).
+func isMacStorage(v map[string]any) bool {
+	if _, ok := v["Media"]; ok {
+		return true
+	}
+	if b, ok := v["bsd_name"].(string); ok && b != "" {
+		return true
+	}
+	return false
 }
 
 var ioregNode = regexp.MustCompile(`(?m)\+-o `)

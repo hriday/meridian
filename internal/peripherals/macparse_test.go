@@ -24,6 +24,13 @@ const sampleSystemProfiler = `{
               "manufacturer": "Apple Inc."
             }
           ]
+        },
+        {
+          "_name": "Ultra Fit",
+          "product_id": "0x5583",
+          "vendor_id": "0x0781  (SanDisk Corp.)",
+          "manufacturer": "SanDisk",
+          "Media": [ { "bsd_name": "disk4", "size": "64 GB" } ]
         }
       ]
     }
@@ -35,9 +42,9 @@ func TestParseSystemProfiler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Bus and the id-less "Keyboard Hub" are skipped; two real devices remain.
-	if len(devs) != 2 {
-		t.Fatalf("got %d devices, want 2: %+v", len(devs), devs)
+	// Bus and the id-less "Keyboard Hub" are skipped; three real devices remain.
+	if len(devs) != 3 {
+		t.Fatalf("got %d devices, want 3: %+v", len(devs), devs)
 	}
 	rcv := devs[0]
 	if rcv.vendorID != 0x046d || rcv.productID != 0xc52b || !rcv.hasIDs {
@@ -46,9 +53,16 @@ func TestParseSystemProfiler(t *testing.T) {
 	if rcv.vendorName != "Logitech" || rcv.serial != "ABC123" {
 		t.Errorf("receiver fields wrong: %+v", rcv)
 	}
+	if len(rcv.classes) != 0 {
+		t.Errorf("receiver should have no system_profiler class, got %v", rcv.classes)
+	}
 	apple := devs[1]
 	if apple.vendorID != 0x05ac || !apple.hasIDs {
 		t.Errorf("apple_vendor_id should map to 0x05ac: %+v", apple)
+	}
+	flash := devs[2]
+	if !hasString(flash.classes, "mass-storage") {
+		t.Errorf("a node with a Media array should be mass-storage, got %v", flash.classes)
 	}
 }
 

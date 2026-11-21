@@ -29,8 +29,12 @@ func isReceiver(r rawDevice) bool {
 	if r.hasIDs && knownReceiverPIDs[id32(r.vendorID, r.productID)] {
 		return true
 	}
+	// Match specific dongle phrases, not a bare "receiver" — that would snag IR
+	// remotes ("Infrared Receiver"), audio receivers and the like, and hang a
+	// security flag on them. Known Logitech/Microsoft dongles are caught by PID
+	// above; this is the fallback for unlisted ones, which name themselves plainly.
 	n := strings.ToLower(r.name)
-	for _, kw := range []string{"unifying", "receiver", "bolt receiver", "nano transceiver", "2.4g", "2.4 ghz", "wireless dongle"} {
+	for _, kw := range []string{"unifying", "bolt receiver", "wireless receiver", "usb receiver", "nano transceiver", "nano receiver", "wireless dongle"} {
 		if strings.Contains(n, kw) {
 			return true
 		}
@@ -55,10 +59,10 @@ func kindLabel(r rawDevice, receiver bool) string {
 		return "Camera / video"
 	case hasAnyClass(r, "audio"):
 		return "Audio"
+	case hasAnyClass(r, "serial") || (r.hasIDs && serialVIDs[r.vendorID]):
+		return "USB-serial adapter"
 	case hasAnyClass(r, "hub"):
 		return "USB hub"
-	case r.hasIDs && serialVIDs[r.vendorID]:
-		return "USB-serial adapter"
 	case hasAnyClass(r, "hid"):
 		return "Input device (HID)"
 	default:

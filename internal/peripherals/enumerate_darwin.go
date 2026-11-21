@@ -30,13 +30,27 @@ func enumerate(ctx context.Context) ([]rawDevice, string, error) {
 		classes := parseIOHIDClasses(ir)
 		for i := range devs {
 			if devs[i].hasIDs {
-				if cs := classes[id32(devs[i].vendorID, devs[i].productID)]; len(cs) > 0 {
-					devs[i].classes = cs
-				}
+				// Union, don't overwrite: a device may already carry a
+				// system_profiler class (mass-storage), and ioreg adds its HID
+				// classes — the keyboard+storage flag needs both at once.
+				devs[i].classes = unionClasses(devs[i].classes, classes[id32(devs[i].vendorID, devs[i].productID)])
 			}
 		}
 	} else {
-		note = "Couldn't read HID details (ioreg) — keyboard/mouse flags may be incomplete."
+		note = "Couldn't read HID details (ioreg): this scan can't identify keyboards or other input devices, so input-related flags are missing. Treat the results as incomplete."
 	}
 	return devs, note, nil
+}
+
+// unionClasses merges two class lists, dropping duplicates and preserving order.
+func unionClasses(a, b []string) []string {
+	have := map[string]bool{}
+	out := make([]string, 0, len(a)+len(b))
+	for _, c := range append(append([]string{}, a...), b...) {
+		if !have[c] {
+			have[c] = true
+			out = append(out, c)
+		}
+	}
+	return out
 }

@@ -71,6 +71,7 @@ func TestClassify_kinds(t *testing.T) {
 		kind string
 	}{
 		{rawDevice{vendorID: 0x10c4, productID: 0xea60, hasIDs: true, name: "CP2102 UART"}, "USB-serial adapter"},
+		{rawDevice{vendorID: 0x2e8a, productID: 0x0005, hasIDs: true, classes: []string{"serial"}, name: "Pico"}, "USB-serial adapter"}, // serial by class, unlisted VID
 		{rawDevice{hasIDs: true, classes: []string{"mouse", "hid"}}, "Mouse"},
 		{rawDevice{hasIDs: true, classes: []string{"video"}, name: "FaceTime HD"}, "Camera / video"},
 		{rawDevice{hasIDs: true, classes: []string{"hub"}, name: "USB2.0 Hub"}, "USB hub"},
@@ -87,10 +88,19 @@ func TestReceiver_byNameAndPID(t *testing.T) {
 	if !isReceiver(rawDevice{name: "Logitech Unifying Receiver"}) {
 		t.Error("should detect receiver by name")
 	}
+	if !isReceiver(rawDevice{name: "USB Receiver"}) {
+		t.Error("Logitech's generic 'USB Receiver' name should be detected")
+	}
 	if !isReceiver(rawDevice{vendorID: 0x046d, productID: 0xc548, hasIDs: true, name: "USB Input Device"}) {
 		t.Error("should detect Bolt receiver by PID even with a generic name")
 	}
 	if isReceiver(rawDevice{name: "SanDisk Ultra"}) {
 		t.Error("a flash drive is not a receiver")
+	}
+	// False-positive guard: a bare "receiver" in the name must NOT flag.
+	for _, n := range []string{"eHome Infrared Receiver", "USB Audio Receiver", "IR Receiver"} {
+		if isReceiver(rawDevice{name: n}) {
+			t.Errorf("%q should not be classified as a wireless receiver", n)
+		}
 	}
 }
