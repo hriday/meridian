@@ -101,7 +101,7 @@ low ports:
 
 | Tool | Why | Note |
 |---|---|---|
-| ARP scan, **LAN reconcile**, LLDP/CDP, RTP analyzer, **Packet summary** | raw layer-2 / packet capture | **macOS:** root/`sudo`, **or** a BPF-access group — no admin needed if you have it; **Linux:** root or `CAP_NET_RAW` |
+| ARP scan, **LAN reconcile**, LLDP/CDP, **Link inspector** (LLDP half), RTP analyzer, **Packet summary** | raw layer-2 / packet capture | **macOS:** root/`sudo`, **or** a BPF-access group (Wireshark ChmodBPF) — no admin needed if you have it; **Linux:** root or `setcap cap_net_raw+ep`; **Windows:** Npcap. Link inspector's duplex read and its gateway SNMP probe work **without** this |
 | **TCP traceroute** | raw ICMP for hop replies | **no sudo on macOS**; `sudo` on Linux |
 | Syslog (514), SNMP traps (162), TFTP (69) | privileged ports | `sudo`, or use a high `--port` |
 
@@ -295,6 +295,12 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | RTP analyzer | per-stream jitter/loss/codec (raw capture: sudo or BPF group) | `rtp` |
 | Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (raw capture: sudo or BPF group) | `pktscan` |
 | Wi-Fi analyzer | channel, signal/SNR, neighbors + channel map / co-channel contention (macOS; Linux via nmcli & Windows via netsh give channel/signal/security, no SNR) | `wifi` |
+| Meshtastic mesh | LoRa mesh node snapshot over USB serial or TCP — node DB, per-neighbour SNR/hops, channel airtime, positions on an OpenStreetMap map (needs a Meshtastic radio) | `mesh` |
+| Bluetooth LE survey | nearby BLE devices with signal (RSSI), name and advertised company — unprivileged (macOS needs Bluetooth permission) | `ble` |
+| Connected peripherals | USB devices attached now — receivers, keyboards, storage, serial — vendor-resolved, with honest security call-outs (BadUSB/rogue-receiver shape); no flags ≠ safe | `peripherals` |
+| Link inspector | is a hub or switch between you and the router? link duplex (hub tell, no privilege) + a switch's LLDP/CDP (sudo/BPF) + an unprivileged gateway SNMP probe; honest hedged verdict | `linkpath` |
+| Local network diagnostic | why LAN resources are unreachable — isolation, macOS Local Network Privacy, captive portal, gateway/DHCP | `netdiag` |
+| Printer status | IPP printer state, out-of-paper/toner, supplies and print ports | `printer` |
 | Ping sweep | ping / TCP sweep a range | `pingsweep` |
 | Port scan | scan ports on a host | `portscan` |
 | PTR sweep | reverse-DNS a range | `ptrsweep` |
@@ -343,7 +349,8 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | Tool | What it does | CLI |
 |---|---|---|
 | Batch | run a single-target command over a stdin list of targets (NDJSON with `--json`) | `batch` (CLI) |
-| Runbook | composite audit — run a profile of tools into one report. Pick a **built-in recipe** (org-recon, audit-domain, web-posture, vpn-check, triage-host) or **Import** your own YAML/TOML/JSON. CLI: md/json/html; in the app, **export to Text / JSON / HTML / PDF** | `runbook` + GUI |
+| Runbook | composite audit — run a profile of tools into one report. Pick a **built-in recipe** (org-recon, audit-domain, web-posture, vpn-check, triage-host, triage-l2) or **Import** your own YAML/TOML/JSON. CLI: md/json/html; in the app, **export to Text / JSON / HTML / PDF** | `runbook` + GUI |
+| Tool reference | generate this whole tool reference (every command + recipe) as Markdown, HTML or PDF — in the app, **Export reference (PDF)** from the command-line page | `docs` + GUI |
 
 ### Config insight
 
