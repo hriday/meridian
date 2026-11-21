@@ -32,6 +32,7 @@ require (
 	golang.org/x/net v0.62.0
 	golang.org/x/sys v0.50.0
 	google.golang.org/protobuf v1.36.12
+	tinygo.org/x/bluetooth v0.17.0
 )
 
 require (
@@ -79,20 +80,29 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/saltosystems/winrt-go v0.0.0-20261015065339-8ef619c103a3 // indirect
 	github.com/samber/lo v1.49.1 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/soypat/cyw43439 v0.2.0 // indirect
+	github.com/soypat/lneto v0.4.0 // indirect
+	github.com/soypat/seqs v0.0.0-20260125140838-2c1c6b1bd69e // indirect
+	github.com/tinygo-org/cbgo v0.1.0 // indirect
+	github.com/tinygo-org/pio v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.8 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.19 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
+	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
+	tinygo.org/x/espradio v0.5.0 // indirect
 )
 
 // replace github.com/wailsapp/wails/v2 v2.10.1 => /Users/hriday/go/pkg/mod

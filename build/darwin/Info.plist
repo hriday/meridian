@@ -29,6 +29,8 @@
         <string>Meridian uses your location only so macOS will reveal nearby Wi-Fi network names (SSIDs) in the Wi-Fi analyzer. Your location is never stored, logged or sent anywhere.</string>
         <key>NSLocalNetworkUsageDescription</key>
         <string>Meridian needs local network access to reach the devices you point its tools at — printers, routers, switches and other hosts on your LAN (ping, port and printer checks, ARP/mDNS discovery, SNMP). Without it macOS silently blocks those tools. Nothing is stored or sent anywhere.</string>
+        <key>NSBluetoothAlwaysUsageDescription</key>
+        <string>Meridian uses Bluetooth only to list the Bluetooth Low Energy devices advertising nearby, with their signal strength, in the BLE nearby-survey tool. It only listens for advertisements — it never connects or pairs. Nothing is stored or sent anywhere.</string>
         {{if .Info.FileAssociations}}
         <key>CFBundleDocumentTypes</key>
         <array>
