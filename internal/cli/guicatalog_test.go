@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -72,6 +74,52 @@ func TestGUIReferenceCoversNewTools(t *testing.T) {
 	for _, w := range want {
 		if !have[w] {
 			t.Errorf("GUICatalog is missing tool %q", w)
+		}
+	}
+}
+
+// sidebarToolRow matches one entry in Workbench.svelte's tools[] array, capturing
+// the friendly name and its group — the two things the overview must mirror.
+var sidebarToolRow = regexp.MustCompile(`\{\s*id:\s*"[^"]+",\s*name:\s*"([^"]+)",\s*group:\s*"([^"]+)"`)
+
+// TestGUICatalogMatchesSidebar enforces the feature's central promise: the
+// overview page and PDF (GUICatalog, in Go) must list exactly the tools the
+// workbench sidebar does (Workbench.svelte, in Svelte), same names and groups.
+// Without this, the two hand-kept lists drift the moment someone adds or renames
+// a tool in one but not the other — the "never goes stale" claim made real.
+func TestGUICatalogMatchesSidebar(t *testing.T) {
+	src, err := os.ReadFile("../../frontend/src/lib/Workbench.svelte")
+	if err != nil {
+		t.Fatalf("reading the sidebar source: %v", err)
+	}
+	sidebar := map[string]string{} // tool name -> group
+	for _, m := range sidebarToolRow.FindAllStringSubmatch(string(src), -1) {
+		sidebar[m[1]] = m[2]
+	}
+	if len(sidebar) < 80 {
+		t.Fatalf("parsed only %d tools from the sidebar — the regex has likely drifted from the source", len(sidebar))
+	}
+
+	catalog := map[string]string{} // tool name -> group
+	for _, g := range GUICatalog() {
+		for _, tool := range g.Tools {
+			catalog[tool.Name] = g.Name
+		}
+	}
+
+	for name, group := range sidebar {
+		cg, ok := catalog[name]
+		if !ok {
+			t.Errorf("sidebar tool %q (group %q) is missing from the Tools overview", name, group)
+			continue
+		}
+		if cg != group {
+			t.Errorf("tool %q is in group %q in the sidebar but %q in the overview", name, group, cg)
+		}
+	}
+	for name := range catalog {
+		if _, ok := sidebar[name]; !ok {
+			t.Errorf("Tools overview lists %q, which is not a tool in the sidebar", name)
 		}
 	}
 }

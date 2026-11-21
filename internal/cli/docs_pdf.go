@@ -91,7 +91,7 @@ func RenderGUIReferencePDF() ([]byte, error) {
 	)
 	groups := GUICatalog()
 	title, tools := guiMeta(groups)
-	_, _, generated := docsMeta(Catalog())
+	generated := docsGeneratedLine()
 
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(marginX, 15, marginX)
@@ -149,18 +149,33 @@ func RenderGUIReferencePDF() ([]byte, error) {
 // drawGUITool renders one GUI tool: its friendly name (bold) with the
 // description wrapped beneath, keeping the pair together across a page break.
 func drawGUITool(pdf *fpdf.Fpdf, tr func(string) string, name, desc string, marginX, contentW, pageH float64) {
-	if pdf.GetY() > pageH-22 {
+	nameTxt := tr(sanitizePDF(name))
+	descTxt := ""
+	if strings.TrimSpace(desc) != "" {
+		descTxt = tr(sanitizePDF(desc))
+	}
+	// Measure the wrapped name+description so the pair never splits across a page
+	// break: count lines in each font/width, then break only if the whole block
+	// won't clear the auto-page-break margin.
+	pdf.SetFont("Helvetica", "B", 9.5)
+	blockH := float64(len(pdf.SplitLines([]byte(nameTxt), contentW))) * 5
+	if descTxt != "" {
+		pdf.SetFont("Helvetica", "", 8.5)
+		blockH += float64(len(pdf.SplitLines([]byte(descTxt), contentW-3))) * 4.2
+	}
+	if pdf.GetY()+blockH > pageH-16 {
 		pdf.AddPage()
 	}
+
 	pdf.SetX(marginX)
 	pdf.SetFont("Helvetica", "B", 9.5)
 	pdf.SetTextColor(20, 50, 55)
-	pdf.MultiCell(contentW, 5, tr(sanitizePDF(name)), "", "L", false)
-	if strings.TrimSpace(desc) != "" {
+	pdf.MultiCell(contentW, 5, nameTxt, "", "L", false)
+	if descTxt != "" {
 		pdf.SetX(marginX + 3)
 		pdf.SetFont("Helvetica", "", 8.5)
 		pdf.SetTextColor(70, 74, 80)
-		pdf.MultiCell(contentW-3, 4.2, tr(sanitizePDF(desc)), "", "L", false)
+		pdf.MultiCell(contentW-3, 4.2, descTxt, "", "L", false)
 	}
 	pdf.Ln(1.8)
 }

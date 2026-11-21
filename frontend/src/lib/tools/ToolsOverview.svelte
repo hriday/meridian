@@ -27,7 +27,7 @@
   $: shown = groups
     .map((g) => ({
       ...g,
-      tools: (g.tools || []).filter((t: any) => !f || t.name.toLowerCase().includes(f) || t.desc.toLowerCase().includes(f)),
+      tools: (g.tools || []).filter((t: any) => !f || (t.name || "").toLowerCase().includes(f) || (t.desc || "").toLowerCase().includes(f)),
     }))
     .filter((g) => g.tools.length > 0);
   $: total = groups.reduce((n, g) => n + (g.tools ? g.tools.length : 0), 0);
