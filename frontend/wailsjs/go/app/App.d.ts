@@ -333,6 +333,8 @@ export function PeripheralsSurvey():Promise<peripherals.Survey>;
 
 export function LinkInspect(arg1:number):Promise<linkpath.Report>;
 
+export function SaveDocsPDF():Promise<string>;
+
 export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
 
 export function PwHashGenerate(arg1:string,arg2:string,arg3:number):Promise<pwhash.GenResult>;
