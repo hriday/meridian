@@ -498,6 +498,10 @@ export function MeshtasticSnapshot(arg1) {
   return window['go']['app']['App']['MeshtasticSnapshot'](arg1);
 }
 
+export function BLESurvey(arg1) {
+  return window['go']['app']['App']['BLESurvey'](arg1);
+}
+
 export function PwHashCheck(arg1, arg2) {
   return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
 }

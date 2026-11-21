@@ -15,5 +15,11 @@
        analyzer can never get the grant that reveals neighbor SSIDs. -->
   <key>com.apple.security.personal-information.location</key>
   <true/>
+  <!-- Required to use the Bluetooth radio under the hardened runtime. As with
+       location, the NSBluetoothAlwaysUsageDescription string in Info.plist is
+       necessary but not sufficient: without this entitlement macOS blocks
+       CoreBluetooth, so the BLE nearby-survey can never scan. -->
+  <key>com.apple.security.device.bluetooth</key>
+  <true/>
 </dict>
 </plist>
