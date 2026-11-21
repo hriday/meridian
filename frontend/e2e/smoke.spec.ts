@@ -48,7 +48,7 @@ test("every tool mounts and renders without a console error", async ({ page }) =
 // — catching "x is not iterable" / undefined-field crashes in result markup.
 const RUN_TOOLS = [
   "lookup", "subnet", "dnsaudit", "axfr", "openresolver",
-  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals", "linkpath",
+  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals", "linkpath", "tools",
 ];
 
 test("key tools run their action and render results without error", async ({ page }) => {
@@ -559,5 +559,45 @@ test("link inspector renders the verdict and findings from a real report", async
   await expect(pane.locator(".findrow").first()).toContainText("Half-duplex");
   await expect(pane.locator(".fmark.found").first()).toBeVisible();
   await expect(pane.locator(".facts")).toContainText("192.168.1.1");               // gateway fact
+  expect(errors, errors.join(" | ")).toEqual([]);
+});
+
+test("tools overview renders the grouped tool list and filters by name or purpose", async ({ page }) => {
+  await page.addInitScript(() => {
+    const REAL = [
+      { name: "Local network", tools: [
+        { name: "Link inspector", desc: "Work out whether there's a hub or switch between this machine and the router." },
+        { name: "Connected peripherals", desc: "Inventory what's plugged into USB, with honest security call-outs." },
+      ] },
+      { name: "Security", tools: [
+        { name: "TLS cipher scan", desc: "See which TLS versions and cipher suites a server accepts, graded." },
+      ] },
+    ];
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("GUIReference") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "tools"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="tools"]').click();
+  const pane = page.locator("main.main");
+
+  await expect(pane.getByRole("button", { name: /Export tools overview/ })).toBeVisible();
+  await expect(pane.locator(".trow")).toHaveCount(3);                               // all tools shown
+  await expect(pane.locator(".group")).toHaveCount(2);                              // two groups
+
+  // Filtering on a word from a description, not a name, still finds the tool.
+  await pane.locator("input.field").fill("router");
+  await expect(pane.locator(".trow")).toHaveCount(1);
+  await expect(pane.locator(".trow").first()).toContainText("Link inspector");
   expect(errors, errors.join(" | ")).toEqual([]);
 });

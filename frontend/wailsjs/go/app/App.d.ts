@@ -121,6 +121,10 @@ export function Blocklist(arg1:string,arg2:string):Promise<dnsbl.Report>;
 
 export function CLICommands():Promise<Array<cli.CommandGroup>>;
 
+export function GUIReference():Promise<Array<cli.GUIGroup>>;
+
+export function SaveGUIReferencePDF():Promise<string>;
+
 export function CLIInfo():Promise<app.CLIInfo>;
 
 export function CTSubdomains(arg1:string):Promise<Array<ctlog.Subdomain>>;
