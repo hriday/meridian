@@ -3,6 +3,7 @@
 import {pwaudit} from '../models';
 import {meshtastic} from '../models';
 import {ble} from '../models';
+import {peripherals} from '../models';
 import {arpscan} from '../models';
 import {axfr} from '../models';
 import {ciscopw} from '../models';
@@ -326,6 +327,8 @@ export function PrinterStatus(arg1:string):Promise<ipp.Result>;
 export function MeshtasticSnapshot(arg1:string):Promise<meshtastic.Snapshot>;
 
 export function BLESurvey(arg1:number):Promise<ble.Survey>;
+
+export function PeripheralsSurvey():Promise<peripherals.Survey>;
 
 export function PwHashCheck(arg1:string,arg2:string):Promise<pwhash.CheckResult>;
 

@@ -373,6 +373,109 @@ export namespace ble {
 
 }
 
+export namespace peripherals {
+
+	export class Flag {
+	    level: string;
+	    text: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Flag(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.level = source["level"];
+	        this.text = source["text"];
+	    }
+	}
+	export class Device {
+	    name: string;
+	    vendor: string;
+	    vendorId?: string;
+	    productId?: string;
+	    kind: string;
+	    receiver: boolean;
+	    input: boolean;
+	    serial?: string;
+	    flags?: Flag[];
+
+	    static createFrom(source: any = {}) {
+	        return new Device(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.vendor = source["vendor"];
+	        this.vendorId = source["vendorId"];
+	        this.productId = source["productId"];
+	        this.kind = source["kind"];
+	        this.receiver = source["receiver"];
+	        this.input = source["input"];
+	        this.serial = source["serial"];
+	        this.flags = this.convertValues(source["flags"], Flag);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Survey {
+	    devices: Device[];
+	    count: number;
+	    flagged: number;
+	    takenAt: string;
+	    note?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Survey(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.devices = this.convertValues(source["devices"], Device);
+	        this.count = source["count"];
+	        this.flagged = source["flagged"];
+	        this.takenAt = source["takenAt"];
+	        this.note = source["note"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace meshtastic {
 
 	export class Node {

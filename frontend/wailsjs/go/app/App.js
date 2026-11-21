@@ -502,6 +502,10 @@ export function BLESurvey(arg1) {
   return window['go']['app']['App']['BLESurvey'](arg1);
 }
 
+export function PeripheralsSurvey() {
+  return window['go']['app']['App']['PeripheralsSurvey']();
+}
+
 export function PwHashCheck(arg1, arg2) {
   return window['go']['app']['App']['PwHashCheck'](arg1, arg2);
 }
