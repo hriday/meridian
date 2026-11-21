@@ -124,14 +124,19 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 func assess(ls linkState, neigh []lldp.Neighbor, lldpStatus, gateway string) (string, []Finding) {
 	var fs []Finding
 
-	// Wireless: the hub/switch question doesn't apply to the radio hop.
+	// Wireless: the hub/switch question doesn't apply to the radio hop. (LLDP is
+	// never captured on a wireless egress, so there are no neighbours to list.)
 	if ls.wireless {
 		fs = append(fs, Finding{"info", "This machine reaches the network over Wi-Fi. “Hub vs switch” is a wired-link question — it doesn't apply to the wireless hop."})
 		fs = append(fs, Finding{"limit", "There's an access point (and almost always a switch) upstream of the AP, but a host can't see past the access point to tell."})
-		for _, n := range neigh {
-			fs = append(fs, neighborFinding(n, gateway))
-		}
 		return "You're on Wi-Fi — a host can't see whether a hub or switch sits upstream of the access point.", fs
+	}
+
+	// A half-duplex reading at gigabit or faster is physically impossible
+	// (gigabit mandates full-duplex) — it's a driver/virtual-adapter misreport,
+	// not a real hub, so don't let it drive a false hub verdict.
+	if ls.duplex == "half" && ls.speedMbps >= 1000 {
+		ls.duplex = ""
 	}
 
 	// Wired link read (duplex is the hub tell).
@@ -192,7 +197,9 @@ func verdictLine(switchSeen, hubSeen bool, ls linkState, lldpStatus string) stri
 		return "A switch is directly attached between you and the router (it announced itself via LLDP/CDP)."
 	case hubSeen:
 		return "A hub is almost certainly in the path (the link is half-duplex)."
-	case ls.known && ls.duplex == "full" && lldpStatus == "ok":
+	case ls.known && ls.duplex == "full" && (lldpStatus == "ok" || lldpStatus == "none-heard"):
+		// LLDP capture actually ran (heard a non-switch, or nothing) — don't tell
+		// the user to re-run with privilege they already supplied.
 		return "No hub or announced switch detected — but an unmanaged switch could still be in the path, invisibly."
 	case ls.known && ls.duplex == "full":
 		return "No hub detected (full-duplex). Switch detection needs privilege — run the triage-l2 recipe for the full check."
@@ -232,8 +239,12 @@ func isRepeater(n lldp.Neighbor) bool {
 	return hasCap(n, "repeater")
 }
 
+// isGateway reports whether a neighbour IS the default gateway: a device whose
+// management IP equals the gateway is the router itself (even a combined
+// router+switch that also advertises a Bridge capability), not an intermediate
+// switch between the host and the router.
 func isGateway(n lldp.Neighbor, gateway string) bool {
-	return gateway != "" && n.MgmtIP == gateway && hasCap(n, "router") && !isSwitchy(n)
+	return gateway != "" && n.MgmtIP == gateway
 }
 
 func hasCap(n lldp.Neighbor, subs ...string) bool {

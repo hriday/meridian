@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-var mediaSpeed = regexp.MustCompile(`(\d+)base`)
+// mediaSpeed matches the speed token in an ifconfig media type: "1000baseT",
+// "100baseTX", "2500baseT", and the G-suffixed multi-gig forms "10Gbase-T" /
+// "40Gbase-SR" (where the digits are a gigabit count).
+var mediaSpeed = regexp.MustCompile(`(\d+)(g?)base`)
 
 // parseIfconfigMedia reads the "media:" line of `ifconfig <iface>` output and
 // extracts speed and duplex. A wired Ethernet link reports a base-T media type
@@ -30,6 +33,9 @@ func parseIfconfigMedia(out string) linkState {
 		}
 		if m := mediaSpeed.FindStringSubmatch(low); m != nil {
 			if n, err := strconv.Atoi(m[1]); err == nil {
+				if m[2] == "g" { // "10Gbase-T" → 10 Gb/s = 10000 Mb/s
+					n *= 1000
+				}
 				ls.speedMbps = n
 			}
 		}

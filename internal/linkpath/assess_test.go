@@ -80,6 +80,40 @@ func TestAssess_repeaterIsAHub(t *testing.T) {
 	}
 }
 
+func TestAssess_noneHeardWithPrivilegeIsNotToldToReRun(t *testing.T) {
+	// LLDP ran (with privilege) and heard nothing — the verdict must NOT tell
+	// the user to re-run with privilege they already supplied.
+	v, _ := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, nil, "none-heard", "192.168.1.1")
+	if strings.Contains(v, "needs privilege") || strings.Contains(v, "recipe") {
+		t.Errorf("none-heard verdict shouldn't ask to re-run with privilege: %q", v)
+	}
+	if !strings.Contains(v, "No hub or announced switch") {
+		t.Errorf("verdict = %q, want the clean-but-hedged verdict", v)
+	}
+}
+
+func TestAssess_combinedRouterSwitchAtGatewayIsNotIntermediate(t *testing.T) {
+	// A typical home router advertises both Bridge and Router at the gateway IP;
+	// it's the router itself, not an intermediate switch.
+	gw := lldp.Neighbor{Protocol: "LLDP", SystemName: "home-gw", Capabilities: []string{"Bridge", "Router"}, MgmtIP: "192.168.1.1"}
+	v, fs := assess(linkState{known: true, duplex: "full", speedMbps: 1000}, []lldp.Neighbor{gw}, "ok", "192.168.1.1")
+	if strings.Contains(v, "switch is directly attached") {
+		t.Errorf("a router+switch at the gateway IP must not read as an intermediate switch: %q", v)
+	}
+	if !hasFinding(fs, "info", "router itself") {
+		t.Errorf("expected the gateway to be identified as the router: %+v", fs)
+	}
+}
+
+func TestAssess_gigabitHalfDuplexIsIgnored(t *testing.T) {
+	// A half-duplex reading at gigabit is physically impossible — don't let a
+	// driver misreport produce a false hub verdict.
+	v, _ := assess(linkState{known: true, duplex: "half", speedMbps: 1000}, nil, "ok", "192.168.1.1")
+	if strings.Contains(v, "hub is almost certainly") {
+		t.Errorf("a gigabit half-duplex misreport must not drive a hub verdict: %q", v)
+	}
+}
+
 func TestAssess_wireless(t *testing.T) {
 	v, fs := assess(linkState{wireless: true}, nil, "skipped-wireless", "192.168.1.1")
 	if !strings.Contains(v, "Wi-Fi") {

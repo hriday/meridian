@@ -23,6 +23,12 @@ func TestParseIfconfigMedia(t *testing.T) {
 	if ls.known || ls.duplex != "" || ls.speedMbps != 0 {
 		t.Errorf("a Wi-Fi/no-media link should read as unknown: %+v", ls)
 	}
+
+	tenG := "en5: flags=8863 mtu 1500\n\tmedia: autoselect (10Gbase-T <full-duplex>)\n\tstatus: active\n"
+	ls = parseIfconfigMedia(tenG)
+	if ls.speedMbps != 10000 || ls.duplex != "full" {
+		t.Errorf("10Gbase-T should read as 10000 Mb/s full duplex, got %+v", ls)
+	}
 }
 
 func TestParseHardwarePorts(t *testing.T) {
