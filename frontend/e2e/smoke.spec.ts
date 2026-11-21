@@ -48,7 +48,7 @@ test("every tool mounts and renders without a console error", async ({ page }) =
 // — catching "x is not iterable" / undefined-field crashes in result markup.
 const RUN_TOOLS = [
   "lookup", "subnet", "dnsaudit", "axfr", "openresolver",
-  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh",
+  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble",
 ];
 
 test("key tools run their action and render results without error", async ({ page }) => {
@@ -433,3 +433,39 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   expect(errors, errors.join(" | ")).toEqual([]);
 });
 
+test("ble survey renders the device list from a real scan", async ({ page }) => {
+  await page.addInitScript(() => {
+    const REAL = {
+      durationSec: 6, count: 3, named: 2,
+      devices: [
+        { address: "11111111-1111-1111-1111-111111111111", name: "AirPods Pro", rssi: -48, company: "Apple", seen: 9 },
+        { address: "22222222-2222-2222-2222-222222222222", name: "Fit Watch", rssi: -67, company: "Garmin", seen: 4 },
+        { address: "33333333-3333-3333-3333-333333333333", name: "", rssi: -88, company: "0x0157", seen: 1 },
+      ],
+      takenAt: "2026-11-20T00:00:00Z",
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("BLESurvey") ? Promise.resolve(REAL) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "ble"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="ble"]').click();
+  const pane = page.locator("main.main");
+  await pane.getByRole("button", { name: "Scan" }).click();
+
+  await expect(pane.locator(".drow")).toHaveCount(3);
+  await expect(pane.locator(".drow").first()).toContainText("AirPods Pro"); // strongest first
+  await expect(pane.locator(".drow").first()).toContainText("Apple");
+  await expect(pane.locator(".drow").last()).toContainText("(unnamed)");    // the nameless device
+  expect(errors, errors.join(" | ")).toEqual([]);
+});

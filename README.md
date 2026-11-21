@@ -84,6 +84,11 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   airtime, battery and position — nodes that report a location are plotted on a
   **map** (OpenStreetMap). Read-only — it only asks the node to dump its config —
   and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
+- **Bluetooth LE survey** — scan for the Bluetooth Low Energy devices advertising
+  nearby (phones, watches, earbuds, beacons, sensors) using this machine's own
+  radio, each with **signal** (RSSI), name and advertised company. Listen-only —
+  it never connects or pairs — and a point-in-time survey, no history. Cross-platform
+  (CoreBluetooth / BlueZ / WinRT); macOS needs Bluetooth permission on first scan.
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
