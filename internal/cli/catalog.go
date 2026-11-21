@@ -125,6 +125,7 @@ func Catalog() []CommandGroup {
 		}},
 		{Name: "Scripting", Note: "pipe a newline-delimited target list on stdin.", Commands: []CommandDoc{
 			{"completion", "bash|zsh|fish|powershell", "print a shell tab-completion script"},
+			{"docs", "[--format md|html|pdf] [--out <file>]", "generate the full tool reference (every command + recipe) as Markdown, HTML or PDF — the GUI exports the PDF from the command-line reference"},
 			{"batch", "<command> [flags]   (targets on stdin)", "run a single-target command over many targets — e.g. `cat hosts.txt | meridian-cli batch cipherscan --json` (NDJSON)"},
 			{"runbook", "<profile|file.yaml> <target> [--format md|json|html] [--out f] | list", "composite audit → one report: a built-in recipe (org-recon, audit-domain, web-posture, vpn-check, triage-host) or your own YAML/TOML/JSON"},
 		}},

@@ -314,6 +314,7 @@ meridian-cli mesh /dev/cu.usbserial-10         # Meshtastic node snapshot — no
 meridian-cli peripherals                       # USB devices attached now — receivers, keyboards, storage + security call-outs (alias: usb)
 meridian-cli linkpath                          # is a hub/switch between you and the router? link duplex + LLDP/CDP (alias: uplink)
 meridian-cli runbook triage-l2 192.168.1.1     # full L2 path report: link + LLDP + ARP neighbours + gateway reachability
+meridian-cli docs --format pdf --out tools.pdf # generate the full tool reference (every command + recipe); also exportable from the app
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 

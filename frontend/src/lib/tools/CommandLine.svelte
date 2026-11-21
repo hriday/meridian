@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CLICommands, CLIInfo, InstallCLI } from "../../../wailsjs/go/app/App.js";
+  import { CLICommands, CLIInfo, InstallCLI, SaveDocsPDF } from "../../../wailsjs/go/app/App.js";
   import ToolHelp from "../ToolHelp.svelte";
 
   let groups: any[] = [];
@@ -33,6 +33,21 @@
       cliMsg = String(e?.message ?? e);
     } finally {
       cliBusy = false;
+    }
+  }
+
+  let docsBusy = false;
+  let docsMsg = "";
+  async function exportDocs() {
+    docsBusy = true;
+    docsMsg = "";
+    try {
+      const path = await SaveDocsPDF();
+      docsMsg = path ? `Saved to ${path}` : "";
+    } catch (e: any) {
+      docsMsg = String(e?.message ?? e);
+    } finally {
+      docsBusy = false;
     }
   }
 
@@ -77,6 +92,12 @@
     {/if}
   </div>
 
+  <div class="exportrow">
+    <button class="pill btn" on:click={exportDocs} disabled={docsBusy}>{docsBusy ? "Generating…" : "Export reference (PDF)"}</button>
+    <span class="sdim">the full tool reference — every command and recipe, as a PDF</span>
+    {#if docsMsg}<span class="sdim">{docsMsg}</span>{/if}
+  </div>
+
   <input class="field" bind:value={filter} placeholder="Filter commands… (e.g. tls, dns, snmp)" spellcheck="false" />
 
   {#each shown as g}
@@ -102,6 +123,7 @@
   .lede { margin: 0 0 12px; font-size: 0.82rem; color: var(--text-dim); line-height: 1.5; }
   .mono { font-family: var(--font-mono, ui-monospace, monospace); }
   .status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
+  .exportrow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 12px; }
   .pill { font-size: 0.74rem; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
   .pill.ok { background: color-mix(in srgb, var(--good, #3fb950) 16%, transparent); color: var(--good, #3fb950); }
   .pill.btn { background: var(--accent); color: var(--on-accent, #052e2b); border: none; cursor: pointer; }

@@ -150,6 +150,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runHTTP3(args[1:], stdout, stderr)
 	case "completion":
 		return runCompletion(args[1:], stdout, stderr)
+	case "docs":
+		return runDocs(args[1:], stdout, stderr)
 	case "ike", "vpnprobe":
 		return runIke(args[1:], stdout, stderr)
 	case "wg", "wireguard":
