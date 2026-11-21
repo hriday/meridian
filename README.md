@@ -105,7 +105,10 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   port. It returns an **honest, hedged verdict** — *"a hub is almost certainly in
   the path"*, *"a managed switch core-sw1 is directly attached"*, or *"nothing
   detected, but an unmanaged switch could still be invisible"* — and always states
-  its blind spots. CLI `linkpath` (alias `uplink`); the **`triage-l2` runbook
+  its blind spots. The duplex read needs **no privilege**; when the LLDP capture
+  hits the sudo/BPF wall it prints the **one-time setup** that removes per-run sudo
+  (setcap / ChmodBPF / Npcap) and does an **unprivileged SNMP probe** of the gateway
+  as a fallback. CLI `linkpath` (alias `uplink`); the **`triage-l2` runbook
   recipe** adds ARP neighbours and gateway reachability.
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
