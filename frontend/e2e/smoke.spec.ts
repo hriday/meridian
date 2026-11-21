@@ -388,7 +388,7 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
     const REAL = {
       transport: "tcp", target: "192.168.1.50:4403", myNodeNum: 100,
       firmware: "2.5.3.abcdef", hwModel: "HELTEC_V3",
-      me: { num: 100, id: "!00000064", longName: "Base", shortName: "BASE", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
+      me: { num: 100, id: "!00000064", longName: "Base", shortName: "BASE", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: true, lat: 37.49, lon: -122.29, altitudeM: 10 },
       nodes: [
         { num: 200, id: "!000000c8", longName: "Hilltop", shortName: "HILL", role: "Client", snr: 6.3, hopsAway: 1, lastHeard: Math.floor(Date.now() / 1000) - 120, viaMqtt: false, battery: 72, voltage: 3.9, hasPosition: true, lat: 37.5, lon: -122.3, altitudeM: 84 },
         { num: 300, id: "!0000012c", longName: "Ridge", shortName: "", role: "", snr: -11, hopsAway: 3, lastHeard: 0, viaMqtt: false, battery: null, voltage: 0, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
@@ -408,6 +408,11 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   page.on("pageerror", (e) => errors.push(String(e)));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 
+  // Serve a 1x1 transparent PNG for every map tile so the test never hits the
+  // real OpenStreetMap servers (and no tile-load error trips the console check).
+  const PIXEL = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+  await page.route(/tile\.openstreetmap\.org/, (route) => route.fulfill({ status: 200, contentType: "image/png", body: PIXEL }));
+
   await page.goto("/");
   await page.waitForSelector("nav.side .item");
   await page.locator('[data-tool="mesh"]').click();
@@ -419,5 +424,11 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   await expect(pane.locator(".noderow")).toHaveCount(2);         // two neighbours
   await expect(pane.locator(".noderow").first()).toContainText("Hilltop");
   await expect(pane.locator(".noderow").first().locator("a")).toHaveText("37.5000, -122.3000"); // position link
+
+  // The node map renders a Leaflet map with a marker per positioned node:
+  // "my node" (Base) + Hilltop = 2, with Base styled as the distinct "me" marker.
+  await expect(pane.locator(".mapbox.leaflet-container")).toBeVisible(); // Leaflet adds the class to the div itself
+  await expect(pane.locator(".mk")).toHaveCount(2);
+  await expect(pane.locator(".mk.me")).toHaveCount(1);
   expect(errors, errors.join(" | ")).toEqual([]);
 });

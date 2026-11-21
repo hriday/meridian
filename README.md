@@ -81,8 +81,9 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
 - **Meshtastic mesh** — connect to a Meshtastic LoRa node over **USB serial** or
   **TCP** (`:4403`) and read its **node database**: every node it currently sees,
   with per-neighbor **SNR**, hop distance (`direct` = one-hop RF neighbor), channel
-  airtime, battery and position. Read-only — it only asks the node to dump its
-  config — and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
+  airtime, battery and position — nodes that report a location are plotted on a
+  **map** (OpenStreetMap). Read-only — it only asks the node to dump its config —
+  and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
