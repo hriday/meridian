@@ -89,6 +89,14 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   radio, each with **signal** (RSSI), name and advertised company. Listen-only —
   it never connects or pairs — and a point-in-time survey, no history. Cross-platform
   (CoreBluetooth / BlueZ / WinRT); macOS needs Bluetooth permission on first scan.
+- **Connected peripherals** — inventory the USB devices attached to this machine
+  right now (mice, keyboards, **2.4 GHz wireless receivers** — the non-Bluetooth
+  dongles — flash drives, serial adapters, cameras), vendor-resolved, with honest
+  **security call-outs**: an unrecognized vendor, a receiver that can hide paired
+  devices, or a device that can type keystrokes (the BadUSB shape). It lists what's
+  *plugged in* — it can't see wireless devices in the air — and the flags are prompts
+  to verify, never verdicts: **no flags is not a clean bill of health**. Cross-platform
+  (system_profiler / sysfs / PnP); point-in-time, no history.
 - **Service discovery** — mDNS/Bonjour + SSDP/UPnP: what devices are on the LAN
   and what they advertise (AirPlay, printers, Sonos, HomeKit, NAS…), via each
   OS's own resolver. **LAN reconcile** — diff a live ARP sweep against your
@@ -293,6 +301,7 @@ meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
 meridian-cli mesh /dev/cu.usbserial-10         # Meshtastic node snapshot — node db, SNR/hops, airtime (or: mesh 192.168.1.50)
+meridian-cli peripherals                       # USB devices attached now — receivers, keyboards, storage + security call-outs (alias: usb)
 meridian-cli cve CVE-2021-44228 --json        # JSON for scripting
 meridian-cli syslog --port 5140               # live receiver, Ctrl-C to stop
 
