@@ -66,14 +66,21 @@ func Scan(ctx context.Context, dur time.Duration) (Survey, error) {
 	)
 
 	// Stop the (blocking) scan after the window, and also if ctx is cancelled.
-	timer := time.AfterFunc(dur, func() { _ = adapter.StopScan() })
+	// The library's StopScan is neither idempotent nor safe to call concurrently
+	// (a second call can panic on a closed/nil channel), and the timer and the
+	// ctx-watcher are independent stoppers that could fire at once — e.g. ctx
+	// wired to Ctrl-C landing right at the window's end — so funnel every stop
+	// through a sync.Once.
+	var stopOnce sync.Once
+	stop := func() { stopOnce.Do(func() { _ = adapter.StopScan() }) }
+	timer := time.AfterFunc(dur, stop)
 	defer timer.Stop()
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
 		select {
 		case <-ctx.Done():
-			_ = adapter.StopScan()
+			stop()
 		case <-done:
 		}
 	}()
