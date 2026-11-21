@@ -84,7 +84,12 @@
   // set actually changes (not on every unrelated render, e.g. the loading flag).
   let mapKey = "";
   afterUpdate(() => {
-    const key = pts.map((p) => `${p._me ? "me:" : ""}${p.num},${p.lat},${p.lon}`).join("|");
+    // Key on every field a marker renders (position, signal, name, hops), not
+    // just position, so the map can never show a marker that disagrees with the
+    // node list. In practice run() clears snap between scans, so the map is torn
+    // down and rebuilt each scan anyway; this keeps the keyed sync correct on its
+    // own, independent of that reset.
+    const key = pts.map((p) => JSON.stringify([p._me ? 1 : 0, p.num, p.lat, p.lon, p.snr, p.longName, p.shortName, p.id, p.hopsAway, p.viaMqtt])).join("|");
     if (key !== mapKey) {
       mapKey = key;
       syncMap(mapEl, pts);

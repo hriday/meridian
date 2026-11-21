@@ -432,3 +432,4 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   await expect(pane.locator(".mk.me")).toHaveCount(1);
   expect(errors, errors.join(" | ")).toEqual([]);
 });
+
