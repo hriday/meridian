@@ -88,6 +88,12 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 	iface := info.PrimaryIf
 	ls := readLink(iface)
 
+	// Start the unprivileged SNMP probe of the gateway now, so it overlaps the
+	// (possibly long) LLDP listen below and adds no wall-clock on the common
+	// path. SNMP is plain UDP — no capture, no sudo — and works on Wi-Fi too.
+	probeCh := make(chan mgmtProbe, 1)
+	go func() { probeCh <- probeGatewaySNMP(info.Gateway) }()
+
 	var neigh []lldp.Neighbor
 	status := "skipped"
 	switch {
@@ -113,10 +119,14 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 		}
 	}
 
-	// Unprivileged management-plane probe: the gateway is the one device whose
-	// IP we know, and SNMP is plain UDP (no raw capture, no sudo) — so this
-	// works even on Wi-Fi and without the LLDP privilege.
-	probe := probeGatewaySNMP(ctx, info.Gateway)
+	// Collect the SNMP result, but never block the whole tool on it: take it if
+	// ready, else wait at most its own bound, and give up if ctx is cancelled.
+	var probe mgmtProbe
+	select {
+	case probe = <-probeCh:
+	case <-ctx.Done():
+	case <-time.After(snmpProbeBudget):
+	}
 
 	verdict, findings := assess(ls, neigh, status, info.Gateway, probe, privilegeHint())
 	return Report{
@@ -137,17 +147,23 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 	}, nil
 }
 
+// snmpProbeTimeout bounds each SNMP attempt; snmp.Dial retries once, so the
+// probe's own worst case is ~2× this. snmpProbeBudget is the longest Inspect
+// will wait for the probe once the LLDP listen is done (it's already running).
+const (
+	snmpProbeTimeout = 600 * time.Millisecond
+	snmpProbeBudget  = 1500 * time.Millisecond
+)
+
 // probeGatewaySNMP asks the gateway for its SNMP system description with the
 // default "public" community — an unprivileged UDP query. A non-answer (no
-// SNMP, wrong community) returns a zero result; it never guesses.
-func probeGatewaySNMP(ctx context.Context, gateway string) mgmtProbe {
+// SNMP, wrong community, or a dropped packet) returns a zero result; it never
+// guesses. It is bounded by its own timeout; the caller caps the wait.
+func probeGatewaySNMP(gateway string) mgmtProbe {
 	if gateway == "" {
 		return mgmtProbe{}
 	}
-	if d, ok := ctx.Deadline(); ok && time.Until(d) < 2*time.Second {
-		return mgmtProbe{} // not enough time left; skip rather than block
-	}
-	c, err := snmp.Dial(gateway, "public", 1500*time.Millisecond)
+	c, err := snmp.Dial(gateway, "public", snmpProbeTimeout)
 	if err != nil {
 		return mgmtProbe{}
 	}
@@ -266,6 +282,9 @@ func appendSNMP(fs []Finding, probe mgmtProbe, gateway string) []Finding {
 		gw = "the gateway"
 	}
 	txt := "The gateway (" + gw + ") answers SNMP with community “public” — a managed device you can read without privilege or capture"
+	if n := strings.TrimSpace(probe.sysName); n != "" {
+		txt += " — " + n
+	}
 	if d := strings.TrimSpace(probe.sysDescr); d != "" {
 		txt += ": " + truncateRunes(d, 140)
 	}
