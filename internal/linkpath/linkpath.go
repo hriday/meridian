@@ -20,12 +20,14 @@ package linkpath
 import (
 	"context"
 	"errors"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hriday/meridian/internal/lldp"
 	"github.com/hriday/meridian/internal/myip"
+	"github.com/hriday/meridian/internal/snmp"
 )
 
 // DefaultLLDPWindow is how long to listen for a switch's LLDP/CDP advertisement.
@@ -44,9 +46,19 @@ type Report struct {
 	Media      string          `json:"media,omitempty"`   // raw media string, for reference
 	LLDPStatus string          `json:"lldpStatus"`        // ok | none-heard | needs-privilege | unsupported | skipped-wireless | error
 	Neighbors  []lldp.Neighbor `json:"neighbors"`         // switches/routers that announced themselves
+	GatewaySNMP   string       `json:"gatewaySnmp,omitempty"`     // gateway's SNMP sysDescr, if it answered (unprivileged)
+	GatewaySNMPOK bool         `json:"gatewaySnmpOk"`             // whether the gateway answered SNMP
 	Verdict    string          `json:"verdict"`           // the one-line synthesis
 	Findings   []Finding       `json:"findings"`          // the reasons behind the verdict
 	TakenAt    string          `json:"takenAt"`           // RFC3339 UTC
+}
+
+// mgmtProbe is the result of the unprivileged management-plane probe (SNMP),
+// the input to the pure assessor that doesn't depend on the snmp package.
+type mgmtProbe struct {
+	snmpOK   bool
+	sysDescr string
+	sysName  string
 }
 
 // Finding is one signal or caveat. Level is "found" (a device/condition
@@ -76,6 +88,12 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 	iface := info.PrimaryIf
 	ls := readLink(iface)
 
+	// Start the unprivileged SNMP probe of the gateway now, so it overlaps the
+	// (possibly long) LLDP listen below and adds no wall-clock on the common
+	// path. SNMP is plain UDP — no capture, no sudo — and works on Wi-Fi too.
+	probeCh := make(chan mgmtProbe, 1)
+	go func() { probeCh <- probeGatewaySNMP(info.Gateway) }()
+
 	var neigh []lldp.Neighbor
 	status := "skipped"
 	switch {
@@ -101,33 +119,88 @@ func Inspect(ctx context.Context, lldpWindow time.Duration) (Report, error) {
 		}
 	}
 
-	verdict, findings := assess(ls, neigh, status, info.Gateway)
+	// Collect the SNMP result, but never block the whole tool on it: take it if
+	// ready, else wait at most its own bound, and give up if ctx is cancelled.
+	var probe mgmtProbe
+	select {
+	case probe = <-probeCh:
+	case <-ctx.Done():
+	case <-time.After(snmpProbeBudget):
+	}
+
+	verdict, findings := assess(ls, neigh, status, info.Gateway, probe, privilegeHint())
 	return Report{
-		Iface:      iface,
-		Gateway:    info.Gateway,
-		Wireless:   ls.wireless,
-		LinkKnown:  ls.known,
-		SpeedMbps:  ls.speedMbps,
-		Duplex:     ls.duplex,
-		Media:      ls.media,
-		LLDPStatus: status,
-		Neighbors:  neigh,
-		Verdict:    verdict,
-		Findings:   findings,
-		TakenAt:    time.Now().UTC().Format(time.RFC3339),
+		Iface:         iface,
+		Gateway:       info.Gateway,
+		Wireless:      ls.wireless,
+		LinkKnown:     ls.known,
+		SpeedMbps:     ls.speedMbps,
+		Duplex:        ls.duplex,
+		Media:         ls.media,
+		LLDPStatus:    status,
+		Neighbors:     neigh,
+		GatewaySNMP:   probe.sysDescr,
+		GatewaySNMPOK: probe.snmpOK,
+		Verdict:       verdict,
+		Findings:      findings,
+		TakenAt:       time.Now().UTC().Format(time.RFC3339),
 	}, nil
+}
+
+// snmpProbeTimeout bounds each SNMP attempt; snmp.Dial retries once, so the
+// probe's own worst case is ~2× this. snmpProbeBudget is the longest Inspect
+// will wait for the probe once the LLDP listen is done (it's already running).
+const (
+	snmpProbeTimeout = 600 * time.Millisecond
+	snmpProbeBudget  = 1500 * time.Millisecond
+)
+
+// probeGatewaySNMP asks the gateway for its SNMP system description with the
+// default "public" community — an unprivileged UDP query. A non-answer (no
+// SNMP, wrong community, or a dropped packet) returns a zero result; it never
+// guesses. It is bounded by its own timeout; the caller caps the wait.
+func probeGatewaySNMP(gateway string) mgmtProbe {
+	if gateway == "" {
+		return mgmtProbe{}
+	}
+	c, err := snmp.Dial(gateway, "public", snmpProbeTimeout)
+	if err != nil {
+		return mgmtProbe{}
+	}
+	defer c.Close()
+	sys, err := snmp.System(c)
+	if err != nil || (sys.Descr == "" && sys.Name == "") {
+		return mgmtProbe{}
+	}
+	return mgmtProbe{snmpOK: true, sysDescr: sys.Descr, sysName: sys.Name}
+}
+
+// privilegeHint is the OS-specific, one-time way to let LLDP capture run without
+// per-run sudo — surfaced when the capture hits a privilege wall.
+func privilegeHint() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return "To capture LLDP without sudo every time, grant your user BPF access once (the Wireshark “ChmodBPF” approach: a group that owns /dev/bpf*)."
+	case "linux":
+		return "To capture LLDP without sudo every time, run once: sudo setcap cap_net_raw+ep $(which meridian-cli)."
+	case "windows":
+		return "To capture LLDP, install Npcap with its non-admin option so capture runs without Administrator."
+	default:
+		return "Raw capture needs elevated privilege on this platform."
+	}
 }
 
 // assess is the pure synthesis: given the link read, the LLDP neighbours and the
 // capture status, it produces the headline verdict and the findings behind it.
 // Testable without any hardware.
-func assess(ls linkState, neigh []lldp.Neighbor, lldpStatus, gateway string) (string, []Finding) {
+func assess(ls linkState, neigh []lldp.Neighbor, lldpStatus, gateway string, probe mgmtProbe, privHint string) (string, []Finding) {
 	var fs []Finding
 
 	// Wireless: the hub/switch question doesn't apply to the radio hop. (LLDP is
 	// never captured on a wireless egress, so there are no neighbours to list.)
 	if ls.wireless {
 		fs = append(fs, Finding{"info", "This machine reaches the network over Wi-Fi. “Hub vs switch” is a wired-link question — it doesn't apply to the wireless hop."})
+		fs = appendSNMP(fs, probe, gateway) // SNMP works over Wi-Fi too
 		fs = append(fs, Finding{"limit", "There's an access point (and almost always a switch) upstream of the AP, but a host can't see past the access point to tell."})
 		return "You're on Wi-Fi — a host can't see whether a hub or switch sits upstream of the access point.", fs
 	}
@@ -177,17 +250,54 @@ func assess(ls linkState, neigh []lldp.Neighbor, lldpStatus, gateway string) (st
 	case "none-heard":
 		fs = append(fs, Finding{"info", "No device announced itself via LLDP/CDP during the listen window. A managed switch may have LLDP turned off, and an unmanaged switch or hub never announces itself."})
 	case "needs-privilege":
-		fs = append(fs, Finding{"limit", "Couldn't listen for switch advertisements — raw capture needs elevated privilege. Re-run with privilege, or use the triage-l2 recipe, to detect a managed switch by LLDP/CDP."})
+		tip := "Couldn't listen for switch advertisements — raw capture needs elevated privilege."
+		if privHint != "" {
+			tip += " " + privHint
+		}
+		tip += " Without any capture, the arpscan, discover (mDNS/SSDP) and snmpsweep tools can also find managed switches that have a management IP."
+		fs = append(fs, Finding{"limit", tip})
 	case "unsupported":
 		fs = append(fs, Finding{"limit", "LLDP/CDP capture isn't supported on this operating system yet, so a managed switch can't be detected here."})
 	case "error":
 		fs = append(fs, Finding{"limit", "The LLDP/CDP capture couldn't run, so a managed switch couldn't be detected this time."})
 	}
 
+	// Unprivileged SNMP read of the gateway (works without the LLDP capture).
+	fs = appendSNMP(fs, probe, gateway)
+
 	// The unmanaged-switch blind spot is always true — say so every time.
 	fs = append(fs, Finding{"limit", "An unmanaged switch is invisible to every check here — no IP, no LLDP, no effect on duplex. Nothing below proves the path is switch-free."})
 
 	return verdictLine(switchSeen, hubSeen, ls, lldpStatus), fs
+}
+
+// appendSNMP adds a finding when the gateway answered an unprivileged SNMP
+// query — confirming it's a managed device you can read without any capture.
+func appendSNMP(fs []Finding, probe mgmtProbe, gateway string) []Finding {
+	if !probe.snmpOK {
+		return fs
+	}
+	gw := gateway
+	if gw == "" {
+		gw = "the gateway"
+	}
+	txt := "The gateway (" + gw + ") answers SNMP with community “public” — a managed device you can read without privilege or capture"
+	if n := strings.TrimSpace(probe.sysName); n != "" {
+		txt += " — " + n
+	}
+	if d := strings.TrimSpace(probe.sysDescr); d != "" {
+		txt += ": " + truncateRunes(d, 140)
+	}
+	return append(fs, Finding{"found", txt})
+}
+
+// truncateRunes shortens s to at most n runes, adding an ellipsis.
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
 }
 
 // verdictLine turns the collected signals into the one-line headline.

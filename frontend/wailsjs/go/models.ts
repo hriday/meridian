@@ -502,6 +502,8 @@ export namespace linkpath {
 	    media?: string;
 	    lldpStatus: string;
 	    neighbors: lldp.Neighbor[];
+	    gatewaySnmp?: string;
+	    gatewaySnmpOk: boolean;
 	    verdict: string;
 	    findings: Finding[];
 	    takenAt: string;
@@ -521,6 +523,8 @@ export namespace linkpath {
 	        this.media = source["media"];
 	        this.lldpStatus = source["lldpStatus"];
 	        this.neighbors = this.convertValues(source["neighbors"], lldp.Neighbor);
+	        this.gatewaySnmp = source["gatewaySnmp"];
+	        this.gatewaySnmpOk = source["gatewaySnmpOk"];
 	        this.verdict = source["verdict"];
 	        this.findings = this.convertValues(source["findings"], Finding);
 	        this.takenAt = source["takenAt"];
