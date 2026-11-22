@@ -135,7 +135,6 @@
     { id: "dns", name: "DNS", group: "Local / environment", ready: true, kw: "dig nslookup resolver query a aaaa mx txt doh dot doq" },
     { id: "ifaces", name: "Interfaces", group: "Local / environment", ready: true, kw: "interfaces nic adapters ip address local ifconfig" },
     { id: "cli", name: "Command line", group: "Local / environment", ready: true, kw: "command line shell terminal commands install cli" },
-    { id: "tools", name: "Tools overview", group: "Local / environment", ready: true, kw: "tools overview reference list catalog all everything what can it do help guide map index pdf export index of tools capabilities" },
     { id: "ping1", name: "Ping", group: "Local network", ready: true, kw: "icmp ping latency rtt reachability" },
     { id: "pingmon", name: "Ping monitor", group: "Local network", ready: true, kw: "ping monitor latency uptime chart" },
     { id: "tcpping", name: "TCP ping (port)", group: "Local network", ready: true, kw: "tcp port ping connect syn latency" },
@@ -289,7 +288,9 @@
       return terms.every((term) => hay.includes(term));
     });
   };
-  $: activeTool = tools.find((t) => t.id === active);
+  // "tools" is a footer help page, not a sidebar tool, so it isn't in `tools`;
+  // give it a tab name directly.
+  $: activeTool = tools.find((t) => t.id === active) ?? (active === "tools" ? ({ id: "tools", name: "Tools overview", group: "", ready: true } as Tool) : undefined);
 </script>
 
 <CommandPalette {tools} />
@@ -362,6 +363,12 @@
           <span class="ver mono">Meridian {appVersion || "…"}</span>
           <button class="upd link" on:click={() => BrowserOpenURL("https://github.com/hriday/meridian/blob/master/docs/guide.md")} title="Open the Meridian user guide in your browser">
             How to use Meridian ↗
+          </button>
+          <button class="upd link" class:on={active === "tools"} on:click={() => (active = "tools")} title="A guide to every tool in Meridian, with a PDF you can export">
+            Tools overview
+          </button>
+          <button class="upd link" on:click={() => BrowserOpenURL("https://github.com/hriday/meridian")} title="Meridian source on GitHub">
+            View on GitHub ↗
           </button>
           {#if upState === "available"}
             <button class="upd avail" on:click={() => (showUpdate = true)} title="See what's new">
@@ -485,6 +492,7 @@
   }
   .upd.link { color: var(--accent); }
   .upd.link:hover { text-decoration: underline; }
+  .upd.link.on { font-weight: 650; text-decoration: underline; }
   .upd.avail { color: var(--accent); font-weight: 600; }
   .upd.avail:hover { text-decoration: underline; }
   .upd.ok { color: var(--good, #3fb950); cursor: default; }

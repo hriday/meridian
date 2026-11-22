@@ -300,10 +300,10 @@ meridian-cli help              # every command, grouped by area (Internet, Secur
 meridian-cli <command>         # run with no/bad args to see that command's usage
 ```
 
-In the desktop app, the **Tools overview** (under *Local / environment*) is the GUI
-counterpart to `meridian-cli help`: every tool grouped as in the sidebar, each with a
-plain-English note on what it does, filterable, and exportable as a PDF. Both it and the
-`docs` command render from the same tool list, so neither goes stale.
+In the desktop app, the **Tools overview** (in the sidebar footer, next to *How to use
+Meridian*) is the GUI counterpart to `meridian-cli help`: every tool grouped as in the
+sidebar, each with a plain-English note on what it does, filterable, and exportable as a
+PDF. Both it and the `docs` command render from the same tool list, so neither goes stale.
 
 **Examples:**
 

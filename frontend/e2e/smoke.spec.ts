@@ -48,7 +48,7 @@ test("every tool mounts and renders without a console error", async ({ page }) =
 // — catching "x is not iterable" / undefined-field crashes in result markup.
 const RUN_TOOLS = [
   "lookup", "subnet", "dnsaudit", "axfr", "openresolver",
-  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals", "linkpath", "tools",
+  "emailauth", "cipherscan", "certexpiry", "sechdr", "http3", "whois", "mesh", "ble", "peripherals", "linkpath",
 ];
 
 test("key tools run their action and render results without error", async ({ page }) => {
@@ -562,7 +562,7 @@ test("link inspector renders the verdict and findings from a real report", async
   expect(errors, errors.join(" | ")).toEqual([]);
 });
 
-test("tools overview renders the grouped tool list and filters by name or purpose", async ({ page }) => {
+test("tools overview opens from the footer and filters by name or purpose", async ({ page }) => {
   await page.addInitScript(() => {
     const REAL = [
       { name: "Local network", tools: [
@@ -579,7 +579,7 @@ test("tools overview renders the grouped tool list and filters by name or purpos
       apply: () => (path.includes("GUIReference") ? Promise.resolve(REAL) : Promise.resolve(perm())),
     });
     (window as any).go = bridge([]);
-    try { localStorage.setItem("meridian.activeTool", "tools"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+    try { localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
   });
 
   const errors: string[] = [];
@@ -588,7 +588,8 @@ test("tools overview renders the grouped tool list and filters by name or purpos
 
   await page.goto("/");
   await page.waitForSelector("nav.side .item");
-  await page.locator('[data-tool="tools"]').click();
+  // The overview lives in the sidebar footer (a help page), not the tool list.
+  await page.locator("nav.side .sidefoot").getByRole("button", { name: "Tools overview", exact: true }).click();
   const pane = page.locator("main.main");
 
   await expect(pane.getByRole("button", { name: /Export tools overview/ })).toBeVisible();

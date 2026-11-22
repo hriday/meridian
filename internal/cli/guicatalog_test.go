@@ -64,7 +64,7 @@ func TestGUICatalogIsComplete(t *testing.T) {
 // most likely to be forgotten in the hand-kept overview — are actually listed,
 // so the overview can't quietly fall behind the sidebar.
 func TestGUIReferenceCoversNewTools(t *testing.T) {
-	want := []string{"Link inspector", "Connected peripherals", "Tools overview", "Meshtastic mesh", "Bluetooth LE survey"}
+	want := []string{"Link inspector", "Connected peripherals", "Meshtastic mesh", "Bluetooth LE survey", "Wi-Fi analyzer"}
 	have := map[string]bool{}
 	for _, g := range GUICatalog() {
 		for _, tool := range g.Tools {
