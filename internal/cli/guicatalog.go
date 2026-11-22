@@ -62,7 +62,6 @@ func GUICatalog() []GUIGroup {
 			{"DNS", "Resolve a name the way dig does — any record type, over plain DNS or the encrypted transports (DoH/DoT/DoQ)."},
 			{"Interfaces", "List this machine's network interfaces with their addresses — your own local networking at a glance."},
 			{"Command line", "Reference for every tool as a meridian-cli subcommand, so you can script, pipe or run it over SSH; install the CLI from here."},
-			{"Tools overview", "This page — every tool in Meridian, grouped as in the sidebar, with a plain-English note on what each one does. Export it as a PDF."},
 		}},
 		{Name: "Local network", Tools: []GUITool{
 			{"Ping", "Ping one host and watch the round-trip time — the simplest 'can I reach it and how fast'."},
