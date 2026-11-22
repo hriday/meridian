@@ -41,3 +41,15 @@ func TestPortLabelEmpty(t *testing.T) {
 		t.Errorf("empty-everything label = %q, want generic fallback", got)
 	}
 }
+
+// With no USB ports, portsFrom must return a non-nil empty slice so `mesh ports
+// --json` emits [] rather than null.
+func TestPortsFromEmptyIsNonNil(t *testing.T) {
+	if got := portsFrom(nil); got == nil || len(got) != 0 {
+		t.Errorf("portsFrom(nil) = %#v, want non-nil empty slice", got)
+	}
+	got := portsFrom([]*enumerator.PortDetails{{Name: "/dev/cu.Bluetooth-Incoming-Port", IsUSB: false}})
+	if got == nil || len(got) != 0 {
+		t.Errorf("portsFrom(non-USB only) = %#v, want non-nil empty slice", got)
+	}
+}

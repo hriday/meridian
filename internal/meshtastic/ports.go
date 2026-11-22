@@ -21,9 +21,13 @@ type SerialPort struct {
 // not open any port. Non-USB ports (a Mac's debug console, Bluetooth serial)
 // are left out: a Meshtastic node attaches over USB or TCP, not those.
 func SerialPorts() ([]SerialPort, error) {
-	// enumerator.All turns on active USB probing so Product/Manufacturer strings
-	// are populated — that's what gives each port a recognisable label.
-	details, err := enumerator.GetDetailedPortsList(enumerator.All)
+	// Passive enumeration only — no filter, which would turn on active USB
+	// probing. Probing opens every attached serial device to read its string
+	// descriptors, and the library warns that can interfere with a device in
+	// use (a console cable live on a switch, a printer mid-job). The product
+	// name is read passively from the OS where it's available (macOS IOKit,
+	// Linux sysfs); where it isn't, portLabel falls back to the USB IDs.
+	details, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		return nil, fmt.Errorf("meshtastic: listing serial ports: %w", err)
 	}
@@ -34,7 +38,9 @@ func SerialPorts() ([]SerialPort, error) {
 // each a label, and sort for a stable order. Separated so it is unit-tested
 // without any hardware.
 func portsFrom(details []*enumerator.PortDetails) []SerialPort {
-	var ports []SerialPort
+	// Non-nil so an empty result marshals as JSON [] (not null) for `mesh ports
+	// --json`, and reads as an empty list everywhere.
+	ports := []SerialPort{}
 	for _, d := range details {
 		if d == nil || !d.IsUSB {
 			continue

@@ -13,13 +13,18 @@
   // the field still works — we never claim "no devices" on a failed scan.
   let ports: { path: string; label: string }[] = [];
   let portsScanned = false;
+  let portsErr = false;
 
   async function loadPorts() {
+    portsErr = false;
     try {
       const r = await MeshtasticSerialPorts();
       ports = Array.isArray(r) ? r : [];
     } catch (e) {
+      // A failed scan is NOT an empty one: never claim "no devices" here, or a
+      // user with a node plugged in is wrongly told none is present.
       ports = [];
+      portsErr = true;
     } finally {
       portsScanned = true;
     }
@@ -223,6 +228,11 @@
         </button>
       {/each}
       <button class="rescan" on:click={loadPorts} disabled={loading} title="Scan for attached USB serial devices again" aria-label="Rescan">↻</button>
+    </div>
+  {:else if portsErr}
+    <div class="picker">
+      <span class="pklbl dim">Couldn't list USB serial devices — enter the node's device path or host below.</span>
+      <button class="rescan" on:click={loadPorts} disabled={loading} title="Scan again" aria-label="Rescan">↻</button>
     </div>
   {:else if portsScanned}
     <div class="picker">
