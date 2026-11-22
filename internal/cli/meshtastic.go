@@ -18,8 +18,11 @@ func runMeshtastic(args []string, stdout, stderr io.Writer) int {
 	if !ok {
 		return 2
 	}
+	if len(pos) == 1 && pos[0] == "ports" {
+		return runMeshtasticPorts(*asJSON, stdout, stderr)
+	}
 	if len(pos) != 1 {
-		fmt.Fprintf(stderr, "mesh needs a Meshtastic node: a serial device (e.g. /dev/cu.usbserial-10) or a host (e.g. 192.168.1.50)\n%s", usage)
+		fmt.Fprintf(stderr, "mesh needs a Meshtastic node: a serial device (e.g. /dev/cu.usbserial-10) or a host (e.g. 192.168.1.50), or 'ports' to list attached USB serial devices\n%s", usage)
 		return 2
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -35,6 +38,28 @@ func runMeshtastic(args []string, stdout, stderr io.Writer) int {
 		return writeJSON(stdout, stderr, snap)
 	}
 	printMeshtastic(stdout, snap)
+	return 0
+}
+
+// runMeshtasticPorts lists the USB serial devices a node could be reached on,
+// so a serial target can be found without hunting for its device path.
+func runMeshtasticPorts(asJSON bool, stdout, stderr io.Writer) int {
+	ports, err := meshtastic.SerialPorts()
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	if asJSON {
+		return writeJSON(stdout, stderr, ports)
+	}
+	if len(ports) == 0 {
+		fmt.Fprintln(stdout, "No USB serial devices attached. Plug the node in over USB, or connect over TCP instead.")
+		return 0
+	}
+	fmt.Fprintln(stdout, "Attached USB serial devices (pass one as the node):")
+	for _, p := range ports {
+		fmt.Fprintf(stdout, "  %-28s %s\n", p.Path, p.Label)
+	}
 	return 0
 }
 

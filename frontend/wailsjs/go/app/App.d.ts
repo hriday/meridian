@@ -331,6 +331,8 @@ export function PrinterStatus(arg1:string):Promise<ipp.Result>;
 
 export function MeshtasticSnapshot(arg1:string):Promise<meshtastic.Snapshot>;
 
+export function MeshtasticSerialPorts():Promise<Array<meshtastic.SerialPort>>;
+
 export function BLESurvey(arg1:number):Promise<ble.Survey>;
 
 export function PeripheralsSurvey():Promise<peripherals.Survey>;

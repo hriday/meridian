@@ -553,6 +553,20 @@ export namespace linkpath {
 
 export namespace meshtastic {
 
+	export class SerialPort {
+	    path: string;
+	    label: string;
+
+	    static createFrom(source: any = {}) {
+	        return new SerialPort(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.label = source["label"];
+	    }
+	}
 	export class Node {
 	    num: number;
 	    id: string;

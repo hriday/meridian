@@ -295,7 +295,7 @@ meridian-cli tfexposure main.tf                            # internet-exposure s
 | RTP analyzer | per-stream jitter/loss/codec (raw capture: sudo or BPF group) | `rtp` |
 | Packet summary | tcpdump-lite: top talkers, TCP resets/retransmits, DNS errors, TLS SNIs (raw capture: sudo or BPF group) | `pktscan` |
 | Wi-Fi analyzer | channel, signal/SNR, neighbors + channel map / co-channel contention (macOS; Linux via nmcli & Windows via netsh give channel/signal/security, no SNR) | `wifi` |
-| Meshtastic mesh | LoRa mesh node snapshot over USB serial or TCP — node DB, per-neighbour SNR/hops, channel airtime, positions on an OpenStreetMap map (needs a Meshtastic radio) | `mesh` |
+| Meshtastic mesh | LoRa mesh node snapshot over USB serial or TCP — node DB, per-neighbour SNR/hops, channel airtime, positions on an OpenStreetMap map (needs a Meshtastic radio). A USB-attached node is detected and offered as a one-click button; `mesh ports` lists them from the CLI | `mesh` |
 | Bluetooth LE survey | nearby BLE devices with signal (RSSI), name and advertised company — unprivileged (macOS needs Bluetooth permission) | `ble` |
 | Connected peripherals | USB devices attached now — receivers, keyboards, storage, serial — vendor-resolved, with honest security call-outs (BadUSB/rogue-receiver shape); no flags ≠ safe | `peripherals` |
 | Link inspector | is a hub or switch between you and the router? link duplex (hub tell, no privilege) + a switch's LLDP/CDP (sudo/BPF) + an unprivileged gateway SNMP probe; honest hedged verdict | `linkpath` |
