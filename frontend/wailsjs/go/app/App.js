@@ -506,6 +506,10 @@ export function MeshtasticSnapshot(arg1) {
   return window['go']['app']['App']['MeshtasticSnapshot'](arg1);
 }
 
+export function MeshtasticSerialPorts() {
+  return window['go']['app']['App']['MeshtasticSerialPorts']();
+}
+
 export function BLESurvey(arg1) {
   return window['go']['app']['App']['BLESurvey'](arg1);
 }

@@ -79,7 +79,8 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   (channel, signal/SNR, neighbors + a channel map showing co-channel contention —
   macOS; Linux via `nmcli` and Windows via `netsh` give channel/signal/security).
 - **Meshtastic mesh** — connect to a Meshtastic LoRa node over **USB serial** or
-  **TCP** (`:4403`) and read its **node database**: every node it currently sees,
+  **TCP** (`:4403`) and read its **node database**. A node plugged in over USB is
+  **detected and offered as a one-click button** (no device path to type); every node it currently sees,
   with per-neighbor **SNR**, hop distance (`direct` = one-hop RF neighbor), channel
   airtime, battery and position — nodes that report a location are plotted on a
   **map** (OpenStreetMap). Read-only — it only asks the node to dump its config —
@@ -318,6 +319,7 @@ meridian-cli netdiag 10.0.0.50                  # why can't I reach it? one verd
 meridian-cli wwn 20:00:00:25:b5:00:00:01       # decode a Fibre Channel WWN (NAA, OUI + vendor)
 cat zoneset.txt | meridian-cli fczone          # analyze FC zoning (Cisco MDS / Brocade) for SAN hygiene
 meridian-cli printer 10.0.0.50                 # printer status over IPP — state, toner, print ports
+meridian-cli mesh ports                        # list attached USB serial devices a Meshtastic node could be on
 meridian-cli mesh /dev/cu.usbserial-10         # Meshtastic node snapshot — node db, SNR/hops, airtime (or: mesh 192.168.1.50)
 meridian-cli peripherals                       # USB devices attached now — receivers, keyboards, storage + security call-outs (alias: usb)
 meridian-cli linkpath                          # is a hub/switch between you and the router? link duplex + LLDP/CDP (alias: uplink)

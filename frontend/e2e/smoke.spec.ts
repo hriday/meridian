@@ -438,6 +438,50 @@ test("meshtastic renders the node header and mesh rows from a real snapshot", as
   expect(errors, errors.join(" | ")).toEqual([]);
 });
 
+test("meshtastic lists attached USB serial ports and reads one on click", async ({ page }) => {
+  await page.addInitScript(() => {
+    const PORTS = [{ path: "/dev/cu.usbmodem1101", label: "Espressif Systems LilyGO T-Deck" }];
+    const SNAP = {
+      transport: "serial", target: "/dev/cu.usbmodem1101", myNodeNum: 100,
+      firmware: "2.5.3", hwModel: "TDECK",
+      me: { num: 100, id: "!00000064", longName: "Base", shortName: "BASE", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
+      nodes: [], channelUtil: 5, airUtilTx: 1, nodeCount: 1, takenAt: "2026-11-20T00:00:00Z",
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => {
+        if (path.includes("MeshtasticSerialPorts")) return Promise.resolve(PORTS);
+        if (path.includes("MeshtasticSnapshot")) return Promise.resolve(SNAP);
+        return Promise.resolve(perm());
+      },
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "mesh"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="mesh"]').click();
+  const pane = page.locator("main.main");
+
+  // The attached board is offered as a pickable chip — label and device path.
+  const chip = pane.locator(".picker .chip");
+  await expect(chip).toHaveCount(1);
+  await expect(chip).toContainText("Espressif Systems LilyGO T-Deck");
+  await expect(chip).toContainText("/dev/cu.usbmodem1101");
+
+  // Clicking it fills the target and reads that node — one click, no path typed.
+  await chip.click();
+  await expect(pane.locator(".nodehead .nname")).toHaveText("Base");
+  await expect(pane.locator("input").first()).toHaveValue("/dev/cu.usbmodem1101");
+  expect(errors, errors.join(" | ")).toEqual([]);
+});
+
 test("ble survey renders the device list from a real scan", async ({ page }) => {
   await page.addInitScript(() => {
     const REAL = {
