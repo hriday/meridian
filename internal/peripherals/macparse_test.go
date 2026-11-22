@@ -1,6 +1,9 @@
 package peripherals
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 // sampleIOUSBHost mirrors the real shape of `ioreg -r -c IOUSBHostDevice -l`
 // (names and serials made generic): a host controller (ignored — not an
@@ -48,10 +51,12 @@ const sampleIOUSBHost = `+-o AppleT6000USBXHCI@01000000  <class AppleUSBXHCITR60
   |   |   | +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100000006, registered, matched, active, busy 0, retain 11>
   |   |   |   {
   |   |   |     "bInterfaceClass" = 2
+  |   |   |     "bInterfaceSubClass" = 2
   |   |   |   }
   |   |   | +-o IOUSBHostInterface@2  <class IOUSBHostInterface, id 0x100000007, registered, matched, active, busy 0, retain 11>
   |   |   |   {
   |   |   |     "bInterfaceClass" = 10
+  |   |   |     "bInterfaceSubClass" = 0
   |   |   |   }
   |   | +-o Ultra Fit@02200000  <class IOUSBHostDevice, id 0x100000008, registered, matched, active, busy 0, retain 40>
   |   |   {
@@ -149,6 +154,63 @@ const sampleIOReg = `
     "PrimaryUsage" = 2
   }
 `
+
+// TestParseRealIORegFixture runs the parser against a real, unmodified-shape
+// `ioreg -r -c IOUSBHostDevice -l` capture (serials redacted) from a Mac with
+// the T-Deck, a Targus/DisplayLink dock, hubs, a mouse and a keyboard attached.
+// It exercises the actual tree — driver nubs interposed between devices and
+// interfaces, single-line IOMatchedPersonality dicts that embed their own
+// bInterfaceClass — not a tidy synthetic one, so a drift in the depth/stack
+// attribution or the property shadowing guard would be caught here.
+func TestParseRealIORegFixture(t *testing.T) {
+	b, err := os.ReadFile("testdata/ioreg_real.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	devs := parseIOUSBHostDevices(b)
+	if len(devs) != 10 {
+		t.Fatalf("got %d devices, want 10 (one per IOUSBHostDevice node)", len(devs))
+	}
+	byVID := map[uint16]rawDevice{}
+	for _, d := range devs {
+		byVID[d.vendorID] = d
+	}
+
+	// The T-Deck's CDC interface is ACM (subclass 2): a real serial port.
+	esp, ok := byVID[0x303a]
+	if !ok {
+		t.Fatalf("T-Deck (0x303a) missing from the real-fixture inventory")
+	}
+	if !hasString(esp.classes, "serial") || hasString(esp.classes, "network") {
+		t.Errorf("T-Deck should be serial, not network: %v", esp.classes)
+	}
+	if esp.name != "Espressif Systems LilyGO T-Deck (16 MB FLASH, 8 MB PSRAM)" || esp.serial != "REDACTED" {
+		t.Errorf("T-Deck name/serial parsed wrong: name=%q serial=%q", esp.name, esp.serial)
+	}
+
+	// The dock's CDC interface is NCM (subclass 13): USB-Ethernet, never serial.
+	dock, ok := byVID[0x17e9]
+	if !ok {
+		t.Fatalf("Targus/DisplayLink dock (0x17e9) missing from the real-fixture inventory")
+	}
+	if hasString(dock.classes, "serial") {
+		t.Errorf("dock CDC-NCM must not be classed as a serial adapter: %v", dock.classes)
+	}
+	if !hasString(dock.classes, "network") {
+		t.Errorf("dock should carry a network class from its NCM interface: %v", dock.classes)
+	}
+
+	// End to end: the board reads as a serial adapter, the dock does not.
+	s := assemble(devs, "")
+	for _, d := range s.Devices {
+		if d.VendorID == "0x303a" && d.Kind != "USB-serial adapter" {
+			t.Errorf("T-Deck kind = %q, want \"USB-serial adapter\"", d.Kind)
+		}
+		if d.VendorID == "0x17e9" && d.Kind == "USB-serial adapter" {
+			t.Errorf("dock must not be labelled a USB-serial adapter")
+		}
+	}
+}
 
 func TestParseIOHIDClasses(t *testing.T) {
 	m := parseIOHIDClasses([]byte(sampleIOReg))

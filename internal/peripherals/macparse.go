@@ -64,7 +64,8 @@ func parseIOUSBHostDevices(b []byte) []rawDevice {
 			if len(stack) == 0 {
 				continue
 			}
-			if c := usbClassName(nodeInt(n, "bInterfaceClass")); c != "" {
+			props := nodeProps(n)
+			if c := interfaceClassName(nodeIntFrom(props, "bInterfaceClass"), nodeIntFrom(props, "bInterfaceSubClass")); c != "" {
 				owner := &devs[stack[len(stack)-1].idx]
 				owner.classes = unionClasses(owner.classes, []string{c})
 			}
@@ -104,9 +105,9 @@ func deviceFromNode(n usbNode) rawDevice {
 	serial := firstNonEmpty(props["USB Serial Number"], props["kUSBSerialNumberString"])
 
 	var classes []string
-	// The device-level class covers hubs (9) and some single-function devices;
-	// composite devices (class 0 / 239) carry their real classes on interfaces.
-	if c := usbClassName(nodeIntFrom(props, "bDeviceClass")); c != "" {
+	// The device-level class covers hubs; composite devices (class 0 / 239)
+	// carry their real classes on their interfaces, read separately.
+	if c := deviceClassName(nodeIntFrom(props, "bDeviceClass")); c != "" {
 		classes = append(classes, c)
 	}
 	return rawDevice{
@@ -120,29 +121,30 @@ func deviceFromNode(n usbNode) rawDevice {
 	}
 }
 
-// nodeProps parses a node's body into a key -> value map, unquoting string
-// values and leaving numbers as their text. Structured values (dicts, arrays,
-// data) are kept verbatim; callers only read the scalar keys they need.
+// nodeProps parses a node's own top-level properties into a key -> value map,
+// unquoting string values and leaving numbers as their text. It reads only the
+// node's own block (brace depth 1): keys inside a nested dict value — e.g. the
+// bInterfaceClass ioreg prints inside IOMatchedPersonality — never shadow the
+// device's real properties, whichever order they appear in.
 func nodeProps(n usbNode) map[string]string {
 	props := map[string]string{}
+	depth := 0
 	for _, line := range n.body {
-		m := usbProp.FindStringSubmatch(line)
-		if m == nil {
-			continue
+		if depth == 1 {
+			if m := usbProp.FindStringSubmatch(line); m != nil {
+				val := strings.TrimSpace(m[2])
+				if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
+					val = val[1 : len(val)-1]
+				}
+				if _, seen := props[m[1]]; !seen { // keep the first (the node's own)
+					props[m[1]] = val
+				}
+			}
 		}
-		val := strings.TrimSpace(m[2])
-		if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
-			val = val[1 : len(val)-1]
-		}
-		if _, seen := props[m[1]]; !seen { // keep the first (the device's own)
-			props[m[1]] = val
-		}
+		depth += strings.Count(line, "{") - strings.Count(line, "}")
 	}
 	return props
 }
-
-// nodeInt reads one integer property directly from a node's body.
-func nodeInt(n usbNode, key string) int { return nodeIntFrom(nodeProps(n), key) }
 
 // nodeIntFrom reads one integer property from an already-parsed prop map,
 // returning -1 when absent or non-numeric (no USB class is -1).
@@ -155,15 +157,34 @@ func nodeIntFrom(props map[string]string, key string) int {
 	return -1
 }
 
-// usbClassName maps a USB class code (device bDeviceClass or interface
-// bInterfaceClass) to the normalized class the classifier understands. Codes
-// without a classifier bucket (printer, etc.) return "".
-func usbClassName(code int) string {
-	switch code {
+// deviceClassName maps a device's bDeviceClass to a normalized class. Only hubs
+// declare their function at the device level; everything else is a composite
+// device (class 0 / 239) whose real classes live on its interfaces.
+func deviceClassName(code int) string {
+	if code == 9 {
+		return "hub"
+	}
+	return ""
+}
+
+// interfaceClassName maps a USB interface's (bInterfaceClass, bInterfaceSubClass)
+// to the normalized class the classifier understands. The CDC class (2) needs
+// the subclass: ACM is a serial port, but ECM/EEM/NCM/MBIM are USB-Ethernet /
+// cellular — labelling those "serial" is wrong. Classes without a classifier
+// bucket (printer, CDC-data, vendor-specific) return "".
+func interfaceClassName(class, subclass int) string {
+	switch class {
 	case 1:
 		return "audio"
-	case 2, 10: // CDC comms + CDC data — serial adapters, most Meshtastic radios
-		return "serial"
+	case 2: // CDC communications — the subclass says what kind
+		switch subclass {
+		case 2: // ACM — a serial port (USB-serial adapters, most Meshtastic radios)
+			return "serial"
+		case 6, 12, 13, 14: // ECM, EEM, NCM, MBIM — USB-Ethernet / cellular
+			return "network"
+		default:
+			return ""
+		}
 	case 3:
 		return "hid"
 	case 6, 14: // still image (PTP cameras) + UVC video
@@ -172,8 +193,6 @@ func usbClassName(code int) string {
 		return "mass-storage"
 	case 9:
 		return "hub"
-	case 224:
-		return "wireless"
 	default:
 		return ""
 	}

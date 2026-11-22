@@ -61,6 +61,8 @@ func kindLabel(r rawDevice, receiver bool) string {
 		return "Audio"
 	case hasAnyClass(r, "serial") || (r.hasIDs && serialVIDs[r.vendorID]):
 		return "USB-serial adapter"
+	case hasAnyClass(r, "network"):
+		return "Network adapter"
 	case hasAnyClass(r, "hub"):
 		return "USB hub"
 	case hasAnyClass(r, "hid"):
@@ -124,7 +126,7 @@ func kindWeight(d Device) int {
 		return 0
 	case "Keyboard", "Mouse", "Keypad", "Input device (HID)":
 		return 1
-	case "USB-serial adapter":
+	case "USB-serial adapter", "Network adapter":
 		return 2
 	case "Camera / video", "Audio":
 		return 3

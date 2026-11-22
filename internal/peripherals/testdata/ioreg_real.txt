@@ -1,0 +1,746 @@
++-o USB2.0 Hub@00100000  <class IOUSBHostDevice, id 0x100163a01, registered, matched, active, busy 0 (288 ms), retain 53>
+  | {
+  |   "kUSBSerialNumberString" = "REDACTED"
+  |   "bDeviceClass" = 9
+  |   "bDeviceSubClass" = 0
+  |   "USB Serial Number" = "REDACTED"
+  |   "USB Vendor Name" = "VIA Labs, Inc."
+  |   "kUSBProductString" = "USB2.0 Hub"
+  |   "kUSBVendorString" = "VIA Labs, Inc."
+  |   "USB Product Name" = "USB2.0 Hub"
+  |   "idVendor" = 8457
+  |   "idProduct" = 10263
+  | }
+  +-o AppleUSB20Hub@00100000  <class AppleUSB20Hub, id 0x100163a4f, registered, matched, active, busy 0 (177 ms), retain 23>
+  | | {
+  | |   "bDeviceSubClass" = 0
+  | |   "bDeviceClass" = 9
+  | | }
+  | +-o AppleUSB20HubPort@00130000  <class AppleUSB20HubPort, id 0x100163a69, registered, matched, active, busy 0 (63 ms), retain 16>
+  | | | {
+  | | | }
+  | | +-o USB2.0 Hub@00130000  <class IOUSBHostDevice, id 0x100163a7a, registered, matched, active, busy 0 (62 ms), retain 50>
+  | |   | {
+  | |   |   "kUSBSerialNumberString" = "REDACTED"
+  | |   |   "bDeviceClass" = 9
+  | |   |   "bDeviceSubClass" = 0
+  | |   |   "USB Serial Number" = "REDACTED"
+  | |   |   "USB Vendor Name" = "VIA Labs, Inc."
+  | |   |   "kUSBProductString" = "USB2.0 Hub"
+  | |   |   "kUSBVendorString" = "VIA Labs, Inc."
+  | |   |   "USB Product Name" = "USB2.0 Hub"
+  | |   |   "idVendor" = 8457
+  | |   |   "idProduct" = 10263
+  | |   | }
+  | |   +-o AppleUSB20Hub@00130000  <class AppleUSB20Hub, id 0x100163a84, registered, matched, active, busy 0 (52 ms), retain 23>
+  | |   | | {
+  | |   | |   "bDeviceSubClass" = 0
+  | |   | |   "bDeviceClass" = 9
+  | |   | | }
+  | |   | +-o AppleUSB20HubPort@00131000  <class AppleUSB20HubPort, id 0x100163a94, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   | |   {
+  | |   | |   }
+  | |   | +-o AppleUSB20HubPort@00132000  <class AppleUSB20HubPort, id 0x100163a96, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   | |   {
+  | |   | |   }
+  | |   | +-o AppleUSB20HubPort@00133000  <class AppleUSB20HubPort, id 0x100163a98, registered, matched, active, busy 0 (1 ms), retain 11>
+  | |   | |   {
+  | |   | |   }
+  | |   | +-o AppleUSB20HubPort@00134000  <class AppleUSB20HubPort, id 0x100163a9a, registered, matched, active, busy 0 (50 ms), retain 15>
+  | |   |   | {
+  | |   |   | }
+  | |   |   +-o USB Optical Mouse@00134000  <class IOUSBHostDevice, id 0x100163b23, registered, matched, active, busy 0 (49 ms), retain 104>
+  | |   |     | {
+  | |   |     |   "idProduct" = 49271
+  | |   |     |   "bDeviceClass" = 0
+  | |   |     |   "USB Product Name" = "USB Optical Mouse"
+  | |   |     |   "bDeviceSubClass" = 0
+  | |   |     |   "USB Vendor Name" = "Logitech"
+  | |   |     |   "idVendor" = 1133
+  | |   |     |   "kUSBProductString" = "USB Optical Mouse"
+  | |   |     |   "kUSBVendorString" = "Logitech"
+  | |   |     | }
+  | |   |     +-o AppleUSBHostCompositeDevice  <class AppleUSBHostCompositeDevice, id 0x100163b27, !registered, !matched, active, busy 0, retain 4>
+  | |   |     |   {
+  | |   |     |     "bDeviceSubClass" = 0
+  | |   |     |     "bDeviceClass" = 0
+  | |   |     |   }
+  | |   |     +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163b28, registered, matched, active, busy 0 (31 ms), retain 11>
+  | |   |     | | {
+  | |   |     | |   "idProduct" = 49271
+  | |   |     | |   "USB Product Name" = "USB Optical Mouse"
+  | |   |     | |   "bInterfaceClass" = 3
+  | |   |     | |   "bInterfaceSubClass" = 1
+  | |   |     | |   "USB Vendor Name" = "Logitech"
+  | |   |     | |   "idVendor" = 1133
+  | |   |     | | }
+  | |   |     | +-o AppleUserUSBHostHIDDevice  <class AppleUserHIDDevice, id 0x100163b2f, registered, matched, active, busy 0 (10 ms), retain 19>
+  | |   |     |   | {
+  | |   |     |   |   "IOMatchedPersonality" = {"IOClass"="AppleUserHIDDevice","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOProviderClass"="IOUSBHostInterface","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOProbeScore"=1,"bInterfaceSubClass"=1,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers","HIDDefaultBehavior"="","kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOUserServerOneProcess"=Yes,"bInterfaceClass"=3,"IOUserClass"="AppleUserUSBHostHIDDevice"}
+  | |   |     |   |   "bInterfaceSubClass" = 1
+  | |   |     |   |   "bInterfaceClass" = 3
+  | |   |     |   | }
+  | |   |     |   +-o IOHIDInterface  <class IOHIDInterface, id 0x100163b33, registered, matched, active, busy 0 (7 ms), retain 10>
+  | |   |     |   | | {
+  | |   |     |   | | }
+  | |   |     |   | +-o AppleUserHIDEventDriver  <class AppleUserHIDEventService, id 0x100163b34, registered, matched, active, busy 0 (1 ms), retain 16>
+  | |   |     |   |   | {
+  | |   |     |   |   |   "IOMatchedPersonality" = {"IOUserClass"="AppleUserHIDEventDriver","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOClass"="AppleUserHIDEventService","IOUserServerOneProcess"=Yes,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOProviderClass"="IOHIDInterface","IOProbeScore"=1,"DeviceUsagePairs"=({"DeviceUsagePage"=1,"DeviceUsage"=1},{"DeviceUsagePage"=1,"DeviceUsage"=2},{"DeviceUsagePage"=1,"DeviceUsage"=5},{"DeviceUsagePage"=1,"DeviceUsage"=4},{"DeviceUsagePage"=11,"DeviceUsage"=1},{"DeviceUsagePage"=65292,"DeviceUsage"=3},{"DeviceUsagePage"=11},{"DeviceUsagePage"=12},{"DeviceUsagePage"=13},{"DeviceUsagePage"=16},{"DeviceUsagePage"=144}),"kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers"}
+  | |   |     |   |   | }
+  | |   |     |   |   +-o IOHIDEventServiceUserClient  <class IOHIDEventServiceUserClient, id 0x100163b38, !registered, !matched, active, busy 0, retain 6>
+  | |   |     |   |       {
+  | |   |     |   |       }
+  | |   |     |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163b3c, !registered, !matched, active, busy 0, retain 6>
+  | |   |     |   |   {
+  | |   |     |   |   }
+  | |   |     |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163b3d, !registered, !matched, active, busy 0, retain 6>
+  | |   |     |       {
+  | |   |     |       }
+  | |   |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b29, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163b2a, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163b2b, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b2c, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b2d, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163b2e, !registered, !matched, active, busy 0, retain 7>
+  | |   |     |   {
+  | |   |     |   }
+  | |   |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100164951, !registered, !matched, active, busy 0, retain 7>
+  | |   |         {
+  | |   |         }
+  | |   +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163a85, !registered, !matched, active, busy 0 (0 ms), retain 8>
+  | |   |   {
+  | |   |     "idProduct" = 10263
+  | |   |     "USB Product Name" = "USB2.0 Hub"
+  | |   |     "bInterfaceClass" = 9
+  | |   |     "bInterfaceSubClass" = 0
+  | |   |     "USB Vendor Name" = "VIA Labs, Inc."
+  | |   |     "idVendor" = 8457
+  | |   |     "USB Serial Number" = "REDACTED"
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a8f, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a90, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a91, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a92, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a93, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163a9c, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494d, !registered, !matched, active, busy 0, retain 6>
+  | |       {
+  | |       }
+  | +-o AppleUSB20HubPort@00110000  <class AppleUSB20HubPort, id 0x100163a6b, registered, matched, active, busy 0 (73 ms), retain 15>
+  | | | {
+  | | | }
+  | | +-o 2.4G吠漀甀挀栀 䬀攀礀戀漀愀爀搀@00110000  <class IOUSBHostDevice, id 0x100163ab4, registered, matched, active, busy 0 (72 ms), retain 110>
+  | |   | {
+  | |   |   "idProduct" = 4104
+  | |   |   "bDeviceClass" = 0
+  | |   |   "USB Product Name" = 
+  | |   |   "bDeviceSubClass" = 0
+  | |   |   "USB Vendor Name" = "SINO WEALTH"
+  | |   |   "idVendor" = 1539
+  | |   |   "kUSBProductString" = 
+  | |   |   "kUSBVendorString" = "SINO WEALTH"
+  | |   | }
+  | |   +-o AppleUSBHostCompositeDevice  <class AppleUSBHostCompositeDevice, id 0x100163ab8, !registered, !matched, active, busy 0, retain 4>
+  | |   |   {
+  | |   |     "bDeviceSubClass" = 0
+  | |   |     "bDeviceClass" = 0
+  | |   |   }
+  | |   +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163ab9, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163aba, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163abb, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163abc, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163abd, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163abe, !registered, !matched, active, busy 0, retain 7>
+  | |   |   {
+  | |   |   }
+  | |   +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163abf, registered, matched, active, busy 0 (53 ms), retain 11>
+  | |   | | {
+  | |   | |   "idProduct" = 4104
+  | |   | |   "USB Product Name" = 
+  | |   | |   "bInterfaceClass" = 3
+  | |   | |   "bInterfaceSubClass" = 1
+  | |   | |   "USB Vendor Name" = "SINO WEALTH"
+  | |   | |   "idVendor" = 1539
+  | |   | | }
+  | |   | +-o AppleUserUSBHostHIDDevice  <class AppleUserHIDDevice, id 0x100163ac4, registered, matched, active, busy 0 (10 ms), retain 20>
+  | |   |   | {
+  | |   |   |   "IOMatchedPersonality" = {"IOClass"="AppleUserHIDDevice","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOProviderClass"="IOUSBHostInterface","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOProbeScore"=1,"bInterfaceSubClass"=1,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers","HIDDefaultBehavior"="","kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"bInterfaceProtocol"=1,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOUserServerOneProcess"=Yes,"bInterfaceClass"=3,"IOUserClass"="AppleUserUSBHostHIDDevice"}
+  | |   |   |   "bInterfaceSubClass" = 1
+  | |   |   |   "bInterfaceClass" = 3
+  | |   |   | }
+  | |   |   +-o IOHIDInterface  <class IOHIDInterface, id 0x100163ad1, registered, matched, active, busy 0 (8 ms), retain 10>
+  | |   |   | | {
+  | |   |   | | }
+  | |   |   | +-o AppleUserHIDEventDriver  <class AppleUserHIDEventService, id 0x100163ad4, registered, matched, active, busy 0 (1 ms), retain 16>
+  | |   |   |   | {
+  | |   |   |   |   "IOMatchedPersonality" = {"IOClass"="AppleUserHIDEventService","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOProviderClass"="IOHIDInterface","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","HIDAccelCurves"=({"HIDAccelGainLinear"=65536,"HIDAccelIndex"=0,"HIDAccelTangentSpeedLinear"=524288},{"HIDAccelGainLinear"=60293,"HIDAccelTangentSpeedLinear"=537395,"HIDAccelGainCubic"=5243,"HIDAccelGainParabolic"=26214,"HIDAccelTangentSpeedParabolicRoot"=1245184,"HIDAccelIndex"=8192},{"HIDAccelGainLinear"=60948,"HIDAccelTangentSpeedLinear"=543949,"HIDAccelGainCubic"=6554,"HIDAccelGainParabolic"=36045,"HIDAccelTangentSpeedParabolicRoot"=1179648,"HIDAccelIndex"=32768},{"HIDAccelGainLinear"=61604,"HIDAccelTangentSpeedLinear"=550502,"HIDAccelGainCubic"=7864,"HIDAccelGainParabolic"=46531,"HIDAccelTangentSpeedParabolicRoot"=1114112,"HIDAccelIndex"=45056},{"HIDAccelGainLinear"=62259,"HIDAccelTangentSpeedLinear"=557056,"HIDAccelGainCubic"=9830,"HIDAccelGainParabolic"=57672,"HIDAccelTangentSpeedParabolicRoot"=1048576,"HIDAccelIndex"=57344},{"HIDAccelGainLinear"=62915,"HIDAccelTangentSpeedLinear"=563610,"HIDAccelGainCubic"=11796,"HIDAccelGainParabolic"=69468,"HIDAccelTangentSpeedParabolicRoot"=983040,"HIDAccelIndex"=65536},{"HIDAccelGainLinear"=63570,"HIDAccelTangentSpeedLinear"=570163,"HIDAccelGainCubic"=14418,"HIDAccelGainParabolic"=81920,"HIDAccelTangentSpeedParabolicRoot"=917504,"HIDAccelIndex"=98304},{"HIDAccelGainLinear"=64225,"HIDAccelTangentSpeedLinear"=576717,"HIDAccelGainCubic"=17695,"HIDAccelGainParabolic"=95027,"HIDAccelTangentSpeedParabolicRoot"=851968,"HIDAccelIndex"=131072},{"HIDAccelGainLinear"=64881,"HIDAccelTangentSpeedLinear"=583270,"HIDAccelGainCubic"=21627,"HIDAccelGainParabolic"=108790,"HIDAccelTangentSpeedParabolicRoot"=786432,"HIDAccelIndex"=163840},{"HIDAccelGainLinear"=65536,"HIDAccelTangentSpeedLinear"=589824,"HIDAccelGainCubic"=26214,"HIDAccelGainParabolic"=123208,"HIDAccelTangentSpeedParabolicRoot"=786432,"HIDAccelIndex"=196608}),"IOProbeScore"=1,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers","DeviceUsagePairs"=({"DeviceUsagePage"=1,"DeviceUsage"=6},{"DeviceUsagePage"=1,"DeviceUsage"=7},{"DeviceUsagePage"=1,"DeviceUsage"=8},{"DeviceUsagePage"=1,"DeviceUsage"=128}),"HIDDefaultBehavior"="","kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOUserServerOneProcess"=Yes,"IOUserClass"="AppleUserHIDEventDriver"}
+  | |   |   |   | }
+  | |   |   |   +-o IOHIDEventServiceUserClient  <class IOHIDEventServiceUserClient, id 0x100163ada, !registered, !matched, active, busy 0, retain 6>
+  | |   |   |       {
+  | |   |   |       }
+  | |   |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163add, !registered, !matched, active, busy 0, retain 6>
+  | |   |   |   {
+  | |   |   |   }
+  | |   |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163af3, !registered, !matched, active, busy 0, retain 6>
+  | |   |       {
+  | |   |       }
+  | |   +-o IOUSBHostInterface@1  <class IOUSBHostInterface, id 0x100163ac0, registered, matched, active, busy 0 (47 ms), retain 11>
+  | |   | | {
+  | |   | |   "idProduct" = 4104
+  | |   | |   "USB Product Name" = 
+  | |   | |   "bInterfaceClass" = 3
+  | |   | |   "bInterfaceSubClass" = 1
+  | |   | |   "USB Vendor Name" = "SINO WEALTH"
+  | |   | |   "idVendor" = 1539
+  | |   | | }
+  | |   | +-o AppleUserUSBHostHIDDevice  <class AppleUserHIDDevice, id 0x100163ac2, registered, matched, active, busy 0 (20 ms), retain 19>
+  | |   |   | {
+  | |   |   |   "IOMatchedPersonality" = {"IOClass"="AppleUserHIDDevice","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOProviderClass"="IOUSBHostInterface","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOProbeScore"=1,"bInterfaceSubClass"=1,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers","HIDDefaultBehavior"="","kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOUserServerOneProcess"=Yes,"bInterfaceClass"=3,"IOUserClass"="AppleUserUSBHostHIDDevice"}
+  | |   |   |   "bInterfaceSubClass" = 1
+  | |   |   |   "bInterfaceClass" = 3
+  | |   |   | }
+  | |   |   +-o IOHIDInterface  <class IOHIDInterface, id 0x100163acb, registered, matched, active, busy 0 (13 ms), retain 10>
+  | |   |   | | {
+  | |   |   | | }
+  | |   |   | +-o AppleUserHIDEventDriver  <class AppleUserHIDEventService, id 0x100163acc, registered, matched, active, busy 0 (0 ms), retain 16>
+  | |   |   |   | {
+  | |   |   |   |   "IOMatchedPersonality" = {"IOUserClass"="AppleUserHIDEventDriver","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOClass"="AppleUserHIDEventService","IOUserServerOneProcess"=Yes,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOProviderClass"="IOHIDInterface","IOProbeScore"=1,"DeviceUsagePairs"=({"DeviceUsagePage"=1,"DeviceUsage"=1},{"DeviceUsagePage"=1,"DeviceUsage"=2},{"DeviceUsagePage"=1,"DeviceUsage"=5},{"DeviceUsagePage"=1,"DeviceUsage"=4},{"DeviceUsagePage"=11,"DeviceUsage"=1},{"DeviceUsagePage"=65292,"DeviceUsage"=3},{"DeviceUsagePage"=11},{"DeviceUsagePage"=12},{"DeviceUsagePage"=13},{"DeviceUsagePage"=16},{"DeviceUsagePage"=144}),"kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers"}
+  | |   |   |   | }
+  | |   |   |   +-o IOHIDEventServiceUserClient  <class IOHIDEventServiceUserClient, id 0x100163ad6, !registered, !matched, active, busy 0, retain 6>
+  | |   |   |       {
+  | |   |   |       }
+  | |   |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163ad9, !registered, !matched, active, busy 0, retain 6>
+  | |   |   |   {
+  | |   |   |   }
+  | |   |   +-o IOHIDLibUserClient  <class IOHIDLibUserClient, id 0x100163aee, !registered, !matched, active, busy 0, retain 6>
+  | |   |       {
+  | |   |       }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494f, !registered, !matched, active, busy 0, retain 7>
+  | |       {
+  | |       }
+  | +-o AppleUSB20HubPort@00120000  <class AppleUSB20HubPort, id 0x100163a6d, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   {
+  | |   }
+  | +-o AppleUSB20HubPort@00140000  <class AppleUSB20HubPort, id 0x100163a6f, registered, matched, active, busy 0 (63 ms), retain 16>
+  |   | {
+  |   | }
+  |   +-o USB2.0 Hub@00140000  <class IOUSBHostDevice, id 0x100163a9f, registered, matched, active, busy 0 (63 ms), retain 50>
+  |     | {
+  |     |   "idProduct" = 1544
+  |     |   "bDeviceClass" = 9
+  |     |   "bDeviceSubClass" = 0
+  |     |   "USB Product Name" = "USB2.0 Hub"
+  |     |   "idVendor" = 1507
+  |     |   "kUSBProductString" = "USB2.0 Hub"
+  |     | }
+  |     +-o AppleUSB20Hub@00140000  <class AppleUSB20Hub, id 0x100163aa1, registered, matched, active, busy 0 (51 ms), retain 23>
+  |     | | {
+  |     | |   "bDeviceSubClass" = 0
+  |     | |   "bDeviceClass" = 9
+  |     | | }
+  |     | +-o AppleUSB20HubPort@00141000  <class AppleUSB20HubPort, id 0x100163aa4, registered, matched, active, busy 0 (48 ms), retain 15>
+  |     | | | {
+  |     | | | }
+  |     | | +-o USB HID User device@00141000  <class IOUSBHostDevice, id 0x100163ade, registered, matched, active, busy 0 (46 ms), retain 105>
+  |     | |   | {
+  |     | |   |   "idProduct" = 10758
+  |     | |   |   "bDeviceClass" = 0
+  |     | |   |   "USB Product Name" = "USB HID User device"
+  |     | |   |   "bDeviceSubClass" = 0
+  |     | |   |   "USB Vendor Name" = "Actionstar"
+  |     | |   |   "idVendor" = 2101
+  |     | |   |   "kUSBProductString" = "USB HID User device"
+  |     | |   |   "kUSBVendorString" = "Actionstar"
+  |     | |   | }
+  |     | |   +-o AppleUSBHostCompositeDevice  <class AppleUSBHostCompositeDevice, id 0x100163ae2, !registered, !matched, active, busy 0, retain 4>
+  |     | |   |   {
+  |     | |   |     "bDeviceSubClass" = 0
+  |     | |   |     "bDeviceClass" = 0
+  |     | |   |   }
+  |     | |   +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163ae3, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163ae4, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163ae5, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163ae6, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Custom Interface@0  <class IOUSBHostInterface, id 0x100163ae7, registered, matched, active, busy 0 (25 ms), retain 12>
+  |     | |   | | {
+  |     | |   | |   "idProduct" = 10758
+  |     | |   | |   "USB Product Name" = "USB HID User device"
+  |     | |   | |   "bInterfaceClass" = 3
+  |     | |   | |   "bInterfaceSubClass" = 0
+  |     | |   | |   "USB Vendor Name" = "Actionstar"
+  |     | |   | |   "idVendor" = 2101
+  |     | |   | | }
+  |     | |   | +-o AppleUserUSBHostHIDDevice  <class AppleUserHIDDevice, id 0x100163aeb, registered, matched, active, busy 0 (5 ms), retain 13>
+  |     | |   |   | {
+  |     | |   |   |   "IOMatchedPersonality" = {"IOClass"="AppleUserHIDDevice","CFBundleIdentifier"="com.apple.AppleUserHIDDrivers","IOProviderClass"="IOUSBHostInterface","IOUserServerCDHash"="c1f9f34e045f400acaeb6a4fce11f184ac894e22","IOProbeScore"=1,"bInterfaceSubClass"=0,"IOUserServerName"="com.apple.driverkit.AppleUserHIDDrivers","HIDDefaultBehavior"="","kOSBundleDextUniqueIdentifier"=<b796d15d9354eae826f370c78da5a69a0107352f2c064353231d0efec890df26>,"CFBundleIdentifierKernel"="com.apple.iokit.IOHIDFamily","IOUserServerOneProcess"=Yes,"bInterfaceClass"=3,"IOUserClass"="AppleUserUSBHostHIDDevice"}
+  |     | |   |   |   "bInterfaceSubClass" = 0
+  |     | |   |   |   "bInterfaceClass" = 3
+  |     | |   |   | }
+  |     | |   |   +-o IOHIDInterface  <class IOHIDInterface, id 0x100163af1, registered, matched, active, busy 0 (3 ms), retain 6>
+  |     | |   |       {
+  |     | |   |       }
+  |     | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163ae8, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163ae9, !registered, !matched, active, busy 0, retain 7>
+  |     | |   |   {
+  |     | |   |   }
+  |     | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100164950, !registered, !matched, active, busy 0, retain 7>
+  |     | |       {
+  |     | |       }
+  |     | +-o AppleUSB20HubPort@00142000  <class AppleUSB20HubPort, id 0x100163aa6, registered, matched, active, busy 0 (0 ms), retain 11>
+  |     | |   {
+  |     | |   }
+  |     | +-o AppleUSB20HubPort@00143000  <class AppleUSB20HubPort, id 0x100163aad, registered, matched, active, busy 0 (1 ms), retain 11>
+  |     | |   {
+  |     | |   }
+  |     | +-o AppleUSB20HubPort@00144000  <class AppleUSB20HubPort, id 0x100163aaf, registered, matched, active, busy 0 (0 ms), retain 11>
+  |     |     {
+  |     |     }
+  |     +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163aa3, !registered, !matched, active, busy 0 (0 ms), retain 8>
+  |     |   {
+  |     |     "idProduct" = 1544
+  |     |     "bInterfaceSubClass" = 0
+  |     |     "USB Product Name" = "USB2.0 Hub"
+  |     |     "idVendor" = 1507
+  |     |     "bInterfaceClass" = 9
+  |     |   }
+  |     +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163aa7, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163aa8, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163aa9, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163aab, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163aac, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163ab1, !registered, !matched, active, busy 0, retain 6>
+  |     |   {
+  |     |   }
+  |     +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494e, !registered, !matched, active, busy 0, retain 6>
+  |         {
+  |         }
+  +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163a53, !registered, !matched, active, busy 0 (0 ms), retain 8>
+  |   {
+  |     "idProduct" = 10263
+  |     "USB Product Name" = "USB2.0 Hub"
+  |     "bInterfaceClass" = 9
+  |     "bInterfaceSubClass" = 0
+  |     "USB Vendor Name" = "VIA Labs, Inc."
+  |     "idVendor" = 8457
+  |     "USB Serial Number" = "REDACTED"
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a64, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a65, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a66, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a67, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a68, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163a73, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494b, !registered, !matched, active, busy 0, retain 6>
+      {
+      }
++-o USB3.0 Hub@00200000  <class IOUSBHostDevice, id 0x1001639f9, registered, matched, active, busy 0 (451 ms), retain 51>
+  | {
+  |   "kUSBSerialNumberString" = "REDACTED"
+  |   "bDeviceClass" = 9
+  |   "bDeviceSubClass" = 0
+  |   "USB Serial Number" = "REDACTED"
+  |   "USB Vendor Name" = "VIA Labs, Inc."
+  |   "kUSBProductString" = "USB3.0 Hub"
+  |   "kUSBVendorString" = "VIA Labs, Inc."
+  |   "USB Product Name" = "USB3.0 Hub"
+  |   "idVendor" = 8457
+  |   "idProduct" = 2071
+  | }
+  +-o AppleUSB30Hub@00200000  <class AppleUSB30Hub, id 0x100163a4c, registered, matched, active, busy 0 (340 ms), retain 23>
+  | | {
+  | |   "bDeviceSubClass" = 0
+  | |   "bDeviceClass" = 9
+  | | }
+  | +-o AppleUSB30HubPort@00230000  <class AppleUSB30HubPort, id 0x100163a54, registered, matched, active, busy 0 (339 ms), retain 16>
+  | | | {
+  | | | }
+  | | +-o USB3.0 Hub@00230000  <class IOUSBHostDevice, id 0x100163a74, registered, matched, active, busy 0 (338 ms), retain 50>
+  | |   | {
+  | |   |   "kUSBSerialNumberString" = "REDACTED"
+  | |   |   "bDeviceClass" = 9
+  | |   |   "bDeviceSubClass" = 0
+  | |   |   "USB Serial Number" = "REDACTED"
+  | |   |   "USB Vendor Name" = "VIA Labs, Inc."
+  | |   |   "kUSBProductString" = "USB3.0 Hub"
+  | |   |   "kUSBVendorString" = "VIA Labs, Inc."
+  | |   |   "USB Product Name" = "USB3.0 Hub"
+  | |   |   "idVendor" = 8457
+  | |   |   "idProduct" = 2071
+  | |   | }
+  | |   +-o AppleUSB30Hub@00230000  <class AppleUSB30Hub, id 0x100163a76, registered, matched, active, busy 0 (228 ms), retain 23>
+  | |   | | {
+  | |   | |   "bDeviceSubClass" = 0
+  | |   | |   "bDeviceClass" = 9
+  | |   | | }
+  | |   | +-o AppleUSB30HubPort@00231000  <class AppleUSB30HubPort, id 0x100163a7c, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   | |   {
+  | |   | |   }
+  | |   | +-o AppleUSB30HubPort@00232000  <class AppleUSB30HubPort, id 0x100163a7e, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   | |   {
+  | |   | |   }
+  | |   | +-o AppleUSB30HubPort@00233000  <class AppleUSB30HubPort, id 0x100163a80, registered, matched, active, busy 0 (225 ms), retain 16>
+  | |   | | | {
+  | |   | | | }
+  | |   | | +-o Targus USB3 DV4K DOCK w PD100W@00233000  <class IOUSBHostDevice, id 0x100163b4b, registered, matched, active, busy 0 (91 ms), retain 133>
+  | |   | |   | {
+  | |   | |   |   "kUSBSerialNumberString" = "REDACTED"
+  | |   | |   |   "bDeviceClass" = 239
+  | |   | |   |   "bDeviceSubClass" = 2
+  | |   | |   |   "USB Serial Number" = "REDACTED"
+  | |   | |   |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   |   "kUSBProductString" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   |   "kUSBVendorString" = "DisplayLink"
+  | |   | |   |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   |   "idVendor" = 6121
+  | |   | |   |   "idProduct" = 24584
+  | |   | |   | }
+  | |   | |   +-o AppleUSBHostCompositeDevice  <class AppleUSBHostCompositeDevice, id 0x100163b4f, !registered, !matched, active, busy 0, retain 4>
+  | |   | |   |   {
+  | |   | |   |     "bDeviceSubClass" = 2
+  | |   | |   |     "bDeviceClass" = 239
+  | |   | |   |   }
+  | |   | |   +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163b51, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163b52, registered, matched, active, busy 0 (7 ms), retain 16>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 255
+  | |   | |   | |   "bInterfaceSubClass" = 0
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o DisplayLinkUserAgent  <class AppleUSBHostInterfaceUserClient, id 0x100163b78, !registered, !matched, active, busy 0, retain 6>
+  | |   | |   |     {
+  | |   | |   |     }
+  | |   | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b53, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o IOUSBHostInterface@1  <class IOUSBHostInterface, id 0x100163b54, registered, matched, active, busy 0 (9 ms), retain 10>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 254
+  | |   | |   | |   "bInterfaceSubClass" = 1
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o DisplayLinkUserAgent  <class AppleUSBHostInterfaceUserClient, id 0x100163b77, !registered, !matched, active, busy 0, retain 6>
+  | |   | |   |     {
+  | |   | |   |     }
+  | |   | |   +-o Targus Audio@2  <class IOUSBHostInterface, id 0x100163b55, registered, matched, active, busy 0 (11 ms), retain 11>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 1
+  | |   | |   | |   "bInterfaceSubClass" = 1
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o AppleUSBAudioControlNub  <class AppleUSBAudioControlNub, id 0x100163b66, registered, matched, active, busy 0 (0 ms), retain 5>
+  | |   | |   | |   {
+  | |   | |   | |     "bInterfaceClass" = 1
+  | |   | |   | |     "bInterfaceSubClass" = 1
+  | |   | |   | |   }
+  | |   | |   | +-o usbaudiod@00233000  <class AppleUSBHostFrameworkInterfaceClient, id 0x100163b68, !registered, !matched, active, busy 0, retain 5>
+  | |   | |   |     {
+  | |   | |   |     }
+  | |   | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b56, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o Targus Audio@3  <class IOUSBHostInterface, id 0x100163b57, registered, matched, active, busy 0 (9 ms), retain 9>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 1
+  | |   | |   | |   "bInterfaceSubClass" = 2
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o usbaudiod@00233000  <class AppleUSBHostFrameworkInterfaceClient, id 0x100163b6c, !registered, !matched, active, busy 0, retain 5>
+  | |   | |   |     {
+  | |   | |   |     }
+  | |   | |   +-o Targus Audio@4  <class IOUSBHostInterface, id 0x100163b58, registered, matched, active, busy 0 (8 ms), retain 9>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 1
+  | |   | |   | |   "bInterfaceSubClass" = 2
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o usbaudiod@00233000  <class AppleUSBHostFrameworkInterfaceClient, id 0x100163b6d, !registered, !matched, active, busy 0, retain 5>
+  | |   | |   |     {
+  | |   | |   |     }
+  | |   | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163b59, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163b5a, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o Targus Ethernet@5  <class IOUSBHostInterface, id 0x100163b5b, registered, matched, active, busy 0 (72 ms), retain 10>
+  | |   | |   | | {
+  | |   | |   | |   "idProduct" = 24584
+  | |   | |   | |   "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   | |   "bInterfaceClass" = 2
+  | |   | |   | |   "bInterfaceSubClass" = 13
+  | |   | |   | |   "USB Vendor Name" = "DisplayLink"
+  | |   | |   | |   "idVendor" = 6121
+  | |   | |   | |   "USB Serial Number" = "REDACTED"
+  | |   | |   | | }
+  | |   | |   | +-o AppleUSBNCMControl  <class AppleUSBNCMControl, id 0x100163b60, registered, matched, active, busy 0 (2 ms), retain 8>
+  | |   | |   |   | {
+  | |   | |   |   |   "bInterfaceSubClass" = 13
+  | |   | |   |   |   "bInterfaceClass" = 2
+  | |   | |   |   | }
+  | |   | |   |   +-o AppleUSBNCMData  <class AppleUSBNCMData, id 0x100163b69, registered, matched, active, busy 0 (1 ms), retain 7>
+  | |   | |   |     | {
+  | |   | |   |     |   "idVendor" = 6121
+  | |   | |   |     |   "idProduct" = 24584
+  | |   | |   |     | }
+  | |   | |   |     +-o en13  <class IOEthernetInterface, id 0x100163b6b, registered, matched, active, busy 0 (1 ms), retain 11>
+  | |   | |   |       | {
+  | |   | |   |       | }
+  | |   | |   |       +-o IONetworkStack  <class IONetworkStack, id 0x10000092c, registered, matched, active, busy 0 (0 ms), retain 30>
+  | |   | |   |         | {
+  | |   | |   |         | }
+  | |   | |   |         +-o IONetworkStackUserClient  <class IONetworkStackUserClient, id 0x100000d81, !registered, !matched, active, busy 0, retain 5>
+  | |   | |   |             {
+  | |   | |   |             }
+  | |   | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163b5c, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o DisplayLinkUserAgent  <class AppleUSBHostDeviceUserClient, id 0x100163b5d, !registered, !matched, active, busy 0, retain 7>
+  | |   | |   |   {
+  | |   | |   |   }
+  | |   | |   +-o Targus Ethernet@6  <class IOUSBHostInterface, id 0x100163b5e, registered, matched, active, busy 0 (10 ms), retain 11>
+  | |   | |   |   {
+  | |   | |   |     "idProduct" = 24584
+  | |   | |   |     "USB Product Name" = "Targus USB3 DV4K DOCK w PD100W"
+  | |   | |   |     "bInterfaceClass" = 10
+  | |   | |   |     "bInterfaceSubClass" = 0
+  | |   | |   |     "USB Vendor Name" = "DisplayLink"
+  | |   | |   |     "idVendor" = 6121
+  | |   | |   |     "USB Serial Number" = "REDACTED"
+  | |   | |   |   }
+  | |   | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100164952, !registered, !matched, active, busy 0, retain 7>
+  | |   | |       {
+  | |   | |       }
+  | |   | +-o AppleUSB30HubPort@00234000  <class AppleUSB30HubPort, id 0x100163a82, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   |     {
+  | |   |     }
+  | |   +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163a79, !registered, !matched, active, busy 0 (0 ms), retain 8>
+  | |   |   {
+  | |   |     "idProduct" = 2071
+  | |   |     "USB Product Name" = "USB3.0 Hub"
+  | |   |     "bInterfaceClass" = 9
+  | |   |     "bInterfaceSubClass" = 0
+  | |   |     "USB Vendor Name" = "VIA Labs, Inc."
+  | |   |     "idVendor" = 8457
+  | |   |     "USB Serial Number" = "REDACTED"
+  | |   |   }
+  | |   +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163a86, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a87, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a88, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a89, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a8a, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a8b, !registered, !matched, active, busy 0, retain 6>
+  | |   |   {
+  | |   |   }
+  | |   +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494c, !registered, !matched, active, busy 0, retain 6>
+  | |       {
+  | |       }
+  | +-o AppleUSB30HubPort@00210000  <class AppleUSB30HubPort, id 0x100163a59, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   {
+  | |   }
+  | +-o AppleUSB30HubPort@00220000  <class AppleUSB30HubPort, id 0x100163a5e, registered, matched, active, busy 0 (0 ms), retain 11>
+  | |   {
+  | |   }
+  | +-o AppleUSB30HubPort@00240000  <class AppleUSB30HubPort, id 0x100163a60, registered, matched, active, busy 0 (0 ms), retain 11>
+  |     {
+  |     }
+  +-o IOUSBHostInterface@0  <class IOUSBHostInterface, id 0x100163a4e, !registered, !matched, active, busy 0 (0 ms), retain 8>
+  |   {
+  |     "idProduct" = 2071
+  |     "USB Product Name" = "USB3.0 Hub"
+  |     "bInterfaceClass" = 9
+  |     "bInterfaceSubClass" = 0
+  |     "USB Vendor Name" = "VIA Labs, Inc."
+  |     "idVendor" = 8457
+  |     "USB Serial Number" = "REDACTED"
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a55, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a56, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163a58, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163a5a, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a5b, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163a5c, !registered, !matched, active, busy 0, retain 6>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x10016494a, !registered, !matched, active, busy 0, retain 6>
+      {
+      }
++-o Espressif Systems LilyGO T-Deck (16 MB FLASH, 8 MB PSRAM)@02100000  <class IOUSBHostDevice, id 0x100163d2f, registered, matched, active, busy 0 (322 ms), retain 91>
+  | {
+  |   "kUSBSerialNumberString" = "REDACTED"
+  |   "bDeviceClass" = 239
+  |   "bDeviceSubClass" = 2
+  |   "USB Serial Number" = "REDACTED"
+  |   "USB Vendor Name" = "Espressif Systems"
+  |   "kUSBProductString" = "Espressif Systems LilyGO T-Deck (16 MB FLASH, 8 MB PSRAM)"
+  |   "kUSBVendorString" = "Espressif Systems"
+  |   "USB Product Name" = "Espressif Systems LilyGO T_Deck"
+  |   "idVendor" = 12346
+  |   "idProduct" = 4097
+  | }
+  +-o AppleUSBCDCCompositeDevice  <class AppleUSBCDCCompositeDevice, id 0x100163d35, !registered, !matched, active, busy 0, retain 4>
+  |   {
+  |     "bDeviceSubClass" = 2
+  |     "bDeviceClass" = 239
+  |   }
+  +-o zoom.us  <class AppleUSBHostDeviceUserClient, id 0x100163d37, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163d38, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163d3a, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163d3b, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o Google Chrome for Testing  <class AppleUSBHostDeviceUserClient, id 0x100163d3c, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o TinyUSB CDC@0  <class IOUSBHostInterface, id 0x100163d3d, registered, matched, active, busy 0 (8 ms), retain 9>
+  | | {
+  | |   "idProduct" = 4097
+  | |   "USB Product Name" = "Espressif Systems LilyGO T-Deck (16 MB FLASH, 8 MB PSRAM)"
+  | |   "bInterfaceClass" = 2
+  | |   "bInterfaceSubClass" = 2
+  | |   "USB Vendor Name" = "Espressif Systems"
+  | |   "idVendor" = 12346
+  | |   "USB Serial Number" = "REDACTED"
+  | | }
+  | +-o AppleUSBACMControl  <class AppleUSBACMControl, id 0x100163d44, registered, matched, active, busy 0 (1 ms), retain 7>
+  |     {
+  |       "bInterfaceSubClass" = 2
+  |       "bInterfaceClass" = 2
+  |     }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100163d3e, !registered, !matched, active, busy 0, retain 7>
+  |   {
+  |   }
+  +-o IOUSBHostInterface@1  <class IOUSBHostInterface, id 0x100163d3f, registered, matched, active, busy 0 (300 ms), retain 6>
+  | | {
+  | |   "idProduct" = 4097
+  | |   "USB Product Name" = "Espressif Systems LilyGO T-Deck (16 MB FLASH, 8 MB PSRAM)"
+  | |   "bInterfaceClass" = 10
+  | |   "bInterfaceSubClass" = 0
+  | |   "USB Vendor Name" = "Espressif Systems"
+  | |   "idVendor" = 12346
+  | |   "USB Serial Number" = "REDACTED"
+  | | }
+  | +-o AppleUSBACMData  <class AppleUSBACMData, id 0x100163d42, registered, matched, active, busy 0 (1 ms), retain 7>
+  |   | {
+  |   |   "idProduct" = 4097
+  |   |   "bInterfaceSubClass" = 0
+  |   |   "idVendor" = 12346
+  |   |   "bInterfaceClass" = 10
+  |   | }
+  |   +-o IOSerialBSDClient  <class IOSerialBSDClient, id 0x100163d4b, registered, matched, active, busy 0 (0 ms), retain 5>
+  |       {
+  |       }
+  +-o Google Chrome  <class AppleUSBHostDeviceUserClient, id 0x100164953, !registered, !matched, active, busy 0, retain 7>
+      {
+      }
