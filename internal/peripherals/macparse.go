@@ -1,102 +1,230 @@
 package peripherals
 
 import (
-	"encoding/json"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-// parseSystemProfiler turns the JSON from `system_profiler SPUSBDataType -json`
-// into raw devices. It walks the USB tree, emitting one device per node that
-// carries a vendor or product ID (bus/controller nodes carry neither and are
-// skipped, but still recursed into). Classes are left empty here — macOS does
-// not expose HID interface detail in this feed; parseIOHIDClasses fills that in
-// from a second source. Build-tag-free so it is unit-tested on every platform.
-func parseSystemProfiler(b []byte) ([]rawDevice, error) {
-	var root map[string]any
-	if err := json.Unmarshal(b, &root); err != nil {
-		return nil, err
-	}
-	var out []rawDevice
-	walkUSB(root["SPUSBDataType"], &out)
-	return out, nil
+// macparse holds the macOS USB readers. Both parse `ioreg` output and are
+// build-tag-free so they are unit-tested on every platform:
+//
+//   - parseIOUSBHostDevices reads the device tree (`ioreg -r -c IOUSBHostDevice
+//     -l`) — the inventory: every attached device with its IDs, names, serial
+//     and interface classes.
+//   - parseIOHIDClasses reads the HID tree (`ioreg -r -c IOHIDDevice -l`) — the
+//     precise keyboard/mouse/keypad flags, which the device tree can't give.
+//
+// ioreg is the authoritative source and is present on every macOS version.
+// `system_profiler SPUSBDataType`, which this used to read, returns an empty
+// list on recent macOS (Sequoia/Tahoe) even with devices plugged in — so it is
+// no longer used.
+
+// usbNodeHeader matches one node header line in `ioreg -l` output: the leading
+// tree art (spaces and pipes), "+-o", the node name, then the "<class NAME"
+// token. Capture 1 is the tree art (its length is the node's depth), capture 2
+// the name, capture 3 the IOKit class.
+var usbNodeHeader = regexp.MustCompile(`^([ |]*)\+-o (.*?)  <class (\w+)`)
+
+// usbProp matches one `"Key" = value` property line inside a node body. The
+// leading [ |]* skips ioreg's tree art (spaces and pipes) before the key.
+var usbProp = regexp.MustCompile(`^[ |]*"([^"]+)"\s*=\s*(.*)$`)
+
+// usbNode is one parsed ioreg node: its depth (indentation width), IOKit class,
+// display name and the raw property lines in its body.
+type usbNode struct {
+	depth int
+	class string
+	name  string
+	body  []string
 }
 
-func walkUSB(node any, out *[]rawDevice) {
-	switch v := node.(type) {
-	case []any:
-		for _, it := range v {
-			walkUSB(it, out)
+// parseIOUSBHostDevices parses `ioreg -r -c IOUSBHostDevice -l` into raw
+// devices. Each IOUSBHostDevice node becomes one device; its USB interface
+// children (IOUSBHostInterface) contribute interface classes — mass storage,
+// HID, serial/CDC, audio, video — attributed to their nearest ancestor device
+// via the indentation depth. Nodes that are neither (host controllers, driver
+// nubs) are skipped but still correctly close out their subtree.
+func parseIOUSBHostDevices(b []byte) []rawDevice {
+	nodes := splitIORegNodes(b)
+	var devs []rawDevice
+	// stack of enclosing devices, by depth, so an interface attaches to the
+	// device that encloses it (hubs nest, so the nearest ancestor wins).
+	type frame struct{ depth, idx int }
+	var stack []frame
+	for _, n := range nodes {
+		for len(stack) > 0 && stack[len(stack)-1].depth >= n.depth {
+			stack = stack[:len(stack)-1]
 		}
-	case map[string]any:
-		vraw, _ := v["vendor_id"].(string)
-		praw, _ := v["product_id"].(string)
-		if vraw != "" || praw != "" {
-			vid, vok := parseMacID(vraw)
-			pid, pok := parseMacID(praw)
-			name, _ := v["_name"].(string)
-			mfr, _ := v["manufacturer"].(string)
-			serial, _ := v["serial_num"].(string)
-			var classes []string
-			// system_profiler hangs a "Media" array (and a "bsd_name") off USB
-			// mass-storage devices. It's the one interface class the USB feed
-			// exposes; HID classes come separately from ioreg. Detecting it here
-			// is what lets the Storage kind and the keyboard+storage (BadUSB)
-			// flag fire on macOS.
-			if isMacStorage(v) {
-				classes = append(classes, "mass-storage")
+		switch n.class {
+		case "IOUSBHostDevice":
+			devs = append(devs, deviceFromNode(n))
+			stack = append(stack, frame{n.depth, len(devs) - 1})
+		case "IOUSBHostInterface":
+			if len(stack) == 0 {
+				continue
 			}
-			*out = append(*out, rawDevice{
-				name:       name,
-				vendorID:   vid,
-				productID:  pid,
-				hasIDs:     vok && pok,
-				vendorName: mfr,
-				serial:     serial,
-				classes:    classes,
-			})
+			if c := usbClassName(nodeInt(n, "bInterfaceClass")); c != "" {
+				owner := &devs[stack[len(stack)-1].idx]
+				owner.classes = unionClasses(owner.classes, []string{c})
+			}
 		}
-		walkUSB(v["_items"], out)
+	}
+	return devs
+}
+
+// splitIORegNodes breaks ioreg output into nodes: each header line starts a new
+// node, and the lines after it (until the next header) are its body.
+func splitIORegNodes(b []byte) []usbNode {
+	var nodes []usbNode
+	for _, line := range strings.Split(string(b), "\n") {
+		if m := usbNodeHeader.FindStringSubmatch(line); m != nil {
+			nodes = append(nodes, usbNode{
+				depth: len(m[1]),
+				name:  strings.TrimSpace(m[2]),
+				class: m[3],
+			})
+			continue
+		}
+		if len(nodes) > 0 {
+			nodes[len(nodes)-1].body = append(nodes[len(nodes)-1].body, line)
+		}
+	}
+	return nodes
+}
+
+// deviceFromNode builds a rawDevice from one IOUSBHostDevice node's properties.
+func deviceFromNode(n usbNode) rawDevice {
+	props := nodeProps(n)
+	vid, vok := parseDecID(props["idVendor"])
+	pid, pok := parseDecID(props["idProduct"])
+	// kUSBProductString is the full name; "USB Product Name" is often truncated.
+	name := firstNonEmpty(props["kUSBProductString"], props["USB Product Name"], stripAddr(n.name))
+	vendor := firstNonEmpty(props["kUSBVendorString"], props["USB Vendor Name"])
+	serial := firstNonEmpty(props["USB Serial Number"], props["kUSBSerialNumberString"])
+
+	var classes []string
+	// The device-level class covers hubs (9) and some single-function devices;
+	// composite devices (class 0 / 239) carry their real classes on interfaces.
+	if c := usbClassName(nodeIntFrom(props, "bDeviceClass")); c != "" {
+		classes = append(classes, c)
+	}
+	return rawDevice{
+		name:       name,
+		vendorID:   vid,
+		productID:  pid,
+		hasIDs:     vok && pok,
+		vendorName: vendor,
+		serial:     cleanSerial(serial),
+		classes:    classes,
 	}
 }
 
-// parseMacID reads an ID from a system_profiler field, which is usually
-// "0x046d  (Logitech Inc.)" but may be the symbolic "apple_vendor_id".
-func parseMacID(s string) (uint16, bool) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, false
-	}
-	if strings.EqualFold(s, "apple_vendor_id") {
-		return 0x05ac, true
-	}
-	if i := strings.Index(s, "0x"); i >= 0 {
-		hexs := s[i+2:]
-		if j := strings.IndexFunc(hexs, func(r rune) bool { return !isHex(r) }); j >= 0 {
-			hexs = hexs[:j]
+// nodeProps parses a node's body into a key -> value map, unquoting string
+// values and leaving numbers as their text. Structured values (dicts, arrays,
+// data) are kept verbatim; callers only read the scalar keys they need.
+func nodeProps(n usbNode) map[string]string {
+	props := map[string]string{}
+	for _, line := range n.body {
+		m := usbProp.FindStringSubmatch(line)
+		if m == nil {
+			continue
 		}
-		if n, err := strconv.ParseUint(hexs, 16, 16); err == nil {
-			return uint16(n), true
+		val := strings.TrimSpace(m[2])
+		if len(val) >= 2 && val[0] == '"' && val[len(val)-1] == '"' {
+			val = val[1 : len(val)-1]
 		}
+		if _, seen := props[m[1]]; !seen { // keep the first (the device's own)
+			props[m[1]] = val
+		}
+	}
+	return props
+}
+
+// nodeInt reads one integer property directly from a node's body.
+func nodeInt(n usbNode, key string) int { return nodeIntFrom(nodeProps(n), key) }
+
+// nodeIntFrom reads one integer property from an already-parsed prop map,
+// returning -1 when absent or non-numeric (no USB class is -1).
+func nodeIntFrom(props map[string]string, key string) int {
+	if v, ok := props[key]; ok {
+		if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			return n
+		}
+	}
+	return -1
+}
+
+// usbClassName maps a USB class code (device bDeviceClass or interface
+// bInterfaceClass) to the normalized class the classifier understands. Codes
+// without a classifier bucket (printer, etc.) return "".
+func usbClassName(code int) string {
+	switch code {
+	case 1:
+		return "audio"
+	case 2, 10: // CDC comms + CDC data — serial adapters, most Meshtastic radios
+		return "serial"
+	case 3:
+		return "hid"
+	case 6, 14: // still image (PTP cameras) + UVC video
+		return "video"
+	case 8:
+		return "mass-storage"
+	case 9:
+		return "hub"
+	case 224:
+		return "wireless"
+	default:
+		return ""
+	}
+}
+
+// parseDecID reads a decimal USB ID (ioreg reports idVendor/idProduct in base 10).
+func parseDecID(s string) (uint16, bool) {
+	if n, err := strconv.ParseUint(strings.TrimSpace(s), 10, 16); err == nil {
+		return uint16(n), true
 	}
 	return 0, false
 }
 
-func isHex(r rune) bool {
-	return (r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')
+// stripAddr drops the "@location" suffix ioreg appends to a node's name.
+func stripAddr(s string) string {
+	if i := strings.IndexByte(s, '@'); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return s
 }
 
-// isMacStorage reports whether a system_profiler USB node is a mass-storage
-// device — it carries a "Media" array or a "bsd_name" (the disk device node).
-func isMacStorage(v map[string]any) bool {
-	if _, ok := v["Media"]; ok {
-		return true
+// cleanSerial drops the all-zero placeholder serial that hubs and anonymous
+// devices report, so it isn't shown as if it were a real serial number.
+func cleanSerial(s string) string {
+	t := strings.TrimSpace(s)
+	if t == "" || strings.Trim(t, "0") == "" {
+		return ""
 	}
-	if b, ok := v["bsd_name"].(string); ok && b != "" {
-		return true
+	return t
+}
+
+func firstNonEmpty(ss ...string) string {
+	for _, s := range ss {
+		if strings.TrimSpace(s) != "" {
+			return strings.TrimSpace(s)
+		}
 	}
-	return false
+	return ""
+}
+
+// unionClasses merges two class lists, dropping duplicates and preserving order.
+func unionClasses(a, b []string) []string {
+	have := map[string]bool{}
+	out := make([]string, 0, len(a)+len(b))
+	for _, c := range append(append([]string{}, a...), b...) {
+		if !have[c] {
+			have[c] = true
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 var ioregNode = regexp.MustCompile(`(?m)\+-o `)
