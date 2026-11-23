@@ -38,6 +38,8 @@ type Snapshot struct {
 
 	Radio    *RadioConfig `json:"radio,omitempty"`    // the node's LoRa setup, when the dump carried it
 	Findings []Finding    `json:"findings,omitempty"` // mesh-health call-outs, most important first
+
+	metricsKnown bool // whether the node actually reported device metrics (so 0% util is measured, not missing)
 }
 
 // Node is one entry in the mesh node database.
@@ -199,7 +201,7 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 	var order []uint32
 	var lora *pb.Config_LoRaConfig
 	primaryChannel := ""
-	activeChannels := 0
+	sawPrimary := false
 	for _, fr := range frames {
 		if mi := fr.GetMyInfo(); mi != nil {
 			snap.MyNodeNum = mi.GetMyNodeNum()
@@ -216,11 +218,9 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 			}
 		}
 		if ch := fr.GetChannel(); ch != nil {
-			if ch.GetRole() != pb.Channel_DISABLED {
-				activeChannels++
-			}
 			if ch.GetRole() == pb.Channel_PRIMARY {
 				primaryChannel = ch.GetSettings().GetName()
+				sawPrimary = true
 			}
 		}
 		if ni := fr.GetNodeInfo(); ni != nil {
@@ -230,7 +230,7 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 			byNum[ni.GetNum()] = ni // a later entry supersedes an earlier one.
 		}
 	}
-	snap.Radio = radioFromLoRa(lora, primaryChannel, activeChannels)
+	snap.Radio = radioFromLoRa(lora, primaryChannel, sawPrimary)
 
 	snap.NodeCount = len(order)
 	for _, num := range order {
@@ -245,6 +245,7 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 			if dm := ni.GetDeviceMetrics(); dm != nil {
 				snap.ChannelUtil = round1(float64(dm.GetChannelUtilization()))
 				snap.AirUtilTx = round1(float64(dm.GetAirUtilTx()))
+				snap.metricsKnown = true
 			}
 			continue
 		}

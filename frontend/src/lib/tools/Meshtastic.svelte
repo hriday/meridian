@@ -268,7 +268,7 @@
         <span class="rsep">·</span>
         <span class="rval mono">{snap.radio.modemPreset || "custom preset"}</span>
         <span class="rsep">·</span>
-        <span class="rval mono">{snap.radio.primaryChannel || "default public channel"}</span>
+        <span class="rval mono">{!snap.radio.channelKnown ? "channel not read" : snap.radio.primaryChannel || "default public channel"}</span>
         <span class="rsep">·</span>
         <span class="rval mono" class:warn={!snap.radio.txEnabled}>TX {snap.radio.txEnabled ? "on" : "OFF"}</span>
       </div>

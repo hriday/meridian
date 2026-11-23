@@ -490,7 +490,7 @@ test("meshtastic shows the radio config and mesh-health findings", async ({ page
       me: { num: 100, id: "!00000064", longName: "moosha", shortName: "MSH", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
       nodes: [],
       channelUtil: 0, airUtilTx: 0, nodeCount: 1, takenAt: "2026-11-23T00:00:00Z",
-      radio: { region: "", regionSet: false, modemPreset: "LongFast", usePreset: true, txEnabled: true, primaryChannel: "", channelCount: 1 },
+      radio: { region: "", regionSet: false, modemPreset: "LongFast", usePreset: true, txEnabled: true, primaryChannel: "", channelKnown: true },
       findings: [
         { level: "problem", title: "LoRa region is not set — the radio will not transmit.", fix: "Set your region on the node (Settings → LoRa → Region)." },
         { level: "check", title: "No neighbours and no RF traffic at all reaching this node.", fix: "A peer has to match your region, modem preset (LongFast) and primary channel, and be within LoRa range." },

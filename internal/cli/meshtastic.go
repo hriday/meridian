@@ -89,9 +89,12 @@ func printMeshtastic(w io.Writer, s meshtastic.Snapshot) {
 		if preset == "" {
 			preset = "custom"
 		}
-		ch := r.PrimaryChannel
-		if ch == "" {
-			ch = "(default public)"
+		ch := "unknown"
+		if r.ChannelKnown {
+			ch = r.PrimaryChannel
+			if ch == "" {
+				ch = "(default public)"
+			}
 		}
 		tx := "on"
 		if !r.TxEnabled {

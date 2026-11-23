@@ -15,8 +15,8 @@ type RadioConfig struct {
 	ModemPreset    string `json:"modemPreset"`    // e.g. "LongFast"; "" when custom radio params are in use
 	UsePreset      bool   `json:"usePreset"`      // false = custom bandwidth/spread/coding, not a named preset
 	TxEnabled      bool   `json:"txEnabled"`      // false = listen-only, never announces itself
-	PrimaryChannel string `json:"primaryChannel"` // primary channel name; "" = the default public channel
-	ChannelCount   int    `json:"channelCount"`   // active (non-disabled) channels
+	PrimaryChannel string `json:"primaryChannel"` // primary channel name; "" = the default public channel (only meaningful when ChannelKnown)
+	ChannelKnown   bool   `json:"channelKnown"`   // did the dump actually carry the primary channel? (false = don't claim a channel)
 }
 
 // Finding is one mesh-health call-out: a likely reason the node is isolated, or
@@ -36,7 +36,7 @@ type Finding struct {
 // radioFromLoRa builds a RadioConfig from the node's LoRaConfig and the name of
 // its primary channel. Returns nil when the dump carried no LoRa config, so the
 // caller can say "couldn't read the radio config" rather than invent one.
-func radioFromLoRa(l *pb.Config_LoRaConfig, primaryChannel string, channelCount int) *RadioConfig {
+func radioFromLoRa(l *pb.Config_LoRaConfig, primaryChannel string, channelKnown bool) *RadioConfig {
 	if l == nil {
 		return nil
 	}
@@ -48,7 +48,7 @@ func radioFromLoRa(l *pb.Config_LoRaConfig, primaryChannel string, channelCount 
 		UsePreset:      l.GetUsePreset(),
 		TxEnabled:      l.GetTxEnabled(),
 		PrimaryChannel: primaryChannel,
-		ChannelCount:   channelCount,
+		ChannelKnown:   channelKnown,
 	}
 }
 
@@ -89,14 +89,18 @@ func diagnose(s Snapshot) []Finding {
 			})
 		case r.RegionSet && r.TxEnabled:
 			// The config can talk; isolation is beyond what Meridian can see.
-			quiet := s.ChannelUtil == 0 && s.AirUtilTx == 0
+			// Only lean on the airtime reading when the node actually reported
+			// metrics — absent metrics default to 0 and must not become a verdict.
+			// round1 means a light-but-real 0.04% also reads as ~0, so the wording
+			// stays "little or no", never "none".
+			quiet := s.metricsKnown && s.ChannelUtil == 0 && s.AirUtilTx == 0
 			title := "On the air, but no neighbours yet — nothing Meridian can see is wrong with this node."
 			if quiet {
-				title = "No neighbours and no RF traffic at all reaching this node."
+				title = "No neighbours, and this node's channel utilisation reads about 0%."
 			}
 			fix := "A peer has to match your region (" + r.Region + "), modem preset (" + presetLabel(r) + ") and primary channel (" + channelLabel(r) + "), be powered on, and be within LoRa range."
 			if quiet {
-				fix += " Zero channel activity points to range (nothing is arriving) rather than a settings mismatch."
+				fix = "Little or no traffic is reaching this node, which points more to range or antenna than to a settings mismatch. " + fix
 			}
 			fs = append(fs, Finding{Level: "check", Title: title, Fix: fix})
 			// region-unset / tx-disabled cases are already explained by the problem findings above.
@@ -115,6 +119,9 @@ func presetLabel(r *RadioConfig) string {
 }
 
 func channelLabel(r *RadioConfig) string {
+	if !r.ChannelKnown {
+		return "its channel (not in this read)"
+	}
 	if strings.TrimSpace(r.PrimaryChannel) == "" {
 		return "the default public channel"
 	}

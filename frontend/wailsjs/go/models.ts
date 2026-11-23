@@ -590,7 +590,7 @@ export namespace meshtastic {
 	    usePreset: boolean;
 	    txEnabled: boolean;
 	    primaryChannel: string;
-	    channelCount: number;
+	    channelKnown: boolean;
 
 	    static createFrom(source: any = {}) {
 	        return new RadioConfig(source);
@@ -604,7 +604,7 @@ export namespace meshtastic {
 	        this.usePreset = source["usePreset"];
 	        this.txEnabled = source["txEnabled"];
 	        this.primaryChannel = source["primaryChannel"];
-	        this.channelCount = source["channelCount"];
+	        this.channelKnown = source["channelKnown"];
 	    }
 	}
 	export class Node {

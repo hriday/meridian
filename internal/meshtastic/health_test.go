@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "buf.build/gen/go/meshtastic/protobufs/protocolbuffers/go/meshtastic"
+	"google.golang.org/protobuf/proto"
 )
 
 func myInfoFrame(num uint32) *pb.FromRadio {
@@ -12,6 +13,12 @@ func myInfoFrame(num uint32) *pb.FromRadio {
 }
 func nodeFrame(num uint32) *pb.FromRadio {
 	return (&pb.FromRadio_builder{NodeInfo: (&pb.NodeInfo_builder{Num: num}).Build()}).Build()
+}
+func nodeWithMetrics(num uint32, chUtil, airTx float32) *pb.FromRadio {
+	return (&pb.FromRadio_builder{NodeInfo: (&pb.NodeInfo_builder{
+		Num:           num,
+		DeviceMetrics: (&pb.DeviceMetrics_builder{ChannelUtilization: proto.Float32(chUtil), AirUtilTx: proto.Float32(airTx)}).Build(),
+	}).Build()}).Build()
 }
 func loraFrame(region pb.Config_LoRaConfig_RegionCode, preset pb.Config_LoRaConfig_ModemPreset, usePreset, tx bool) *pb.FromRadio {
 	return (&pb.FromRadio_builder{Config: (&pb.Config_builder{Lora: (&pb.Config_LoRaConfig_builder{
@@ -61,8 +68,55 @@ func TestRadioConfigExtracted(t *testing.T) {
 	if !r.TxEnabled {
 		t.Errorf("tx should be enabled: %+v", r)
 	}
-	if r.PrimaryChannel != "Secret" || r.ChannelCount != 1 {
+	if r.PrimaryChannel != "Secret" || !r.ChannelKnown {
 		t.Errorf("channel wrong: %+v", r)
+	}
+}
+
+// TestDiagnose_RangeClaimNeedsMetrics: the "points at range" inference may only
+// appear when the node actually reported metrics — absent metrics default to 0%
+// and must never become a range verdict (failed lookup ≠ verdict).
+func TestDiagnose_RangeClaimNeedsMetrics(t *testing.T) {
+	withMetrics := assemble("serial", "/dev/x", []*pb.FromRadio{
+		myInfoFrame(100),
+		loraFrame(pb.Config_LoRaConfig_US, pb.Config_LoRaConfig_LONG_FAST, true, true),
+		primaryChanFrame(""),
+		nodeWithMetrics(100, 0, 0),
+	})
+	if !hasFinding(withMetrics.Findings, "check", "little or no traffic") {
+		t.Errorf("measured 0%% should point at range: %s", findingLevels(withMetrics.Findings))
+	}
+
+	noMetrics := assemble("serial", "/dev/x", []*pb.FromRadio{
+		myInfoFrame(100),
+		loraFrame(pb.Config_LoRaConfig_US, pb.Config_LoRaConfig_LONG_FAST, true, true),
+		primaryChanFrame(""),
+		nodeFrame(100),
+	})
+	if hasFinding(noMetrics.Findings, "check", "little or no traffic") {
+		t.Errorf("no metrics must not assert a range verdict: %s", findingLevels(noMetrics.Findings))
+	}
+	if !hasFinding(noMetrics.Findings, "check", "range") {
+		t.Errorf("should still give the generic match-a-peer/in-range advice: %s", findingLevels(noMetrics.Findings))
+	}
+}
+
+// TestDiagnose_ChannelUnknown: a dump with no channel frame must not be reported
+// as the default public channel — it was simply never read.
+func TestDiagnose_ChannelUnknown(t *testing.T) {
+	snap := assemble("serial", "/dev/x", []*pb.FromRadio{
+		myInfoFrame(100),
+		loraFrame(pb.Config_LoRaConfig_US, pb.Config_LoRaConfig_LONG_FAST, true, true),
+		nodeFrame(100),
+	})
+	if snap.Radio.ChannelKnown {
+		t.Error("no channel frame → ChannelKnown should be false")
+	}
+	if hasFinding(snap.Findings, "check", "default public channel") {
+		t.Errorf("must not claim the default public channel when it wasn't read: %s", findingLevels(snap.Findings))
+	}
+	if !hasFinding(snap.Findings, "check", "not in this read") {
+		t.Errorf("should say the channel wasn't in the read: %s", findingLevels(snap.Findings))
 	}
 }
 
