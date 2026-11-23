@@ -35,6 +35,11 @@ type Snapshot struct {
 	AirUtilTx   float64 `json:"airUtilTx"`   // my node's transmit airtime, percent
 	NodeCount   int     `json:"nodeCount"`   // total nodes seen, including me
 	TakenAt     string  `json:"takenAt"`     // RFC3339 UTC instant of this read
+
+	Radio    *RadioConfig `json:"radio,omitempty"`    // the node's LoRa setup, when the dump carried it
+	Findings []Finding    `json:"findings,omitempty"` // mesh-health call-outs, most important first
+
+	metricsKnown bool // whether the node actually reported device metrics (so 0% util is measured, not missing)
 }
 
 // Node is one entry in the mesh node database.
@@ -194,6 +199,9 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 	}
 	byNum := map[uint32]*pb.NodeInfo{}
 	var order []uint32
+	var lora *pb.Config_LoRaConfig
+	primaryChannel := ""
+	sawPrimary := false
 	for _, fr := range frames {
 		if mi := fr.GetMyInfo(); mi != nil {
 			snap.MyNodeNum = mi.GetMyNodeNum()
@@ -204,6 +212,17 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 				snap.HwModel = hwModel(md.GetHwModel())
 			}
 		}
+		if cfg := fr.GetConfig(); cfg != nil {
+			if l := cfg.GetLora(); l != nil {
+				lora = l
+			}
+		}
+		if ch := fr.GetChannel(); ch != nil {
+			if ch.GetRole() == pb.Channel_PRIMARY {
+				primaryChannel = ch.GetSettings().GetName()
+				sawPrimary = true
+			}
+		}
 		if ni := fr.GetNodeInfo(); ni != nil {
 			if _, seen := byNum[ni.GetNum()]; !seen {
 				order = append(order, ni.GetNum())
@@ -211,6 +230,7 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 			byNum[ni.GetNum()] = ni // a later entry supersedes an earlier one.
 		}
 	}
+	snap.Radio = radioFromLoRa(lora, primaryChannel, sawPrimary)
 
 	snap.NodeCount = len(order)
 	for _, num := range order {
@@ -225,12 +245,14 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 			if dm := ni.GetDeviceMetrics(); dm != nil {
 				snap.ChannelUtil = round1(float64(dm.GetChannelUtilization()))
 				snap.AirUtilTx = round1(float64(dm.GetAirUtilTx()))
+				snap.metricsKnown = true
 			}
 			continue
 		}
 		snap.Nodes = append(snap.Nodes, node)
 	}
 	rankNodes(snap.Nodes)
+	snap.Findings = diagnose(snap)
 	return snap
 }
 

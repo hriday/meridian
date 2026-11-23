@@ -567,6 +567,46 @@ export namespace meshtastic {
 	        this.label = source["label"];
 	    }
 	}
+	export class Finding {
+	    level: string;
+	    title: string;
+	    fix?: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Finding(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.level = source["level"];
+	        this.title = source["title"];
+	        this.fix = source["fix"];
+	    }
+	}
+	export class RadioConfig {
+	    region: string;
+	    regionSet: boolean;
+	    modemPreset: string;
+	    usePreset: boolean;
+	    txEnabled: boolean;
+	    primaryChannel: string;
+	    channelKnown: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new RadioConfig(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.region = source["region"];
+	        this.regionSet = source["regionSet"];
+	        this.modemPreset = source["modemPreset"];
+	        this.usePreset = source["usePreset"];
+	        this.txEnabled = source["txEnabled"];
+	        this.primaryChannel = source["primaryChannel"];
+	        this.channelKnown = source["channelKnown"];
+	    }
+	}
 	export class Node {
 	    num: number;
 	    id: string;
@@ -621,6 +661,8 @@ export namespace meshtastic {
 	    airUtilTx: number;
 	    nodeCount: number;
 	    takenAt: string;
+	    radio?: RadioConfig;
+	    findings?: Finding[];
 
 	    static createFrom(source: any = {}) {
 	        return new Snapshot(source);
@@ -639,6 +681,8 @@ export namespace meshtastic {
 	        this.airUtilTx = source["airUtilTx"];
 	        this.nodeCount = source["nodeCount"];
 	        this.takenAt = source["takenAt"];
+	        this.radio = this.convertValues(source["radio"], RadioConfig);
+	        this.findings = this.convertValues(source["findings"], Finding);
 	    }
 
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

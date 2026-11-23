@@ -209,7 +209,10 @@
     is how many relays away it sits (<code>direct</code> is a one-hop RF neighbour), and <code>via MQTT</code> means it
     was seen through an internet gateway rather than over the air. Nodes that report a position can be
     shown on a <strong>map</strong> (press <strong>Show map</strong>; your node is a square), which loads
-    OpenStreetMap tiles — the only time this tool reaches the internet.
+    OpenStreetMap tiles — the only time this tool reaches the internet. The <strong>Radio</strong> line shows the
+    node's region, modem preset and channel, and <strong>Mesh health</strong> flags why it may be isolated:
+    a red bar is a setting on this node you can fix (region unset, transmit off); an amber bar is something
+    Meridian can't see from here (a peer's settings, range) with what a neighbour would have to match.
   </ToolHelp>
 
   <div class="searchrow">
@@ -257,6 +260,30 @@
         <div class="metric"><div class="mv mono">{snap.nodeCount}</div><div class="ml">nodes seen</div></div>
       </div>
     </div>
+
+    {#if snap.radio}
+      <div class="radiorow">
+        <span class="rlbl">Radio</span>
+        <span class="rval mono" class:warn={!snap.radio.regionSet}>{snap.radio.regionSet ? snap.radio.region : "region UNSET"}</span>
+        <span class="rsep">·</span>
+        <span class="rval mono">{snap.radio.modemPreset || "custom preset"}</span>
+        <span class="rsep">·</span>
+        <span class="rval mono">{!snap.radio.channelKnown ? "channel not read" : snap.radio.primaryChannel || "default public channel"}</span>
+        <span class="rsep">·</span>
+        <span class="rval mono" class:warn={!snap.radio.txEnabled}>TX {snap.radio.txEnabled ? "on" : "OFF"}</span>
+      </div>
+    {/if}
+
+    {#if snap.findings && snap.findings.length}
+      <div class="findings">
+        {#each snap.findings as f}
+          <div class="finding {f.level}">
+            <div class="ftitle">{f.title}</div>
+            {#if f.fix}<div class="ffix">{f.fix}</div>{/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
 
     {#if pts.length}
       <div class="mapwrap">
@@ -334,6 +361,19 @@
   .metric { text-align: right; min-width: 56px; }
   .mv { font-size: 0.92rem; color: var(--text); font-weight: 600; }
   .ml { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint, var(--text-dim)); margin-top: 2px; }
+
+  .radiorow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; max-width: 820px; margin: -4px 0 12px; font-size: 0.78rem; }
+  .rlbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint, var(--text-dim)); font-weight: 600; margin-right: 2px; }
+  .rval { color: var(--text); }
+  .rval.warn { color: var(--warn, #d6a531); font-weight: 600; }
+  .rsep { color: var(--text-faint, var(--text-dim)); }
+
+  .findings { display: flex; flex-direction: column; gap: 8px; max-width: 820px; margin: 0 0 14px; }
+  .finding { border: 1px solid var(--border); border-left-width: 3px; border-radius: 9px; padding: 10px 13px; background: var(--card); }
+  .finding.problem { border-left-color: var(--bad, #f0616a); background: color-mix(in srgb, var(--bad, #f0616a) 7%, transparent); }
+  .finding.check { border-left-color: var(--warn, #d6a531); background: color-mix(in srgb, var(--warn, #d6a531) 6%, transparent); }
+  .ftitle { font-size: 0.84rem; font-weight: 600; color: var(--text); }
+  .ffix { font-size: 0.78rem; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
 
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; max-width: 820px; overflow: hidden; }
   .noderow { display: flex; gap: 11px; padding: 11px 14px; border-bottom: 1px solid var(--border-soft, var(--border)); }
