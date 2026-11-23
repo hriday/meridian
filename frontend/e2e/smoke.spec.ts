@@ -482,6 +482,52 @@ test("meshtastic lists attached USB serial ports and reads one on click", async 
   expect(errors, errors.join(" | ")).toEqual([]);
 });
 
+test("meshtastic shows the radio config and mesh-health findings", async ({ page }) => {
+  await page.addInitScript(() => {
+    const SNAP = {
+      transport: "serial", target: "/dev/cu.usbmodem1101", myNodeNum: 100,
+      firmware: "2.7.26", hwModel: "T_DECK",
+      me: { num: 100, id: "!00000064", longName: "moosha", shortName: "MSH", role: "Client", snr: 0, hopsAway: 0, lastHeard: 0, viaMqtt: false, battery: 101, voltage: 4.1, hasPosition: false, lat: 0, lon: 0, altitudeM: 0 },
+      nodes: [],
+      channelUtil: 0, airUtilTx: 0, nodeCount: 1, takenAt: "2026-11-23T00:00:00Z",
+      radio: { region: "", regionSet: false, modemPreset: "LongFast", usePreset: true, txEnabled: true, primaryChannel: "", channelCount: 1 },
+      findings: [
+        { level: "problem", title: "LoRa region is not set — the radio will not transmit.", fix: "Set your region on the node (Settings → LoRa → Region)." },
+        { level: "check", title: "No neighbours and no RF traffic at all reaching this node.", fix: "A peer has to match your region, modem preset (LongFast) and primary channel, and be within LoRa range." },
+      ],
+    };
+    const perm = (): any => new Proxy(function () {}, { get(_t, p) { if (p === Symbol.iterator) return function* () {}; if (p === "then") return undefined; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return perm(); }, apply: () => perm() });
+    const bridge = (path: string[]): any => new Proxy(function () {}, {
+      get(_t, p) { if (p === "then") return undefined; if (p === Symbol.iterator) return function* () {}; if (p === "length") return 0; if (p === Symbol.toPrimitive || p === "toString" || p === "valueOf") return () => ""; return bridge(path.concat(String(p))); },
+      apply: () => (path.includes("MeshtasticSnapshot") ? Promise.resolve(SNAP) : Promise.resolve(perm())),
+    });
+    (window as any).go = bridge([]);
+    try { localStorage.setItem("meridian.activeTool", "mesh"); localStorage.setItem("meridian.closedGroups", "{}"); } catch {}
+  });
+
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+
+  await page.goto("/");
+  await page.waitForSelector("nav.side .item");
+  await page.locator('[data-tool="mesh"]').click();
+  const pane = page.locator("main.main");
+  await pane.locator("input").first().fill("/dev/cu.usbmodem1101");
+  await pane.getByRole("button", { name: "Read node" }).click();
+
+  // Radio line surfaces the config, with the unset region flagged.
+  await expect(pane.locator(".radiorow")).toContainText("region UNSET");
+  await expect(pane.locator(".radiorow")).toContainText("LongFast");
+
+  // Both findings render, styled by level; the problem names the fix.
+  await expect(pane.locator(".finding")).toHaveCount(2);
+  await expect(pane.locator(".finding.problem")).toContainText("region is not set");
+  await expect(pane.locator(".finding.problem .ffix")).toContainText("Settings → LoRa → Region");
+  await expect(pane.locator(".finding.check")).toContainText("no RF traffic");
+  expect(errors, errors.join(" | ")).toEqual([]);
+});
+
 test("ble survey renders the device list from a real scan", async ({ page }) => {
   await page.addInitScript(() => {
     const REAL = {

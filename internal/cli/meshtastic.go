@@ -80,6 +80,39 @@ func printMeshtastic(w io.Writer, s meshtastic.Snapshot) {
 	}
 	reportRow(w, "Channel util", fmt.Sprintf("%.1f%%  (tx airtime %.1f%%)", s.ChannelUtil, s.AirUtilTx))
 	reportRow(w, "Nodes seen", fmt.Sprintf("%d", s.NodeCount))
+	if r := s.Radio; r != nil {
+		region := r.Region
+		if !r.RegionSet {
+			region = "UNSET"
+		}
+		preset := r.ModemPreset
+		if preset == "" {
+			preset = "custom"
+		}
+		ch := r.PrimaryChannel
+		if ch == "" {
+			ch = "(default public)"
+		}
+		tx := "on"
+		if !r.TxEnabled {
+			tx = "OFF"
+		}
+		reportRow(w, "Radio", fmt.Sprintf("region %s · preset %s · channel %s · tx %s", region, preset, ch, tx))
+	}
+
+	if len(s.Findings) > 0 {
+		fmt.Fprintln(w, "\nMesh health:")
+		for _, f := range s.Findings {
+			marker := "·"
+			if f.Level == "problem" {
+				marker = "!"
+			}
+			fmt.Fprintf(w, "  %s %s\n", marker, f.Title)
+			if f.Fix != "" {
+				fmt.Fprintf(w, "    → %s\n", f.Fix)
+			}
+		}
+	}
 
 	if len(s.Nodes) == 0 {
 		fmt.Fprintln(w, "\nNo other nodes in the database.")

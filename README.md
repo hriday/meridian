@@ -83,7 +83,10 @@ any resolver, DNSSEC signals, over UDP/TCP or **DNS-over-TLS / DNS-over-HTTPS / 
   **detected and offered as a one-click button** (no device path to type); every node it currently sees,
   with per-neighbor **SNR**, hop distance (`direct` = one-hop RF neighbor), channel
   airtime, battery and position — nodes that report a location are plotted on a
-  **map** (OpenStreetMap). Read-only — it only asks the node to dump its config —
+  **map** (OpenStreetMap). It also reads the node's **radio config** (region, modem preset, channel) and runs a
+  **mesh-health check** that explains why a node may be isolated — flagging problems on *your* node it can prove
+  (region unset, transmit disabled) separately from the things it can't see (a peer's settings, range), with
+  what a neighbor would have to match. Read-only — it only asks the node to dump its config —
   and a point-in-time snapshot, no history. <!-- TODO: screenshot (owner to capture live) -->
 - **Bluetooth LE survey** — scan for the Bluetooth Low Energy devices advertising
   nearby (phones, watches, earbuds, beacons, sensors) using this machine's own
