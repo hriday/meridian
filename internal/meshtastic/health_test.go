@@ -121,6 +121,63 @@ func TestDiagnose_ChannelUnknown(t *testing.T) {
 }
 
 // TestDiagnose_RegionUnset: the headline case — region not set blocks everything.
+func chanFrame(index int, role pb.Channel_Role, name string, psk []byte, up, down bool) *pb.FromRadio {
+	return (&pb.FromRadio_builder{Channel: (&pb.Channel_builder{
+		Index: int32(index), Role: role,
+		Settings: (&pb.ChannelSettings_builder{Name: name, Psk: psk, UplinkEnabled: up, DownlinkEnabled: down}).Build(),
+	}).Build()}).Build()
+}
+
+// TestKeyKind pins the security-labeling rule, including Meshtastic's single-byte
+// shorthand where [0x00] is an OPEN channel, not the default key.
+func TestKeyKind(t *testing.T) {
+	cases := []struct {
+		psk  []byte
+		want string
+	}{
+		{nil, "open"},
+		{[]byte{0x00}, "open"},
+		{[]byte{0x01}, "default"},
+		{[]byte{0x0a}, "default"},
+		{make([]byte, 16), "private"},
+		{make([]byte, 32), "private"},
+	}
+	for _, c := range cases {
+		if got := keyKind(c.psk); got != c.want {
+			t.Errorf("keyKind(%v) = %q, want %q", c.psk, got, c.want)
+		}
+	}
+}
+
+// TestAssemble_CapturesChannels pins the channel list: roles, key kind (never the
+// key itself) and MQTT uplink/downlink, with disabled slots excluded and a
+// re-streamed index deduped.
+func TestAssemble_CapturesChannels(t *testing.T) {
+	snap := assemble("serial", "/dev/x", []*pb.FromRadio{
+		myInfoFrame(100),
+		chanFrame(0, pb.Channel_PRIMARY, "", []byte{0x01}, true, true),
+		chanFrame(1, pb.Channel_SECONDARY, "moosha", make([]byte, 16), true, true),
+		chanFrame(1, pb.Channel_SECONDARY, "moosha", make([]byte, 16), true, true), // duplicate index
+		chanFrame(2, pb.Channel_SECONDARY, "open-chan", []byte{0x00}, false, false),
+		chanFrame(3, pb.Channel_DISABLED, "off", nil, false, false),
+		nodeFrame(100),
+	})
+	if len(snap.Channels) != 3 {
+		t.Fatalf("got %d channels, want 3 (dup deduped, disabled excluded): %+v", len(snap.Channels), snap.Channels)
+	}
+	p := snap.Channels[0]
+	if p.Role != "primary" || p.Key != "default" || !p.Uplink || !p.Downlink {
+		t.Errorf("primary channel wrong: %+v", p)
+	}
+	m := snap.Channels[1]
+	if m.Index != 1 || m.Name != "moosha" || m.Role != "secondary" || m.Key != "private" {
+		t.Errorf("secondary channel wrong: %+v", m)
+	}
+	if o := snap.Channels[2]; o.Name != "open-chan" || o.Key != "open" {
+		t.Errorf("an all-zero single-byte PSK channel should read as open: %+v", o)
+	}
+}
+
 func TestDiagnose_RegionUnset(t *testing.T) {
 	snap := assemble("serial", "/dev/x", []*pb.FromRadio{
 		myInfoFrame(100),

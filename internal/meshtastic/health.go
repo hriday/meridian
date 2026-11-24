@@ -128,6 +128,35 @@ func channelLabel(r *RadioConfig) string {
 	return r.PrimaryChannel
 }
 
+// channelRole maps a channel's role to a short label.
+func channelRole(r pb.Channel_Role) string {
+	switch r {
+	case pb.Channel_PRIMARY:
+		return "primary"
+	case pb.Channel_SECONDARY:
+		return "secondary"
+	default:
+		return ""
+	}
+}
+
+// keyKind reports a channel's encryption from its PSK — the PSK value itself
+// never leaves this function. Meshtastic's single-byte shorthand matters here:
+// [0x00] means NO crypto (an open channel), while [0x01]–[0x0a] select a shared
+// well-known key; a longer PSK is a private key the operator set.
+func keyKind(psk []byte) string {
+	switch {
+	case len(psk) == 0:
+		return "open"
+	case len(psk) == 1 && psk[0] == 0:
+		return "open"
+	case len(psk) == 1:
+		return "default"
+	default:
+		return "private"
+	}
+}
+
 // regionName is the region code as a short label ("US", "EU_868"), or "" unset.
 func regionName(code pb.Config_LoRaConfig_RegionCode) string {
 	if code == pb.Config_LoRaConfig_UNSET {

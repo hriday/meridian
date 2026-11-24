@@ -37,9 +37,22 @@ type Snapshot struct {
 	TakenAt     string  `json:"takenAt"`     // RFC3339 UTC instant of this read
 
 	Radio    *RadioConfig `json:"radio,omitempty"`    // the node's LoRa setup, when the dump carried it
+	Channels []Channel    `json:"channels,omitempty"` // the node's configured channels (primary + any secondaries)
 	Findings []Finding    `json:"findings,omitempty"` // mesh-health call-outs, most important first
 
 	metricsKnown bool // whether the node actually reported device metrics (so 0% util is measured, not missing)
+}
+
+// Channel is one of the node's configured channels. Meridian surfaces the shape
+// of each — never the key itself: Key reports only whether a channel is open,
+// on the shared default key, or has a private key, so a PSK never leaves the node.
+type Channel struct {
+	Index    int    `json:"index"`
+	Name     string `json:"name"`     // the channel name; "" is the default primary (LongFast)
+	Role     string `json:"role"`     // "primary" or "secondary"
+	Uplink   bool   `json:"uplink"`   // relays this channel's traffic up to MQTT
+	Downlink bool   `json:"downlink"` // pulls this channel's MQTT traffic down to the node
+	Key      string `json:"key"`      // "open" (no PSK), "default" (shared default key), or "private" (custom key)
 }
 
 // Node is one entry in the mesh node database.
@@ -202,6 +215,8 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 	var lora *pb.Config_LoRaConfig
 	primaryChannel := ""
 	sawPrimary := false
+	chanByIndex := map[int]Channel{}
+	var chanOrder []int
 	for _, fr := range frames {
 		if mi := fr.GetMyInfo(); mi != nil {
 			snap.MyNodeNum = mi.GetMyNodeNum()
@@ -217,9 +232,22 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 				lora = l
 			}
 		}
-		if ch := fr.GetChannel(); ch != nil {
+		if ch := fr.GetChannel(); ch != nil && ch.GetRole() != pb.Channel_DISABLED {
+			s := ch.GetSettings()
+			idx := int(ch.GetIndex())
+			if _, seen := chanByIndex[idx]; !seen {
+				chanOrder = append(chanOrder, idx)
+			}
+			chanByIndex[idx] = Channel{ // a later frame for the same index supersedes.
+				Index:    idx,
+				Name:     s.GetName(),
+				Role:     channelRole(ch.GetRole()),
+				Uplink:   s.GetUplinkEnabled(),
+				Downlink: s.GetDownlinkEnabled(),
+				Key:      keyKind(s.GetPsk()),
+			}
 			if ch.GetRole() == pb.Channel_PRIMARY {
-				primaryChannel = ch.GetSettings().GetName()
+				primaryChannel = s.GetName()
 				sawPrimary = true
 			}
 		}
@@ -231,6 +259,9 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 		}
 	}
 	snap.Radio = radioFromLoRa(lora, primaryChannel, sawPrimary)
+	for _, idx := range chanOrder {
+		snap.Channels = append(snap.Channels, chanByIndex[idx])
+	}
 
 	snap.NodeCount = len(order)
 	for _, num := range order {
