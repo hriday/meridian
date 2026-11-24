@@ -108,7 +108,7 @@ func printMeshtastic(w io.Writer, s meshtastic.Snapshot) {
 		for _, c := range s.Channels {
 			name := c.Name
 			if name == "" {
-				name = "(default LongFast)"
+				name = "(default)"
 			}
 			mqtt := "—"
 			switch {

@@ -281,7 +281,7 @@
         {#each snap.channels as c}
           <div class="chan">
             <span class="cidx mono">{c.index}</span>
-            <span class="cname">{c.name || "default (LongFast)"}</span>
+            <span class="cname">{c.name || "(default)"}</span>
             <span class="crole">{c.role}</span>
             {#if c.key === "private"}<span class="cbadge key">private key</span>
             {:else if c.key === "default"}<span class="cbadge">default key</span>
@@ -389,7 +389,7 @@
   .chanwrap { max-width: 820px; margin: 0 0 14px; }
   .chanhead { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
   .chan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-soft, var(--border)); }
-  .chan:first-of-type { border-top: 0; }
+  .chanhead + .chan { border-top: 0; }
   .cidx { font-size: 0.72rem; color: var(--text-faint, var(--text-dim)); width: 14px; }
   .cname { font-size: 0.84rem; font-weight: 600; color: var(--text); }
   .crole { font-size: 0.72rem; color: var(--text-dim); }

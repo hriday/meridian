@@ -215,6 +215,8 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 	var lora *pb.Config_LoRaConfig
 	primaryChannel := ""
 	sawPrimary := false
+	chanByIndex := map[int]Channel{}
+	var chanOrder []int
 	for _, fr := range frames {
 		if mi := fr.GetMyInfo(); mi != nil {
 			snap.MyNodeNum = mi.GetMyNodeNum()
@@ -232,14 +234,18 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 		}
 		if ch := fr.GetChannel(); ch != nil && ch.GetRole() != pb.Channel_DISABLED {
 			s := ch.GetSettings()
-			snap.Channels = append(snap.Channels, Channel{
-				Index:    int(ch.GetIndex()),
+			idx := int(ch.GetIndex())
+			if _, seen := chanByIndex[idx]; !seen {
+				chanOrder = append(chanOrder, idx)
+			}
+			chanByIndex[idx] = Channel{ // a later frame for the same index supersedes.
+				Index:    idx,
 				Name:     s.GetName(),
 				Role:     channelRole(ch.GetRole()),
 				Uplink:   s.GetUplinkEnabled(),
 				Downlink: s.GetDownlinkEnabled(),
-				Key:      keyKind(len(s.GetPsk())),
-			})
+				Key:      keyKind(s.GetPsk()),
+			}
 			if ch.GetRole() == pb.Channel_PRIMARY {
 				primaryChannel = s.GetName()
 				sawPrimary = true
@@ -253,6 +259,9 @@ func assemble(transport, addr string, frames []*pb.FromRadio) Snapshot {
 		}
 	}
 	snap.Radio = radioFromLoRa(lora, primaryChannel, sawPrimary)
+	for _, idx := range chanOrder {
+		snap.Channels = append(snap.Channels, chanByIndex[idx])
+	}
 
 	snap.NodeCount = len(order)
 	for _, num := range order {

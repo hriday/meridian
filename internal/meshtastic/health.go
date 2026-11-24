@@ -140,14 +140,17 @@ func channelRole(r pb.Channel_Role) string {
 	}
 }
 
-// keyKind reports a channel's encryption from its PSK length alone — never the
-// key. Meshtastic packs the shared default key as a single byte; a longer PSK is
-// a private key the operator set; an empty one is unencrypted.
-func keyKind(pskLen int) string {
+// keyKind reports a channel's encryption from its PSK — the PSK value itself
+// never leaves this function. Meshtastic's single-byte shorthand matters here:
+// [0x00] means NO crypto (an open channel), while [0x01]–[0x0a] select a shared
+// well-known key; a longer PSK is a private key the operator set.
+func keyKind(psk []byte) string {
 	switch {
-	case pskLen == 0:
+	case len(psk) == 0:
 		return "open"
-	case pskLen == 1:
+	case len(psk) == 1 && psk[0] == 0:
+		return "open"
+	case len(psk) == 1:
 		return "default"
 	default:
 		return "private"
