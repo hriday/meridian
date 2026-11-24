@@ -491,6 +491,10 @@ test("meshtastic shows the radio config and mesh-health findings", async ({ page
       nodes: [],
       channelUtil: 0, airUtilTx: 0, nodeCount: 1, takenAt: "2026-11-23T00:00:00Z",
       radio: { region: "", regionSet: false, modemPreset: "LongFast", usePreset: true, txEnabled: true, primaryChannel: "", channelKnown: true },
+      channels: [
+        { index: 0, name: "", role: "primary", uplink: true, downlink: true, key: "default" },
+        { index: 1, name: "moosha", role: "secondary", uplink: true, downlink: true, key: "private" },
+      ],
       findings: [
         { level: "problem", title: "LoRa region is not set — the radio will not transmit.", fix: "Set your region on the node (Settings → LoRa → Region)." },
         { level: "check", title: "No neighbours and no RF traffic at all reaching this node.", fix: "A peer has to match your region, modem preset (LongFast) and primary channel, and be within LoRa range." },
@@ -519,6 +523,12 @@ test("meshtastic shows the radio config and mesh-health findings", async ({ page
   // Radio line surfaces the config, with the unset region flagged.
   await expect(pane.locator(".radiorow")).toContainText("region UNSET");
   await expect(pane.locator(".radiorow")).toContainText("LongFast");
+
+  // Channels render, including the private secondary with its MQTT status.
+  await expect(pane.locator(".chan")).toHaveCount(2);
+  await expect(pane.locator(".chan").nth(1)).toContainText("moosha");
+  await expect(pane.locator(".chan").nth(1)).toContainText("private key");
+  await expect(pane.locator(".chan").nth(1).locator(".cbadge.mqtt")).toContainText("MQTT");
 
   // Both findings render, styled by level; the problem names the fix.
   await expect(pane.locator(".finding")).toHaveCount(2);

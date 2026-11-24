@@ -210,7 +210,8 @@
     was seen through an internet gateway rather than over the air. Nodes that report a position can be
     shown on a <strong>map</strong> (press <strong>Show map</strong>; your node is a square), which loads
     OpenStreetMap tiles — the only time this tool reaches the internet. The <strong>Radio</strong> line shows the
-    node's region, modem preset and channel, and <strong>Mesh health</strong> flags why it may be isolated:
+    node's region, modem preset and channel; <strong>Channels</strong> lists every channel (primary and any
+    secondaries) with whether it's encrypted and its MQTT uplink/downlink; and <strong>Mesh health</strong> flags why it may be isolated:
     a red bar is a setting on this node you can fix (region unset, transmit off); an amber bar is something
     Meridian can't see from here (a peer's settings, range) with what a neighbour would have to match.
   </ToolHelp>
@@ -271,6 +272,23 @@
         <span class="rval mono">{!snap.radio.channelKnown ? "channel not read" : snap.radio.primaryChannel || "default public channel"}</span>
         <span class="rsep">·</span>
         <span class="rval mono" class:warn={!snap.radio.txEnabled}>TX {snap.radio.txEnabled ? "on" : "OFF"}</span>
+      </div>
+    {/if}
+
+    {#if snap.channels && snap.channels.length}
+      <div class="chanwrap">
+        <div class="chanhead">Channels · {snap.channels.length}</div>
+        {#each snap.channels as c}
+          <div class="chan">
+            <span class="cidx mono">{c.index}</span>
+            <span class="cname">{c.name || "default (LongFast)"}</span>
+            <span class="crole">{c.role}</span>
+            {#if c.key === "private"}<span class="cbadge key">private key</span>
+            {:else if c.key === "default"}<span class="cbadge">default key</span>
+            {:else}<span class="cbadge open">unencrypted</span>{/if}
+            {#if c.uplink || c.downlink}<span class="cbadge mqtt">MQTT {c.uplink && c.downlink ? "↑↓" : c.uplink ? "↑" : "↓"}</span>{/if}
+          </div>
+        {/each}
       </div>
     {/if}
 
@@ -367,6 +385,18 @@
   .rval { color: var(--text); }
   .rval.warn { color: var(--warn, #d6a531); font-weight: 600; }
   .rsep { color: var(--text-faint, var(--text-dim)); }
+
+  .chanwrap { max-width: 820px; margin: 0 0 14px; }
+  .chanhead { font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); font-weight: 600; margin-bottom: 6px; }
+  .chan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border-soft, var(--border)); }
+  .chan:first-of-type { border-top: 0; }
+  .cidx { font-size: 0.72rem; color: var(--text-faint, var(--text-dim)); width: 14px; }
+  .cname { font-size: 0.84rem; font-weight: 600; color: var(--text); }
+  .crole { font-size: 0.72rem; color: var(--text-dim); }
+  .cbadge { font-size: 0.68rem; color: var(--text-dim); border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; }
+  .cbadge.key { color: var(--good, #3fb950); border-color: color-mix(in srgb, var(--good, #3fb950) 45%, transparent); }
+  .cbadge.open { color: var(--warn, #d6a531); border-color: color-mix(in srgb, var(--warn, #d6a531) 45%, transparent); }
+  .cbadge.mqtt { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
 
   .findings { display: flex; flex-direction: column; gap: 8px; max-width: 820px; margin: 0 0 14px; }
   .finding { border: 1px solid var(--border); border-left-width: 3px; border-radius: 9px; padding: 10px 13px; background: var(--card); }

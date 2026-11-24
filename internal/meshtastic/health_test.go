@@ -121,6 +121,37 @@ func TestDiagnose_ChannelUnknown(t *testing.T) {
 }
 
 // TestDiagnose_RegionUnset: the headline case — region not set blocks everything.
+func chanFrame(index int, role pb.Channel_Role, name string, pskLen int, up, down bool) *pb.FromRadio {
+	return (&pb.FromRadio_builder{Channel: (&pb.Channel_builder{
+		Index: int32(index), Role: role,
+		Settings: (&pb.ChannelSettings_builder{Name: name, Psk: make([]byte, pskLen), UplinkEnabled: up, DownlinkEnabled: down}).Build(),
+	}).Build()}).Build()
+}
+
+// TestAssemble_CapturesChannels pins the channel list: primary + secondaries with
+// their roles, key kind (never the key itself) and MQTT uplink/downlink, with
+// disabled slots excluded.
+func TestAssemble_CapturesChannels(t *testing.T) {
+	snap := assemble("serial", "/dev/x", []*pb.FromRadio{
+		myInfoFrame(100),
+		chanFrame(0, pb.Channel_PRIMARY, "", 1, true, true),
+		chanFrame(1, pb.Channel_SECONDARY, "moosha", 16, true, true),
+		chanFrame(2, pb.Channel_DISABLED, "off", 0, false, false),
+		nodeFrame(100),
+	})
+	if len(snap.Channels) != 2 {
+		t.Fatalf("got %d channels, want 2 (disabled excluded): %+v", len(snap.Channels), snap.Channels)
+	}
+	p := snap.Channels[0]
+	if p.Role != "primary" || p.Key != "default" || !p.Uplink || !p.Downlink {
+		t.Errorf("primary channel wrong: %+v", p)
+	}
+	m := snap.Channels[1]
+	if m.Index != 1 || m.Name != "moosha" || m.Role != "secondary" || m.Key != "private" {
+		t.Errorf("secondary channel wrong: %+v", m)
+	}
+}
+
 func TestDiagnose_RegionUnset(t *testing.T) {
 	snap := assemble("serial", "/dev/x", []*pb.FromRadio{
 		myInfoFrame(100),

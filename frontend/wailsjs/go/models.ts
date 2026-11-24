@@ -583,6 +583,28 @@ export namespace meshtastic {
 	        this.fix = source["fix"];
 	    }
 	}
+	export class Channel {
+	    index: number;
+	    name: string;
+	    role: string;
+	    uplink: boolean;
+	    downlink: boolean;
+	    key: string;
+
+	    static createFrom(source: any = {}) {
+	        return new Channel(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.name = source["name"];
+	        this.role = source["role"];
+	        this.uplink = source["uplink"];
+	        this.downlink = source["downlink"];
+	        this.key = source["key"];
+	    }
+	}
 	export class RadioConfig {
 	    region: string;
 	    regionSet: boolean;
@@ -662,6 +684,7 @@ export namespace meshtastic {
 	    nodeCount: number;
 	    takenAt: string;
 	    radio?: RadioConfig;
+	    channels?: Channel[];
 	    findings?: Finding[];
 
 	    static createFrom(source: any = {}) {
@@ -682,6 +705,7 @@ export namespace meshtastic {
 	        this.nodeCount = source["nodeCount"];
 	        this.takenAt = source["takenAt"];
 	        this.radio = this.convertValues(source["radio"], RadioConfig);
+	        this.channels = this.convertValues(source["channels"], Channel);
 	        this.findings = this.convertValues(source["findings"], Finding);
 	    }
 

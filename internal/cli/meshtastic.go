@@ -103,6 +103,26 @@ func printMeshtastic(w io.Writer, s meshtastic.Snapshot) {
 		reportRow(w, "Radio", fmt.Sprintf("region %s · preset %s · channel %s · tx %s", region, preset, ch, tx))
 	}
 
+	if len(s.Channels) > 0 {
+		fmt.Fprintln(w, "\nChannels:")
+		for _, c := range s.Channels {
+			name := c.Name
+			if name == "" {
+				name = "(default LongFast)"
+			}
+			mqtt := "—"
+			switch {
+			case c.Uplink && c.Downlink:
+				mqtt = "MQTT up+down"
+			case c.Uplink:
+				mqtt = "MQTT up"
+			case c.Downlink:
+				mqtt = "MQTT down"
+			}
+			fmt.Fprintf(w, "  %d  %-20s %-10s %-8s %s\n", c.Index, truncateRunes(name, 20), c.Role, c.Key, mqtt)
+		}
+	}
+
 	if len(s.Findings) > 0 {
 		fmt.Fprintln(w, "\nMesh health:")
 		for _, f := range s.Findings {
