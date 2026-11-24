@@ -112,12 +112,12 @@ func Read(ctx context.Context, target string) (Snapshot, error) {
 		_ = d.SetReadDeadline(deadline)
 	}
 
-	fr := newFrameReader(rwc, deadline)
+	fr := newFrameReader(rwc)
 	snap := Snapshot{Transport: transport, Target: addr, TakenAt: time.Now().UTC().Format(time.RFC3339)}
 
 	// APP_START → SELF_INFO: the node's identity and radio config. This is the
 	// handshake, so a failure here means we never reached a MeshCore node.
-	si, err := exchange(rwc, fr, appStartCmd(), respSelfInfo)
+	si, err := exchange(rwc, fr, appStartCmd(), respSelfInfo, deadline)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("meshcore: no companion response from %s — is it a MeshCore node reachable over this port, awake, and not already in use by another app?", addr)
 	}
@@ -127,14 +127,20 @@ func Read(ctx context.Context, target string) (Snapshot, error) {
 	snap.Radio = &r
 	snap.HasPosition, snap.Lat, snap.Lon = self.HasPosition, self.Lat, self.Lon
 
-	// DEVICE_QUERY → DEVICE_INFO: firmware and model, best-effort.
-	if di, err := exchange(rwc, fr, []byte{cmdDeviceQuery, 3}, respDeviceInfo); err == nil {
+	// DEVICE_QUERY → DEVICE_INFO: firmware and model, best-effort — on a firmware
+	// that ignores the command this must NOT burn the whole budget, or contacts
+	// would read as empty and diagnose would cry "no nodes" falsely. Bound it.
+	devDeadline := time.Now().Add(3 * time.Second)
+	if devDeadline.After(deadline) {
+		devDeadline = deadline
+	}
+	if di, err := exchange(rwc, fr, []byte{cmdDeviceQuery, 3}, respDeviceInfo, devDeadline); err == nil {
 		d, _ := parseDeviceInfo(di)
 		snap.Firmware, snap.Model = d.Version, d.Model
 	}
 
 	// GET_CONTACTS → the node list.
-	snap.Contacts = readContacts(rwc, fr)
+	snap.Contacts = readContacts(rwc, fr, deadline)
 	snap.ContactCount = len(snap.Contacts)
 	rankContacts(snap.Contacts)
 
@@ -145,12 +151,12 @@ func Read(ctx context.Context, target string) (Snapshot, error) {
 // exchange sends one command and reads frames until the wanted response code
 // arrives, skipping unsolicited pushes and debug noise. A device error frame
 // ends the wait with an error.
-func exchange(w io.Writer, fr *frameReader, cmd []byte, want byte) ([]byte, error) {
+func exchange(w io.Writer, fr *frameReader, cmd []byte, want byte, deadline time.Time) ([]byte, error) {
 	if err := writeFrame(w, cmd); err != nil {
 		return nil, err
 	}
 	for {
-		p, err := fr.next()
+		p, err := fr.next(deadline)
 		if err != nil {
 			return nil, err
 		}
@@ -170,13 +176,13 @@ func exchange(w io.Writer, fr *frameReader, cmd []byte, want byte) ([]byte, erro
 
 // readContacts requests and collects the contact list. A read error or the
 // end-of-contacts marker stops it; anything it already has is returned.
-func readContacts(w io.Writer, fr *frameReader) []Contact {
+func readContacts(w io.Writer, fr *frameReader, deadline time.Time) []Contact {
 	cs := []Contact{}
 	if err := writeFrame(w, []byte{cmdGetContacts}); err != nil {
 		return cs
 	}
 	for {
-		p, err := fr.next()
+		p, err := fr.next(deadline)
 		if err != nil {
 			return cs
 		}

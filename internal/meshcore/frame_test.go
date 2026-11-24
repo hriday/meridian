@@ -27,8 +27,8 @@ func TestWriteFrame(t *testing.T) {
 
 func TestFrameReader_ReadsFrame(t *testing.T) {
 	stream := framed([]byte{respSelfInfo, 0xAA})
-	fr := newFrameReader(bytes.NewReader(stream), time.Time{})
-	p, err := fr.next()
+	fr := newFrameReader(bytes.NewReader(stream))
+	p, err := fr.next(time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,8 +44,8 @@ func TestFrameReader_ResyncsPastDebugText(t *testing.T) {
 	var stream []byte
 	stream = append(stream, []byte("[STALL] ui:timers 710ms\n")...)  // debug noise
 	stream = append(stream, framed([]byte{respDeviceInfo, 0x0a})...) // a real frame
-	fr := newFrameReader(bytes.NewReader(stream), time.Time{})
-	p, err := fr.next()
+	fr := newFrameReader(bytes.NewReader(stream))
+	p, err := fr.next(time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,8 +61,8 @@ func TestFrameReader_FalseMarkerResync(t *testing.T) {
 	// '>' then length 0xFFFF (65535) > maxFrame → false marker, skipped.
 	stream = append(stream, markerIn, 0xff, 0xff)
 	stream = append(stream, framed([]byte{respSelfInfo, 0x01})...)
-	fr := newFrameReader(bytes.NewReader(stream), time.Time{})
-	p, err := fr.next()
+	fr := newFrameReader(bytes.NewReader(stream))
+	p, err := fr.next(time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}

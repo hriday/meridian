@@ -42,13 +42,12 @@ type selfInfo struct {
 	Lat, Lon    float64
 }
 
-// deviceInfo is the parsed DEVICE_INFO response.
+// deviceInfo is the parsed DEVICE_INFO response — only the fields the snapshot
+// surfaces. (The frame also carries firmware-ver, max-contacts and max-channels;
+// add them here if a consumer ever needs them.)
 type deviceInfo struct {
-	FirmwareVer int
-	Model       string
-	Version     string // semantic version string
-	MaxContacts int
-	MaxChannels int
+	Model   string
+	Version string // semantic version string
 }
 
 // parseSelfInfo reads a RESP_SELF_INFO payload (code byte first). Fields past the
@@ -75,6 +74,9 @@ func parseSelfInfo(p []byte) (selfInfo, error) {
 		}
 	}
 	if len(p) >= 58 {
+		// /1000 follows the wiki ("radio_freq divided by 1000", "radio_bw kHz×1000"):
+		// freq is stored in kHz → MHz, bandwidth in Hz → kHz. UNVERIFIED against real
+		// firmware — confirm the units on a hardware read before trusting these.
 		si.Radio.FreqMHz = float64(binary.LittleEndian.Uint32(p[48:52])) / 1000
 		si.Radio.BandwidthKHz = float64(binary.LittleEndian.Uint32(p[52:56])) / 1000
 		si.Radio.SpreadFactor = int(p[56])
@@ -93,15 +95,6 @@ func parseDeviceInfo(p []byte) (deviceInfo, error) {
 		return deviceInfo{}, fmt.Errorf("meshcore: not a device-info frame")
 	}
 	var di deviceInfo
-	if len(p) >= 2 {
-		di.FirmwareVer = int(p[1])
-	}
-	if len(p) >= 3 {
-		di.MaxContacts = int(p[2]) * 2
-	}
-	if len(p) >= 4 {
-		di.MaxChannels = int(p[3])
-	}
 	if len(p) >= 60 {
 		di.Model = cstr(p[20:60])
 	}

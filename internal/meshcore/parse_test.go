@@ -83,11 +83,8 @@ func TestParseDeviceInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if di.FirmwareVer != 10 || di.Model != "LilyGo T-Deck" || di.Version != "v1.2.3" {
+	if di.Model != "LilyGo T-Deck" || di.Version != "v1.2.3" {
 		t.Errorf("device info wrong: %+v", di)
-	}
-	if di.MaxContacts != 100 || di.MaxChannels != 8 {
-		t.Errorf("counts wrong: %+v", di)
 	}
 }
 
